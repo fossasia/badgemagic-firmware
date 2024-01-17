@@ -22,9 +22,9 @@ See specific pages regarding each version of the hardware below
 
 The custom 11x44 LED dot matrix displays using persistence of vision.
 
-Bitmaps are drawn using all the pins (11) vertically, resulting in a single diagonal scanline with high refresh rate.
+Bitmaps are drawn using 24 pins in [charlieplexing](https://en.wikipedia.org/wiki/Charlieplexing) technique.
 
-![This is an alt text.](assets/dotmatrix.png)
+![charlieplexing](https://en.wikipedia.org/wiki/Charlieplexing#/media/File:CharlieplexedArray4.png)
 
 ## Firmware
 
