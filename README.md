@@ -51,7 +51,7 @@ Sorry, you'll have to dive into code here :/
 
 See original [led-name-badge-ls32](https://github.com/fossasia/led-name-badge-ls32) for USB update protocol reverse engineering
 
-See [Badge Magic app](https://github.com/fossasia/badge-magic-android) for Bluetooth update protocol
+See [Badge Magic app](https://github.com/fossasia/badgemagic-android) for Bluetooth update protocol
 
 ## Variant Specific Instructions
 
