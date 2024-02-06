@@ -24,7 +24,7 @@ The custom 11x44 LED dot matrix displays using persistence of vision.
 
 Bitmaps are drawn using 24 pins in [charlieplexing](https://en.wikipedia.org/wiki/Charlieplexing) technique.
 
-![charlieplexing](https://en.wikipedia.org/wiki/Charlieplexing#/media/File:CharlieplexedArray4.png)
+<img src="/assets/CharlieplexedArray4.png" alt="charlieplexing Original at https://en.wikipedia.org/wiki/Charlieplexing#/media/File:CharlieplexedArray4.png" style="height: width:700px;"/>
 
 ## Firmware
 
