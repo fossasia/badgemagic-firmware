@@ -47,7 +47,7 @@ The 2 buttons configuration:
 
 ### Upload Protocol
 
-Sorry, you'll have to dive into code here :/
+Here is some documentation on the [BLE package format](BadgeBLE.md). There still are some unclear parts, but it seems to work.
 
 See original [led-name-badge-ls32](https://github.com/fossasia/led-name-badge-ls32) for USB update protocol reverse engineering
 
