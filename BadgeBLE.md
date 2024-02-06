@@ -25,8 +25,7 @@ The badge supports up to 8 bitmaps which can have various features enabled.
 | uint8[4]  | padding   | 4 bytes zeroes of padding
 | uint8[16] | separator | zeroes to separate header from bitmap data |
 | uint8[11]\*N | bitmapdata | image data for all bitmaps. Each bitmap consists of a number of 11 byte chunks describing an 8x11 bitmap, each byte describes 8 pixels, starting with the most significant bit. The number of chunks is listed in the "sizes" fields above, N = sum(sizes). |
-| uint8[?] | padding | the last 16-byte block of bitmap data is padded with zeroes. |
-| uint8[16] | end-of-message | the last write to the characteristic is just zeroes. |
+| uint8[?] | padding | the last 16-byte block of bitmap data is padded with zeroes if necessary. |
 
 
 #### Modes
