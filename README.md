@@ -1,6 +1,6 @@
 # badgemagic-firmware
 
-Hardware details and information to build an open firmware for Bluetooth LED badges, compatible with [Badge Magic app](https://github.com/fossasia/badge-magic-android)
+Hardware details and information to build an open firmware for Bluetooth LED badges, compatible with [Badge Magic app](https://github.com/fossasia/badgemagic-android)
 
 ## Hardware Information
 
