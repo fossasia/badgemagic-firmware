@@ -53,6 +53,17 @@ See original [led-name-badge-ls32](https://github.com/fossasia/led-name-badge-ls
 
 See [Badge Magic app](https://github.com/fossasia/badgemagic-android) for Bluetooth update protocol
 
+#### Bluetooth Stack
+
+```
+Address 38:3B:26:CC:03:C1
+Name LSLED
+Class 0x0
+Appearance 0x0
+Device UUID 0000fee0-0000-1000-8000-00805f9b34fb
+or 0000fee1-0000-1000-8000-00805f9b34fb
+```
+
 ## Variant Specific Instructions
 
 Currently, only the RISC-V version is targeted as it seems the only one produced at the moment.
