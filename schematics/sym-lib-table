@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "BadgeMagic")(type "KiCad")(uri "${KIPRJMOD}/BadgeMagic.kicad_sym")(options "")(descr ""))
+)
