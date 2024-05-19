@@ -49,7 +49,8 @@ CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usb2dev.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usb2hostBase.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_spi1.c \
 CH5xx_ble_firmware_library/RVMSIS/core_riscv.c \
-src/main.c
+src/main.c \
+src/leddrv.c
 
 
 # ASM sources
