@@ -104,8 +104,16 @@ int main()
 	btn_onOnePress(KEY2, change_fb);
 	btn_onLongPress(KEY1, change_brightness);
 
-	while (1) {
-	}
+    while (1) {
+		int i = 0;
+		while (isPressed(KEY2)) {
+			i++;
+			if (i>10) {
+				asm volatile("j 0x00");
+			}
+			DelayMs(200);
+		}
+    }
 }
 
 __INTERRUPT
