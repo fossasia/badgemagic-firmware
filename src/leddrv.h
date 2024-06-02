@@ -10,5 +10,6 @@ void led_init();
 void leds_releaseall();
 void led_write2dcol(int dcol, uint16_t col1_val, uint16_t col2_val);
 void led_write2row_raw(int row, int which_half, uint32_t val);
+void led_setDriveStrength(int is_20mA);
 
 #endif /* __LEDDRV_H__ */

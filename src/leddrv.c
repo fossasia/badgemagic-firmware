@@ -1,7 +1,9 @@
 #include "leddrv.h"
 
-#define LED_DRIVE_STRENTH 0
 #define LED_PINCOUNT (23)
+
+volatile int drive_strength;
+
 typedef enum {
 	FLOATING,
 	LOW,
@@ -28,15 +30,20 @@ static void gpio_buf_set(pinctrl_t pinctl, tristate_t state)
 	}
 }
 
+void led_setDriveStrength(int is_20mA)
+{
+	drive_strength = is_20mA;
+}
+
 static void gpio_buf_apply(
 				volatile uint8_t *gpio_base, 
 				uint32_t *port, uint32_t *cfg, 
 				uint32_t *mask)
 {
-#if LED_DRIVE_STRENTH != 0
-	uint32_t *drv = (uint32_t *)(gpio_base + GPIO_PD_DRV);
-	*drv = (*drv & ~*mask) | (*cfg & *mask);
-#endif
+	if (drive_strength) {
+		uint32_t *drv = (uint32_t *)(gpio_base + GPIO_PD_DRV);
+		*drv = (*drv & ~*mask) | (*cfg & *mask);
+	}
 	uint32_t *dir = (uint32_t *)(gpio_base + GPIO_DIR);
 	*dir = (*dir & ~*mask) | (*cfg & *mask);
 
