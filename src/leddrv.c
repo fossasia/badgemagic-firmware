@@ -140,6 +140,13 @@ static uint32_t combine_cols(uint16_t col1_val, uint16_t col2_val)
 
 void led_write2dcol(int dcol, uint16_t col1_val, uint16_t col2_val)
 {
+	// first leds in first two columns are switched
+	if (dcol == 0) {
+		uint16_t b1 = col1_val & 0x01;
+		uint16_t b2 = col2_val & 0x01;
+		col1_val = (col1_val & 0xFFFE) | b2;
+		col2_val = (col2_val & 0xFFFE) | b1;
+	}
 	led_write2dcol_raw(dcol, combine_cols(col1_val, col2_val));
 }
 
