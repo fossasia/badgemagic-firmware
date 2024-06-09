@@ -125,8 +125,14 @@ void handle_mode_transition()
 
 		// Take control of the current fb to display 
 		// the Bluetooth animation
+		fb_t *cur = fblist_currentfb();
+		cur->modes = FIXED;
+		cur->scroll = 0;
+		memset(cur->buf, 0, cur->width * sizeof(uint16_t));
+
 		while (mode == DOWNLOAD) {
-			/* Animation and Bluetooth will be placed here */
+			frame_next(&bluetooth, cur->buf, 10, 0);
+			DelayMs(200);
 		}
 		// If not being flashed, pressing KEY1 again will 
 		// make the badge goes off:
