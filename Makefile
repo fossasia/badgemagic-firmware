@@ -58,6 +58,9 @@ src/ble/profile/devinfo.c \
 src/ble/setup.c \
 src/ble/peripheral.c \
 src/data.c \
+src/xbm.c \
+src/resource.c \
+src/animation.c \
 
 
 # ASM sources
