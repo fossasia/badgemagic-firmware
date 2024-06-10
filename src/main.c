@@ -4,6 +4,9 @@
 #include "leddrv.h"
 #include "button.h"
 #include "fb.h"
+#include "resource.h"
+#include "animation.h"
+
 #include "power.h"
 #include "data.h"
 
@@ -49,6 +52,13 @@ __HIGH_CODE
 static void fb_transition()
 {
 	fblist_gonext();
+}
+void play_splash(xbm_t *xbm, int col, int row)
+{
+	while (scroll_pad_next(xbm, 11, 11, 11, 
+				fblist_currentfb()->buf, 0, 0) != 0) {
+		DelayMs(100);
+	}
 }
 
 void draw_testfb()
@@ -185,6 +195,8 @@ int main()
 	PFIC_EnableIRQ(TMR0_IRQn);
 
 	fblist_init(FB_WIDTH);
+	
+	play_splash(&splash, 0, 0);
 
 	draw_testfb();
 
