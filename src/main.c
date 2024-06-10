@@ -3,10 +3,10 @@
 
 #include "leddrv.h"
 #include "button.h"
+#include "fb.h"
 
 #define FB_WIDTH 	(LED_COLS * 4)
 #define SCROLL_IRATIO   (16)
-#define FB_NUM_SPARE    (8)
 #define SCAN_F          (2000)
 #define SCAN_T          (FREQ_SYS / SCAN_F)
 
@@ -22,8 +22,6 @@ enum MODES {
 	MODES_COUNT,
 };
 #define BRIGHTNESS_LEVELS   (4)
-
-uint16_t fb[FB_NUM_SPARE][FB_WIDTH];
 
 uint8_t test_font[][11] = {
 	0x00, 0xFE, 0x66, 0x62, 0x68, 0x78, 0x68, 0x60, 0x60, 0xF0, 0x00, // F
@@ -49,9 +47,7 @@ void draw2fb(uint16_t *fb, int c, int col)
 	}
 }
 
-volatile int fb_sel, fb_num;
 volatile int mode, brightness;
-volatile uint64_t tick;
 
 __HIGH_CODE
 static void change_brightness()
@@ -67,9 +63,28 @@ static void change_mode()
 }
 
 __HIGH_CODE
-static void change_fb()
+static void fb_transition()
 {
-	NEXT_STATE(fb_sel, 0, fb_num);
+	fblist_gonext();
+}
+
+void draw_testfb()
+{
+
+	fb_t *curr_fb = fblist_currentfb();
+	curr_fb->modes = LEFT;
+
+	for (int i=0; i<8; i++) {
+		draw2fb(curr_fb->buf, i, 8 * (i + 4));
+	}
+
+	fb_t *fb_next = fb_new(8*12);
+	fblist_append(fb_next);
+	fb_next->modes = LEFT;
+	
+	for (int i=4; i<12; i++) {
+		draw2fb(fb_next->buf, i % 8, 8 * (i + 1));
+	}
 }
 
 int main()
@@ -77,36 +92,21 @@ int main()
 	SetSysClock(CLK_SOURCE_PLL_60MHz);
 
 	led_init();
-	draw2fb(fb[0], 0, 8*(5-1));
-	draw2fb(fb[0], 1, 8*(6-1));
-	draw2fb(fb[0], 2, 8*(7-1));
-	draw2fb(fb[0], 3, 8*(8-1));
-	draw2fb(fb[0], 4, 8*(9-1));
-	draw2fb(fb[0], 5, 8*(10-1));
-	draw2fb(fb[0], 6, 8*(11-1));
-	draw2fb(fb[0], 7, 8*(12-1));
-
-	draw2fb(fb[1], 4, 8*5);
-	draw2fb(fb[1], 5, 8*6);
-	draw2fb(fb[1], 6, 8*7);
-	draw2fb(fb[1], 7, 8*8);
-	draw2fb(fb[1], 0, 8*9);
-	draw2fb(fb[1], 1, 8*10);
-	draw2fb(fb[1], 2, 8*11);
-	draw2fb(fb[1], 3, 8*12);
-	fb_num = 2;
-
 	TMR0_TimerInit(SCAN_T / 2);
 	TMR0_ITCfg(ENABLE, TMR0_3_IT_CYC_END);
 	PFIC_EnableIRQ(TMR0_IRQn);
 
+	fblist_init(FB_WIDTH);
+
+	draw_testfb();
+
 	btn_init();
 	btn_onOnePress(KEY1, change_mode);
-	btn_onOnePress(KEY2, change_fb);
+	btn_onOnePress(KEY2, fb_transition);
 	btn_onLongPress(KEY1, change_brightness);
 
     while (1) {
-		int i = 0;
+		uint32_t i = 0;
 		while (isPressed(KEY2)) {
 			i++;
 			if (i>10) {
@@ -121,16 +121,19 @@ __INTERRUPT
 __HIGH_CODE
 void TMR0_IRQHandler(void)
 {
-	static int i, scroll;
+	static int i;
 
 	if (TMR0_GetITFlag(TMR0_3_IT_CYC_END)) {
 
+		fb_t *fb = fblist_currentfb();
 		i += 1;
 		if (i >= LED_COLS) {
 			i = 0;
-			scroll++;
-			if (scroll >= (FB_WIDTH-LED_COLS)*SCROLL_IRATIO) {
-				scroll = 0;
+			if ((fb->modes & 0x0f) == LEFT) {
+				fb->scroll++;
+				if (fb->scroll >= (fb->width-LED_COLS)*SCROLL_IRATIO) {
+					fb->scroll = 0;
+				}
 			}
 		}
 		
@@ -139,8 +142,8 @@ void TMR0_IRQHandler(void)
 				leds_releaseall();
 		} else {
 			led_write2dcol(i/2, 
-				fb[fb_sel][i+scroll/SCROLL_IRATIO], 
-				fb[fb_sel][i+scroll/SCROLL_IRATIO+1]);
+				fb->buf[i+ fb->scroll/SCROLL_IRATIO], 
+				fb->buf[i+ fb->scroll/SCROLL_IRATIO + 1]);
 		}
 
 		TMR0_ClearITFlag(TMR0_3_IT_CYC_END);

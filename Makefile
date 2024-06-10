@@ -51,7 +51,8 @@ CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_spi1.c \
 CH5xx_ble_firmware_library/RVMSIS/core_riscv.c \
 src/main.c \
 src/leddrv.c \
-src/button.c
+src/button.c \
+src/fb.c \
 
 
 # ASM sources
