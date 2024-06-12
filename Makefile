@@ -53,6 +53,9 @@ src/main.c \
 src/leddrv.c \
 src/button.c \
 src/fb.c \
+src/xbm.c \
+src/resource.c \
+src/animation.c
 
 
 # ASM sources
