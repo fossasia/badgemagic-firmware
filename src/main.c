@@ -57,6 +57,7 @@ __HIGH_CODE
 static void change_brightness()
 {
 	NEXT_STATE(brightness, 0, BRIGHTNESS_LEVELS);
+	led_setDriveStrength(brightness / 2);
 }
 
 __HIGH_CODE
@@ -95,7 +96,7 @@ int main()
 	draw2fb(fb[1], 3, 8*12);
 	fb_num = 2;
 
-	TMR0_TimerInit(SCAN_T);
+	TMR0_TimerInit(SCAN_T / 2);
 	TMR0_ITCfg(ENABLE, TMR0_3_IT_CYC_END);
 	PFIC_EnableIRQ(TMR0_IRQn);
 
@@ -124,7 +125,7 @@ void TMR0_IRQHandler(void)
 
 	if (TMR0_GetITFlag(TMR0_3_IT_CYC_END)) {
 
-		i += 2;
+		i += 1;
 		if (i >= LED_COLS) {
 			i = 0;
 			scroll++;
@@ -132,8 +133,15 @@ void TMR0_IRQHandler(void)
 				scroll = 0;
 			}
 		}
-		// This is a mess
-		led_write2dcol(i/2, fb[fb_sel][i+scroll/SCROLL_IRATIO], fb[fb_sel][i+scroll/SCROLL_IRATIO+1]);
+		
+		if (i % 2) {
+			if ((brightness + 1) % 2) 
+				leds_releaseall();
+		} else {
+			led_write2dcol(i/2, 
+				fb[fb_sel][i+scroll/SCROLL_IRATIO], 
+				fb[fb_sel][i+scroll/SCROLL_IRATIO+1]);
+		}
 
 		TMR0_ClearITFlag(TMR0_3_IT_CYC_END);
 	}
