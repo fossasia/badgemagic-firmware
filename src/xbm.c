@@ -26,6 +26,7 @@ void xbm2fb(xbm_t *xbm, uint16_t *fb, int col, int row)
 	for (int i=0; i < xbm->w; i++) {
 		fb[col+i] = tmpfb[i];
 	}
+	free(tmpfb);
 }
 
 void xbm2fb_dirty(xbm_t *xbm, uint16_t *fb, int col, int row)
