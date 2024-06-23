@@ -57,6 +57,7 @@ src/ble/profile/legacy.c \
 src/ble/profile/devinfo.c \
 src/ble/setup.c \
 src/ble/peripheral.c \
+src/data.c \
 
 
 # ASM sources
