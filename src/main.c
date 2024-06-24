@@ -5,6 +5,9 @@
 #include "button.h"
 #include "fb.h"
 
+#include "ble/setup.h"
+#include "ble/profile.h"
+
 #define FB_WIDTH 	(LED_COLS * 4)
 #define SCROLL_IRATIO   (16)
 #define SCAN_F          (2000)
@@ -103,6 +106,16 @@ void poweroff()
 	LowPower_Shutdown(0);
 }
 
+void ble_start()
+{
+	ble_hardwareInit();
+	tmos_clockInit();
+
+	peripheral_init();
+	devInfo_registerService();
+	legacy_registerService();
+}
+
 void handle_mode_transition()
 {
 	static int prev_mode;
@@ -116,8 +129,9 @@ void handle_mode_transition()
 
 		// Take control of the current fb to display 
 		// the Bluetooth animation
+		ble_start();
 		while (mode == DOWNLOAD) {
-			/* Animation and Bluetooth will be placed here */
+			TMOS_SystemProcess();
 		}
 		// If not being flashed, pressing KEY1 again will 
 		// make the badge goes off:
