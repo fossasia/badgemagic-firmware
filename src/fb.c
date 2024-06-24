@@ -19,7 +19,7 @@ fb_t *fblist_insert(fb_t *at, fb_t *new)
 
 fb_t *fblist_append(fb_t *new) 
 {
-	fblist_insert(new, tail);
+	fblist_insert(tail, new);
 	tail = new;
 	return new;
 }
