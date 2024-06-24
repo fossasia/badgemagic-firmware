@@ -188,6 +188,10 @@ void TMR0_IRQHandler(void)
 			if ((brightness + 1) % 2) 
 				leds_releaseall();
 		} else {
+			if (i + fb->scroll/SCROLL_IRATIO >= fb->width) {
+				leds_releaseall();
+				return;
+			}
 			led_write2dcol(i/2, 
 				fb->buf[i+ fb->scroll/SCROLL_IRATIO], 
 				fb->buf[i+ fb->scroll/SCROLL_IRATIO + 1]);
