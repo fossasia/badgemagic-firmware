@@ -4,6 +4,11 @@
 #include "leddrv.h"
 #include "button.h"
 #include "fb.h"
+#include "power.h"
+#include "data.h"
+
+#include "ble/setup.h"
+#include "ble/profile.h"
 
 #define FB_WIDTH 	(LED_COLS * 4)
 #define SCROLL_IRATIO   (16)
@@ -22,30 +27,6 @@ enum MODES {
 	MODES_COUNT,
 };
 #define BRIGHTNESS_LEVELS   (4)
-
-uint8_t test_font[][11] = {
-	0x00, 0xFE, 0x66, 0x62, 0x68, 0x78, 0x68, 0x60, 0x60, 0xF0, 0x00, // F
-	0x00, 0x7C, 0xC6, 0xC6, 0xC6, 0xC6, 0xC6, 0xC6, 0xC6, 0x7C, 0x00, // O
-	0x00, 0x7C, 0xC6, 0xC6, 0x60, 0x38, 0x0C, 0xC6, 0xC6, 0x7C, 0x00, // S
-	0x00, 0x7C, 0xC6, 0xC6, 0x60, 0x38, 0x0C, 0xC6, 0xC6, 0x7C, 0x00, // S
-	0x00, 0x38, 0x6C, 0xC6, 0xC6, 0xFE, 0xC6, 0xC6, 0xC6, 0xC6, 0x00, // A
-	0x00, 0x7C, 0xC6, 0xC6, 0x60, 0x38, 0x0C, 0xC6, 0xC6, 0x7C, 0x00, // S
-	0x00, 0x3C, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x3C, 0x00, // I
-	0x00, 0x38, 0x6C, 0xC6, 0xC6, 0xFE, 0xC6, 0xC6, 0xC6, 0xC6, 0x00, // A
-};
-
-void draw2fb(uint16_t *fb, int c, int col) 
-{
-	uint16_t tmpfb[8] = {0};
-	for (int i=0; i<8; i++) {
-		for (int j=0; j<11; j++) {
-			tmpfb[i] |= ((test_font[c][j] >> (8-i)) & 0x01) << j;
-		}
-	}
-	for (int i=0; i<8; i++) {
-		fb[col+i] = tmpfb[i];
-	}
-}
 
 volatile int mode, brightness;
 
@@ -72,19 +53,17 @@ void draw_testfb()
 {
 
 	fb_t *curr_fb = fblist_currentfb();
-	curr_fb->modes = LEFT;
 
 	for (int i=0; i<8; i++) {
-		draw2fb(curr_fb->buf, i, 8 * (i + 4));
+		fb_t *fb = flash2newfb(i);
+		if (fb == NULL)
+			continue;
+		fb->modes = LEFT;
+		fblist_append(fb);
 	}
+	fblist_gonext();
 
-	fb_t *fb_next = fb_new(8*12);
-	fblist_append(fb_next);
-	fb_next->modes = LEFT;
-	
-	for (int i=4; i<12; i++) {
-		draw2fb(fb_next->buf, i % 8, 8 * (i + 1));
-	}
+	fblist_drop(curr_fb);
 }
 
 void poweroff()
@@ -103,6 +82,16 @@ void poweroff()
 	LowPower_Shutdown(0);
 }
 
+void ble_start()
+{
+	ble_hardwareInit();
+	tmos_clockInit();
+
+	peripheral_init();
+	devInfo_registerService();
+	legacy_registerService();
+}
+
 void handle_mode_transition()
 {
 	static int prev_mode;
@@ -116,8 +105,9 @@ void handle_mode_transition()
 
 		// Take control of the current fb to display 
 		// the Bluetooth animation
+		ble_start();
 		while (mode == DOWNLOAD) {
-			/* Animation and Bluetooth will be placed here */
+			TMOS_SystemProcess();
 		}
 		// If not being flashed, pressing KEY1 again will 
 		// make the badge goes off:
@@ -156,7 +146,7 @@ int main()
 		while (isPressed(KEY2)) {
 			i++;
 			if (i>10) {
-				asm volatile("j 0x00");
+				reset_jump();
 			}
 			DelayMs(200);
 		}
