@@ -53,6 +53,10 @@ src/main.c \
 src/leddrv.c \
 src/button.c \
 src/fb.c \
+src/ble/profile/legacy.c \
+src/ble/profile/devinfo.c \
+src/ble/setup.c \
+src/ble/peripheral.c \
 
 
 # ASM sources
@@ -95,7 +99,7 @@ C_INCLUDES =  \
 -ICH5xx_ble_firmware_library/StdPeriphDriver/inc \
 -ICH5xx_ble_firmware_library/RVMSIS \
 -ICH5xx_ble_firmware_library/Core \
--IUser
+-ICH5xx_ble_firmware_library/BLE \
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
@@ -118,7 +122,10 @@ CFLAGS += -MMD -MP
 LDSCRIPT = CH5xx_ble_firmware_library/Ld/Link.ld 
 
 # libraries
-LIBS = -lc -lm -lnosys ./CH5xx_ble_firmware_library/StdPeriphDriver/libISP583.a
+LIBS = -lc -lm -lnosys \
+	./CH5xx_ble_firmware_library/StdPeriphDriver/libISP583.a \
+	./CH5xx_ble_firmware_library/BLE/LIBCH58xBLE.a \
+
 LIBDIR = 
 LDFLAGS = $(MCU) -mno-save-restore -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wunused -Wuninitialized -T $(LDSCRIPT) -nostartfiles -Xlinker --gc-sections -Wl,-Map=$(BUILD_DIR)/$(TARGET).map --specs=nano.specs $(LIBS)
 
