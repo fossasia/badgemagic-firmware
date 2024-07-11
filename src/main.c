@@ -175,6 +175,7 @@ int main()
 	debug_init();
 	PRINT("\nDebug console is on UART%d\n", DEBUG);
 
+	cdc_onWrite(usb_receive);
 	hiddev_onWrite(usb_receive);
 	usb_start();
 

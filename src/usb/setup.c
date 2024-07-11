@@ -125,6 +125,8 @@ void usb_start() {
 	for the first interface (not the interface number) */
 	hiddev_init();
 
+	cdc_acm_init();
+
 	init();
 	PFIC_EnableIRQ(USB_IRQn);
 }

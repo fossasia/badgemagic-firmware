@@ -63,6 +63,7 @@ src/usb/ctrl.c \
 src/usb/debug.c \
 src/usb/dev.c \
 src/usb/composite/hiddev.c \
+src/usb/composite/cdc-serial.c \
 
 # ASM sources
 ASM_SOURCES =  \
