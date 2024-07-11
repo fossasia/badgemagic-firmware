@@ -10,6 +10,8 @@
 #include "ble/setup.h"
 #include "ble/profile.h"
 
+#include "usb/usb.h"
+
 #define FB_WIDTH 	(LED_COLS * 4)
 #define SCROLL_IRATIO   (16)
 #define SCAN_F          (2000)
@@ -138,6 +140,8 @@ int main()
 
 	debug_init();
 	PRINT("\nDebug console is on UART%d\n", DEBUG);
+
+	usb_start();
 
 	led_init();
 	TMR0_TimerInit(SCAN_T / 2);

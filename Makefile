@@ -57,7 +57,11 @@ src/ble/profile/devinfo.c \
 src/ble/setup.c \
 src/ble/peripheral.c \
 src/data.c \
+src/usb/utils.c \
+src/usb/setup.c \
+src/usb/ctrl.c \
 src/usb/debug.c \
+src/usb/dev.c \
 
 # ASM sources
 ASM_SOURCES =  \
