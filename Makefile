@@ -7,8 +7,8 @@ TARGET = badgemagic-ch582
 ######################################
 # building variables
 ######################################
-# debug build?
-DEBUG = 1
+# Uncomment below line to enable debugging
+# DEBUG = 1
 # optimization for size
 OPT = -Os
 
@@ -58,7 +58,7 @@ src/ble/profile/devinfo.c \
 src/ble/setup.c \
 src/ble/peripheral.c \
 src/data.c \
-
+src/usb/debug.c \
 
 # ASM sources
 ASM_SOURCES =  \
@@ -108,7 +108,7 @@ ASFLAGS = $(MCU) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 CFLAGS = $(MCU) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
 ifeq ($(DEBUG), 1)
-CFLAGS += -g -gdwarf-2
+CFLAGS += -g -gdwarf-2 -DDEBUG=$(DEBUG)
 endif
 
 
