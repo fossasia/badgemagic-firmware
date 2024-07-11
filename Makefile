@@ -62,6 +62,7 @@ src/usb/setup.c \
 src/usb/ctrl.c \
 src/usb/debug.c \
 src/usb/dev.c \
+src/usb/composite/hiddev.c \
 
 # ASM sources
 ASM_SOURCES =  \

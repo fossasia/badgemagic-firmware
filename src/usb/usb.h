@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+void hiddev_fill_IN(uint8_t *buf, uint8_t len);
+int hiddev_tx_poll(uint8_t *buf, int len, uint16_t timeout_ms);
+void hiddev_onWrite(void (*cb)(uint8_t *buf, uint16_t len));
+
 void usb_start();
 
 #endif /* __USB_H__ */

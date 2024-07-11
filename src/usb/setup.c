@@ -121,6 +121,10 @@ void usb_start() {
 
 	ctrl_init();
 
+	/* This should be placed first, the python script always looks
+	for the first interface (not the interface number) */
+	hiddev_init();
+
 	init();
 	PFIC_EnableIRQ(USB_IRQn);
 }
