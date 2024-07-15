@@ -54,8 +54,8 @@ static void bm_transition()
 }
 void play_splash(xbm_t *xbm, int col, int row)
 {
-	while (scroll_pad_next(xbm, 11, 11, 11, fb, 0, 0) != 0) {
-		DelayMs(100);
+	while (ani_xbm_scrollup_pad(xbm, 11, 11, 11, fb, 0, 0) != 0) {
+		DelayMs(30);
 	}
 }
 
@@ -211,6 +211,33 @@ int main()
 			DelayMs(200);
 		}
 		handle_mode_transition();
+
+		bm_t *bm = bmlist_current();
+		if ((LEGACY_GET_ANIMATION(bm->modes)) == LEFT) {
+			ani_scroll_x(bm, fb, 0);
+		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == RIGHT) {
+			ani_scroll_x(bm, fb, 1);
+		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == UP) {
+			ani_scroll_up(bm, fb);
+		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == DOWN) {
+			ani_scroll_down(bm, fb);
+		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == SNOWFLAKE) {
+			ani_snowflake(bm, fb);
+		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == PICTURE) {
+			ani_picture(bm, fb);
+		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == ANIMATION) {
+			ani_animation(bm, fb);
+		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == LASER) {
+			ani_laser(bm, fb);
+		}
+
+		if (bm->is_flash) {
+			ani_flash_toggle(bm, fb);
+		}
+		if (bm->is_marquee) {
+			ani_marque(bm, fb);
+		}
+		DelayMs(300);
     }
 }
 

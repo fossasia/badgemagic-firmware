@@ -5,11 +5,30 @@
 
 #include "xbm.h"
 
-int frame_next(xbm_t *xbm, uint16_t *fb, int col, int row);
-int scrollup_next(xbm_t *xbm, int vh, uint16_t *fb, int col, int row);
-int scroll_pad_next( xbm_t *xbm, int vh, int pt, int pb,
+int ani_xbm_next_frame(xbm_t *xbm, uint16_t *fb, int col, int row);
+int ani_xbm_scroll_up(xbm_t *xbm, int vh, uint16_t *fb, int col, int row);
+int ani_xbm_scrollup_pad( xbm_t *xbm, int vh, int pt, int pb,
 				uint16_t *fb, int col, int row);
-int scroll_circular_next(xbm_t *xbm, uint16_t *fb, 
+int ani_xbm_scrollup_inf(xbm_t *xbm, uint16_t *fb, 
 				int vh, int col, int row);
+
+void fb_fill(uint16_t *fb, uint16_t v);
+void ani_shift_y(bm_t *bm, uint16_t *fb, int dir, int frame);
+
+void ani_scroll_x(bm_t *bm, uint16_t *fb, int dir);
+void ani_scroll_y(bm_t *bm, uint16_t *fb);
+
+void ani_scroll_left(bm_t *bm, uint16_t *fb);
+void ani_scroll_right(bm_t *bm, uint16_t *fb);
+void ani_scroll_up(bm_t *bm, uint16_t *fb);
+void ani_scroll_down(bm_t *bm, uint16_t *fb);
+void ani_fixed(bm_t *bm, uint16_t *fb);
+void ani_laser(bm_t *bm, uint16_t *fb);
+void ani_snowflake(bm_t *bm, uint16_t *fb);
+void ani_animation(bm_t *bm, uint16_t *fb);
+void ani_picture(bm_t *bm, uint16_t *fb);
+
+void ani_marque(bm_t *bm, uint16_t *fb);
+void ani_flash_toggle(bm_t *bm, uint16_t *fb);
 
 #endif /* __ANIMATION_H__ */

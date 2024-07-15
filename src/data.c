@@ -24,17 +24,31 @@ uint32_t data_flatSave(uint8_t *data, uint32_t len)
 	return EEPROM_WRITE(0, data, len);
 }
 
+data_legacy_t *data_get_header(int read_anyway)
+{
+	static data_legacy_t *cache;
+
+	if (cache == NULL) {
+		cache = malloc(sizeof(data_legacy_t));
+		read_anyway = 1;
+	}
+
+	if (read_anyway) {
+		EEPROM_READ(0, cache, LEGACY_HEADER_SIZE);
+	}
+	return cache;
+}
+
 uint16_t data_flash2newmem(uint8_t **chunk, uint32_t n)
 {
-	data_legacy_t header;
-	EEPROM_READ(0, &header, LEGACY_HEADER_SIZE);
+	data_legacy_t *header = data_get_header(0);
 
-	uint16_t size = bswap16(header.sizes[n]) * LED_ROWS;
+	uint16_t size = bswap16(header->sizes[n]) * LED_ROWS;
 	if (size == 0)
 		return 0;
 
 	uint16_t offs = LEGACY_HEADER_SIZE
-		+ bigendian16_sum(header.sizes, n) * LED_ROWS;
+		+ bigendian16_sum(header->sizes, n) * LED_ROWS;
 
 	*chunk = malloc(size);
 	EEPROM_READ(offs, *chunk, size);
@@ -79,6 +93,14 @@ bm_t *flash2newbm(uint32_t n)
 	uint16_t size = data_flash2newmem(&buf, n);
 	if (size == 0)
 		return NULL;
-	return chunk2newbm(buf, size);
+
+	bm_t *bm = chunk2newbm(buf, size);
+	data_legacy_t *header = data_get_header(0);
+
+	bm->is_flash = (header->flash & (1 << n)) != 0;
+	bm->is_marquee = (header->marquee & (1 << n)) != 0;
+	bm->modes = header->modes[n];
+
 	free(buf);
+	return bm;
 }
