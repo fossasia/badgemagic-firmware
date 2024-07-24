@@ -3,7 +3,7 @@
 
 #include "leddrv.h"
 #include "button.h"
-#include "fb.h"
+#include "bmlist.h"
 #include "resource.h"
 #include "animation.h"
 
@@ -15,8 +15,6 @@
 
 #include "usb/usb.h"
 
-#define FB_WIDTH 	(LED_COLS * 4)
-#define SCROLL_IRATIO   (16)
 #define SCAN_F          (2000)
 #define SCAN_T          (FREQ_SYS / SCAN_F)
 
@@ -33,7 +31,8 @@ enum MODES {
 };
 #define BRIGHTNESS_LEVELS   (4)
 
-volatile int mode, brightness;
+volatile uint16_t fb[LED_COLS] = {0};
+volatile int mode, brightness = 0;
 
 __HIGH_CODE
 static void change_brightness()
@@ -49,33 +48,30 @@ static void change_mode()
 }
 
 __HIGH_CODE
-static void fb_transition()
+static void bm_transition()
 {
-	fblist_gonext();
+	bmlist_gonext();
 }
 void play_splash(xbm_t *xbm, int col, int row)
 {
-	while (scroll_pad_next(xbm, 11, 11, 11, 
-				fblist_currentfb()->buf, 0, 0) != 0) {
+	while (scroll_pad_next(xbm, 11, 11, 11, fb, 0, 0) != 0) {
 		DelayMs(100);
 	}
 }
 
-void draw_testfb()
+void load_bmlist()
 {
-
-	fb_t *curr_fb = fblist_currentfb();
+	bm_t *curr_bm = bmlist_current();
 
 	for (int i=0; i<8; i++) {
-		fb_t *fb = flash2newfb(i);
-		if (fb == NULL)
+		bm_t *bm = flash2newbm(i);
+		if (bm == NULL)
 			continue;
-		fb->modes = LEFT;
-		fblist_append(fb);
+		bmlist_append(bm);
 	}
-	fblist_gonext();
+	bmlist_gonext();
 
-	fblist_drop(curr_fb);
+	bmlist_drop(curr_bm);
 }
 
 void poweroff()
@@ -146,10 +142,10 @@ void handle_mode_transition()
 	switch (mode)
 	{
 	case DOWNLOAD:
-		// Disable fb transition while in download mode
+		// Disable bitmap transition while in download mode
 		btn_onOnePress(KEY2, NULL);
 
-		// Take control of the current fb to display 
+		// Take control of the current bitmap to display 
 		// the Bluetooth animation
 		ble_start();
 		while (mode == DOWNLOAD) {
@@ -194,15 +190,15 @@ int main()
 	TMR0_ITCfg(ENABLE, TMR0_3_IT_CYC_END);
 	PFIC_EnableIRQ(TMR0_IRQn);
 
-	fblist_init(FB_WIDTH);
+	bmlist_init(LED_COLS * 4);
 	
 	play_splash(&splash, 0, 0);
 
-	draw_testfb();
+	load_bmlist();
 
 	btn_init();
 	btn_onOnePress(KEY1, change_mode);
-	btn_onOnePress(KEY2, fb_transition);
+	btn_onOnePress(KEY2, bm_transition);
 	btn_onLongPress(KEY1, change_brightness);
 
     while (1) {
@@ -225,30 +221,16 @@ void TMR0_IRQHandler(void)
 	static int i;
 
 	if (TMR0_GetITFlag(TMR0_3_IT_CYC_END)) {
-
-		fb_t *fb = fblist_currentfb();
 		i += 1;
 		if (i >= LED_COLS) {
 			i = 0;
-			if ((fb->modes & 0x0f) == LEFT) {
-				fb->scroll++;
-				if (fb->scroll >= (fb->width-LED_COLS)*SCROLL_IRATIO) {
-					fb->scroll = 0;
-				}
-			}
 		}
 		
 		if (i % 2) {
 			if ((brightness + 1) % 2) 
 				leds_releaseall();
 		} else {
-			if (i + fb->scroll/SCROLL_IRATIO >= fb->width) {
-				leds_releaseall();
-				return;
-			}
-			led_write2dcol(i/2, 
-				fb->buf[i+ fb->scroll/SCROLL_IRATIO], 
-				fb->buf[i+ fb->scroll/SCROLL_IRATIO + 1]);
+			led_write2dcol(i/2, fb[i], fb[i + 1]);
 		}
 
 		TMR0_ClearITFlag(TMR0_3_IT_CYC_END);
