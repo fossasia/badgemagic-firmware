@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "fb.h"
+#include "bmlist.h"
 
 typedef struct {
 	uint8_t header[6];
@@ -34,9 +34,9 @@ uint32_t data_flatSave(uint8_t *data, uint32_t len);
 uint16_t data_flash2newmem(uint8_t **chunk, uint32_t n);
 
 void chunk2buffer(uint8_t *chunk, uint16_t size, uint16_t *buf);
-void chunk2fb(uint8_t *chunk, uint16_t size, fb_t *fb);
+void chunk2bm(uint8_t *chunk, uint16_t size, bm_t *bm);
 
-fb_t *chunk2newfb(uint8_t *chunk, uint16_t size);
-fb_t *flash2newfb(uint32_t n);
+bm_t *chunk2newbm(uint8_t *chunk, uint16_t size);
+bm_t *flash2newbm(uint32_t n);
 
 #endif /* __DATA_H__ */

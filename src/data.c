@@ -41,16 +41,16 @@ uint16_t data_flash2newmem(uint8_t **chunk, uint32_t n)
 	return size;
 }
 
-static void __chunk2buffer(uint16_t *fb, uint8_t *chunk, int col) 
+static void __chunk2buffer(uint16_t *bm, uint8_t *chunk, int col) 
 {
-	uint16_t tmpfb[8] = {0};
+	uint16_t tmpbm[8] = {0};
 	for (int i=0; i<8; i++) {
 		for (int j=0; j<11; j++) {
-			tmpfb[i] |= ((chunk[j] >> (7-i)) & 0x01) << j;
+			tmpbm[i] |= ((chunk[j] >> (7-i)) & 0x01) << j;
 		}
 	}
 	for (int i=0; i<8; i++) {
-		fb[col+i] = tmpfb[i];
+		bm[col+i] = tmpbm[i];
 	}
 }
 
@@ -61,24 +61,24 @@ void chunk2buffer(uint8_t *chunk, uint16_t size, uint16_t *buf)
 	}
 }
 
-void chunk2fb(uint8_t *chunk, uint16_t size, fb_t *fb)
+void chunk2bm(uint8_t *chunk, uint16_t size, bm_t *bm)
 {
-	chunk2buffer(chunk, size, fb->buf);
+	chunk2buffer(chunk, size, bm->buf);
 }
 
-fb_t *chunk2newfb(uint8_t *chunk, uint16_t size)
+bm_t *chunk2newbm(uint8_t *chunk, uint16_t size)
 {
-	fb_t *fb = fb_new((size*8)/11);
-	chunk2fb(chunk, size, fb);
-	return fb;
+	bm_t *bm = bm_new((size*8)/11);
+	chunk2bm(chunk, size, bm);
+	return bm;
 }
 
-fb_t *flash2newfb(uint32_t n)
+bm_t *flash2newbm(uint32_t n)
 {
 	uint8_t *buf;
 	uint16_t size = data_flash2newmem(&buf, n);
 	if (size == 0)
 		return NULL;
-	return chunk2newfb(buf, size);
+	return chunk2newbm(buf, size);
 	free(buf);
 }
