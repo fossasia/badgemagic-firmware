@@ -45,8 +45,8 @@ The "mode" bytes are a combination of two 4 bit values. The high nibble describe
 | 0x02 | scroll up         |
 | 0x03 | scroll down       |
 | 0x04 | fixed             |
-| 0x05 | "snowflake"       |
-| 0x06 | "picture"         |
-| 0x07 | "animation"       |
+| 0x05 | "animation"       |
+| 0x06 | "snowflake"       |
+| 0x07 | "picture"         |
 | 0x08 | "laser"           |
 
