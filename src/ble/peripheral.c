@@ -198,16 +198,26 @@ static uint16 peripheral_task(uint8 task_id, uint16 events)
 	return 0;
 }
 
+void ble_enable_advertise()
+{
+	uint8 e = TRUE;
+	GAPRole_SetParameter(GAPROLE_ADVERT_ENABLED, sizeof(uint8), &e);
+}
+
+void ble_disable_advertise()
+{
+	uint8 e = FALSE;
+	GAPRole_SetParameter(GAPROLE_ADVERT_ENABLED, sizeof(uint8), &e);
+}
+
 static void gap_init()
 {
 	GAPRole_PeripheralInit();
 
-	static uint8  initial_advertising_enable = TRUE;
 	static uint16 desired_min_interval = 6;
 	static uint16 desired_max_interval = 500;
 
 	// Set the GAP Role Parameters
-	GAPRole_SetParameter(GAPROLE_ADVERT_ENABLED, sizeof(uint8), &initial_advertising_enable);
 	GAPRole_SetParameter(GAPROLE_SCAN_RSP_DATA, sizeof(scanRspData), scanRspData);
 	GAPRole_SetParameter(GAPROLE_ADVERT_DATA, sizeof(advertData), advertData);
 	GAPRole_SetParameter(GAPROLE_MIN_CONN_INTERVAL, sizeof(uint16), &desired_min_interval);

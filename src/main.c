@@ -1,5 +1,6 @@
 #include "CH58x_common.h"
 #include "CH58x_sys.h"
+#include "CH58xBLE_LIB.h"
 
 #include "leddrv.h"
 #include "button.h"
@@ -29,7 +30,24 @@ enum MODES {
 	POWER_OFF,
 	MODES_COUNT,
 };
+
 #define BRIGHTNESS_LEVELS   (4)
+
+#define ANI_BASE_SPEED_T      (200000) // uS
+#define ANI_MARQUE_SPEED_T    (100000) // uS
+#define ANI_FLASH_SPEED_T     (500000) // uS
+#define SCAN_BOOTLD_BTN_SPEED_T         (200000) // uS
+#define ANI_SPEED_STRATEGY(speed_level) \
+				(ANI_BASE_SPEED_T - ((speed_level) \
+				* ANI_BASE_SPEED_T / 8))
+
+#define ANI_NEXT_STEP       (1 << 0)
+#define ANI_MARQUE          (1 << 1)
+#define ANI_FLASH           (1 << 2)
+#define SCAN_BOOTLD_BTN     (1 << 3)
+#define BLE_NEXT_STEP       (1 << 4)
+
+static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
 volatile uint16_t fb[LED_COLS] = {0};
 volatile int mode, brightness = 0;
@@ -90,12 +108,98 @@ void poweroff()
 	LowPower_Shutdown(0);
 }
 
-void ble_start()
+static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
+{
+	static int marque_step, flash_step;
+
+	if(events & SYS_EVENT_MSG) {
+		uint8 *pMsg = tmos_msg_receive(common_taskid);
+		if(pMsg != NULL)
+		{
+			tmos_msg_deallocate(pMsg);
+		}
+		return (events ^ SYS_EVENT_MSG);
+	}
+
+	if(events & ANI_NEXT_STEP) {
+
+		static void (*animations[])(bm_t *bm, uint16_t *fb) = {
+			ani_scroll_left,
+			ani_scroll_right,
+			ani_scroll_up,
+			ani_scroll_down,
+			ani_fixed,
+			ani_animation,
+			ani_snowflake,
+			ani_picture,
+			ani_laser
+		};
+
+		bm_t *bm = bmlist_current();
+		if (animations[LEGACY_GET_ANIMATION(bm->modes)])
+			animations[LEGACY_GET_ANIMATION(bm->modes)](bm, fb);
+
+		if (bm->is_flash) {
+			ani_flash(bm, fb, flash_step);
+		}
+		if (bm->is_marquee) {
+			ani_marque(bm, fb, marque_step);
+		}
+
+		uint32_t t = ANI_SPEED_STRATEGY(LEGACY_GET_SPEED(bm->modes));
+		tmos_start_task(common_taskid, ANI_NEXT_STEP, t / 625);
+
+		return events ^ ANI_NEXT_STEP;
+	}
+
+	if (events & ANI_MARQUE) {
+		bm_t *bm = bmlist_current();
+		marque_step++;
+		if (bm->is_marquee) {
+			ani_marque(bm, fb, marque_step);
+		}
+
+		return events ^ ANI_MARQUE;
+	}
+
+	if (events & SCAN_BOOTLD_BTN) {
+		static uint32_t hold;
+		hold = isPressed(KEY2) ? hold + 1 : 0;
+		if (hold > 10) {
+			reset_jump();
+		}
+
+		return events ^ SCAN_BOOTLD_BTN;
+	}
+
+	if (events & ANI_FLASH) {
+		bm_t *bm = bmlist_current();
+		flash_step++;
+
+		if (bm->is_flash) {
+			ani_flash(bm, fb, flash_step);
+		}
+		/* After flash is applied, it will potentialy overwrite the marque
+		effect after it just wrote, results in flickering. So here apply the
+		marque effect again */
+		if (bm->is_marquee) {
+			ani_marque(bm, fb, marque_step);
+		}
+
+		return events ^ ANI_FLASH;
+	}
+
+	return 0;
+}
+
+void ble_setup()
 {
 	ble_hardwareInit();
 	tmos_clockInit();
 
 	peripheral_init();
+	ble_disable_advertise();
+
 	devInfo_registerService();
 	legacy_registerService();
 }
@@ -132,6 +236,26 @@ static void usb_receive(uint8_t *buf, uint16_t len)
 		data_flatSave(data, data_len);
 		SYS_ResetExecute();
 	}
+}
+
+void spawn_tasks()
+{
+	common_taskid = TMOS_ProcessEventRegister(common_tasks);
+
+	tmos_start_reload_task(common_taskid, ANI_MARQUE, ANI_MARQUE_SPEED_T / 625);
+	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
+	tmos_start_reload_task(common_taskid, SCAN_BOOTLD_BTN, 
+				SCAN_BOOTLD_BTN_SPEED_T / 625);
+	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
+}
+
+void ble_start()
+{
+	ble_enable_advertise();
+
+	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
+	tmos_stop_task(common_taskid, ANI_MARQUE);
+	tmos_stop_task(common_taskid, ANI_FLASH);
 }
 
 void handle_mode_transition()
@@ -201,44 +325,13 @@ int main()
 	btn_onOnePress(KEY2, bm_transition);
 	btn_onLongPress(KEY1, change_brightness);
 
-    while (1) {
-		uint32_t i = 0;
-		while (isPressed(KEY2)) {
-			i++;
-			if (i>10) {
-				reset_jump();
-			}
-			DelayMs(200);
-		}
+	ble_setup();
+
+	spawn_tasks();
+	while (1) {
 		handle_mode_transition();
-
-		bm_t *bm = bmlist_current();
-		if ((LEGACY_GET_ANIMATION(bm->modes)) == LEFT) {
-			ani_scroll_x(bm, fb, 0);
-		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == RIGHT) {
-			ani_scroll_x(bm, fb, 1);
-		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == UP) {
-			ani_scroll_up(bm, fb);
-		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == DOWN) {
-			ani_scroll_down(bm, fb);
-		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == SNOWFLAKE) {
-			ani_snowflake(bm, fb);
-		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == PICTURE) {
-			ani_picture(bm, fb);
-		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == ANIMATION) {
-			ani_animation(bm, fb);
-		} else if ((LEGACY_GET_ANIMATION(bm->modes)) == LASER) {
-			ani_laser(bm, fb);
-		}
-
-		if (bm->is_flash) {
-			ani_flash_toggle(bm, fb);
-		}
-		if (bm->is_marquee) {
-			ani_marque(bm, fb);
-		}
-		DelayMs(300);
-    }
+		TMOS_SystemProcess();
+	}
 }
 
 __INTERRUPT

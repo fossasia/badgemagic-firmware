@@ -4,6 +4,9 @@
 #include "leddrv.h"
 #include "bmlist.h"
 
+#define ANI_ANIMATION_STEPS     (5) // steps
+#define ANI_FIXED_STEPS         (LED_COLS) // steps
+
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #define ALIGN(x, range) (((x % (range))>0)*(range) + (x / (range)) * (range))
@@ -349,14 +352,23 @@ void ani_snowflake(bm_t *bm, uint16_t *fb)
 
 void ani_animation(bm_t *bm, uint16_t *fb)
 {
+	int frame_steps = ANI_ANIMATION_STEPS;
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
-	int c = mod(bm->anim_step++, frames);
-	still(bm, fb, c);
+	int frame = mod(bm->anim_step, frame_steps*frames)/frame_steps;
+
+	bm->anim_step++;
+
+	still(bm, fb, frame);
 }
 
 void ani_fixed(bm_t *bm, uint16_t *fb)
 {
-	still(bm, fb, 0);
+	int frame_steps = ANI_FIXED_STEPS;
+	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
+	int frame = mod(bm->anim_step, frame_steps*frames)/frame_steps;
+
+	bm->anim_step++;
+	still(bm, fb, frame);
 }
 
 static void picture(bm_t *bm, uint16_t *fb, int step, int frame)
@@ -428,11 +440,9 @@ void ani_picture(bm_t *bm, uint16_t *fb)
 	picture(bm, fb, bm->anim_step, frame);
 }
 
-void ani_marque(bm_t *bm, uint16_t *fb)
+void ani_marque(bm_t *bm, uint16_t *fb, int step)
 {
 	int tpl = 0b000100010001;
-	static int step;
-	step++;
 
 	int i;
 	for (i = 0 ; i < LED_COLS - 1; i++) {
@@ -447,11 +457,8 @@ void ani_marque(bm_t *bm, uint16_t *fb)
 
 }
 
-void ani_flash_toggle(bm_t *bm, uint16_t *fb)
+void ani_flash(bm_t *bm, uint16_t *fb, int step)
 {
-	static int tog;
-	if (tog) {
+	if (!(step % 2))
 		fb_fill(fb, 0);
-	}
-	tog = !tog;
 }

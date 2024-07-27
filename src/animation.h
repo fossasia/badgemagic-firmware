@@ -28,7 +28,7 @@ void ani_snowflake(bm_t *bm, uint16_t *fb);
 void ani_animation(bm_t *bm, uint16_t *fb);
 void ani_picture(bm_t *bm, uint16_t *fb);
 
-void ani_marque(bm_t *bm, uint16_t *fb);
-void ani_flash_toggle(bm_t *bm, uint16_t *fb);
+void ani_marque(bm_t *bm, uint16_t *fb, int step);
+void ani_flash(bm_t *bm, uint16_t *fb, int step);
 
 #endif /* __ANIMATION_H__ */
