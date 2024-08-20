@@ -7,8 +7,8 @@ TARGET = badgemagic-ch582
 ######################################
 # building variables
 ######################################
-# debug build?
-DEBUG = 1
+# Uncomment below line to enable debugging
+# DEBUG = 1
 # optimization for size
 OPT = -Os
 
@@ -37,7 +37,6 @@ CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_uart0.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_timer1.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_pwm.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usbhostClass.c \
-CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usbdev.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_adc.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usbhostBase.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_timer3.c \
@@ -58,7 +57,13 @@ src/ble/profile/devinfo.c \
 src/ble/setup.c \
 src/ble/peripheral.c \
 src/data.c \
-
+src/usb/utils.c \
+src/usb/setup.c \
+src/usb/ctrl.c \
+src/usb/debug.c \
+src/usb/dev.c \
+src/usb/composite/hiddev.c \
+src/usb/composite/cdc-serial.c \
 
 # ASM sources
 ASM_SOURCES =  \
@@ -108,7 +113,7 @@ ASFLAGS = $(MCU) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 CFLAGS = $(MCU) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
 ifeq ($(DEBUG), 1)
-CFLAGS += -g -gdwarf-2
+CFLAGS += -g -gdwarf-2 -DDEBUG=$(DEBUG)
 endif
 
 

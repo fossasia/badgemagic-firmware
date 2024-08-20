@@ -84,7 +84,6 @@
 #include "CH58x_sys.h"
 #include "CH58x_timer.h"
 #include "CH58x_spi.h"
-#include "CH58x_usbdev.h"
 #include "CH58x_usbhost.h"
 #include "ISP583.h"
 
