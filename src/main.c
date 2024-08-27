@@ -189,6 +189,12 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		return events ^ ANI_FLASH;
 	}
 
+	if (events & BLE_NEXT_STEP) {
+		ani_xbm_next_frame(&bluetooth, fb, 10, 0);
+
+		return events ^ BLE_NEXT_STEP;
+	}
+
 	return 0;
 }
 
@@ -256,6 +262,9 @@ void ble_start()
 	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
+	memset(fb, 0, sizeof(fb));
+
+	tmos_start_reload_task(common_taskid, BLE_NEXT_STEP, 500000 / 625);
 }
 
 void handle_mode_transition()
