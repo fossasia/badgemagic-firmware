@@ -1,9 +1,13 @@
 #include "CH58x_common.h"
 #include "CH58x_sys.h"
+#include "CH58xBLE_LIB.h"
 
 #include "leddrv.h"
 #include "button.h"
-#include "fb.h"
+#include "bmlist.h"
+#include "resource.h"
+#include "animation.h"
+
 #include "power.h"
 #include "data.h"
 
@@ -12,8 +16,6 @@
 
 #include "usb/usb.h"
 
-#define FB_WIDTH 	(LED_COLS * 4)
-#define SCROLL_IRATIO   (16)
 #define SCAN_F          (2000)
 #define SCAN_T          (FREQ_SYS / SCAN_F)
 
@@ -28,9 +30,27 @@ enum MODES {
 	POWER_OFF,
 	MODES_COUNT,
 };
+
 #define BRIGHTNESS_LEVELS   (4)
 
-volatile int mode, brightness;
+#define ANI_BASE_SPEED_T      (200000) // uS
+#define ANI_MARQUE_SPEED_T    (100000) // uS
+#define ANI_FLASH_SPEED_T     (500000) // uS
+#define SCAN_BOOTLD_BTN_SPEED_T         (200000) // uS
+#define ANI_SPEED_STRATEGY(speed_level) \
+				(ANI_BASE_SPEED_T - ((speed_level) \
+				* ANI_BASE_SPEED_T / 8))
+
+#define ANI_NEXT_STEP       (1 << 0)
+#define ANI_MARQUE          (1 << 1)
+#define ANI_FLASH           (1 << 2)
+#define SCAN_BOOTLD_BTN     (1 << 3)
+#define BLE_NEXT_STEP       (1 << 4)
+
+static tmosTaskID common_taskid = INVALID_TASK_ID ;
+
+volatile uint16_t fb[LED_COLS] = {0};
+volatile int mode, brightness = 0;
 
 __HIGH_CODE
 static void change_brightness()
@@ -46,26 +66,30 @@ static void change_mode()
 }
 
 __HIGH_CODE
-static void fb_transition()
+static void bm_transition()
 {
-	fblist_gonext();
+	bmlist_gonext();
+}
+void play_splash(xbm_t *xbm, int col, int row)
+{
+	while (ani_xbm_scrollup_pad(xbm, 11, 11, 11, fb, 0, 0) != 0) {
+		DelayMs(30);
+	}
 }
 
-void draw_testfb()
+void load_bmlist()
 {
-
-	fb_t *curr_fb = fblist_currentfb();
+	bm_t *curr_bm = bmlist_current();
 
 	for (int i=0; i<8; i++) {
-		fb_t *fb = flash2newfb(i);
-		if (fb == NULL)
+		bm_t *bm = flash2newbm(i);
+		if (bm == NULL)
 			continue;
-		fb->modes = LEFT;
-		fblist_append(fb);
+		bmlist_append(bm);
 	}
-	fblist_gonext();
+	bmlist_gonext();
 
-	fblist_drop(curr_fb);
+	bmlist_drop(curr_bm);
 }
 
 void poweroff()
@@ -84,12 +108,98 @@ void poweroff()
 	LowPower_Shutdown(0);
 }
 
-void ble_start()
+static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
+{
+	static int marque_step, flash_step;
+
+	if(events & SYS_EVENT_MSG) {
+		uint8 *pMsg = tmos_msg_receive(common_taskid);
+		if(pMsg != NULL)
+		{
+			tmos_msg_deallocate(pMsg);
+		}
+		return (events ^ SYS_EVENT_MSG);
+	}
+
+	if(events & ANI_NEXT_STEP) {
+
+		static void (*animations[])(bm_t *bm, uint16_t *fb) = {
+			ani_scroll_left,
+			ani_scroll_right,
+			ani_scroll_up,
+			ani_scroll_down,
+			ani_fixed,
+			ani_animation,
+			ani_snowflake,
+			ani_picture,
+			ani_laser
+		};
+
+		bm_t *bm = bmlist_current();
+		if (animations[LEGACY_GET_ANIMATION(bm->modes)])
+			animations[LEGACY_GET_ANIMATION(bm->modes)](bm, fb);
+
+		if (bm->is_flash) {
+			ani_flash(bm, fb, flash_step);
+		}
+		if (bm->is_marquee) {
+			ani_marque(bm, fb, marque_step);
+		}
+
+		uint32_t t = ANI_SPEED_STRATEGY(LEGACY_GET_SPEED(bm->modes));
+		tmos_start_task(common_taskid, ANI_NEXT_STEP, t / 625);
+
+		return events ^ ANI_NEXT_STEP;
+	}
+
+	if (events & ANI_MARQUE) {
+		bm_t *bm = bmlist_current();
+		marque_step++;
+		if (bm->is_marquee) {
+			ani_marque(bm, fb, marque_step);
+		}
+
+		return events ^ ANI_MARQUE;
+	}
+
+	if (events & SCAN_BOOTLD_BTN) {
+		static uint32_t hold;
+		hold = isPressed(KEY2) ? hold + 1 : 0;
+		if (hold > 10) {
+			reset_jump();
+		}
+
+		return events ^ SCAN_BOOTLD_BTN;
+	}
+
+	if (events & ANI_FLASH) {
+		bm_t *bm = bmlist_current();
+		flash_step++;
+
+		if (bm->is_flash) {
+			ani_flash(bm, fb, flash_step);
+		}
+		/* After flash is applied, it will potentialy overwrite the marque
+		effect after it just wrote, results in flickering. So here apply the
+		marque effect again */
+		if (bm->is_marquee) {
+			ani_marque(bm, fb, marque_step);
+		}
+
+		return events ^ ANI_FLASH;
+	}
+
+	return 0;
+}
+
+void ble_setup()
 {
 	ble_hardwareInit();
 	tmos_clockInit();
 
 	peripheral_init();
+	ble_disable_advertise();
+
 	devInfo_registerService();
 	legacy_registerService();
 }
@@ -128,6 +238,26 @@ static void usb_receive(uint8_t *buf, uint16_t len)
 	}
 }
 
+void spawn_tasks()
+{
+	common_taskid = TMOS_ProcessEventRegister(common_tasks);
+
+	tmos_start_reload_task(common_taskid, ANI_MARQUE, ANI_MARQUE_SPEED_T / 625);
+	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
+	tmos_start_reload_task(common_taskid, SCAN_BOOTLD_BTN, 
+				SCAN_BOOTLD_BTN_SPEED_T / 625);
+	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
+}
+
+void ble_start()
+{
+	ble_enable_advertise();
+
+	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
+	tmos_stop_task(common_taskid, ANI_MARQUE);
+	tmos_stop_task(common_taskid, ANI_FLASH);
+}
+
 void handle_mode_transition()
 {
 	static int prev_mode;
@@ -136,10 +266,10 @@ void handle_mode_transition()
 	switch (mode)
 	{
 	case DOWNLOAD:
-		// Disable fb transition while in download mode
+		// Disable bitmap transition while in download mode
 		btn_onOnePress(KEY2, NULL);
 
-		// Take control of the current fb to display 
+		// Take control of the current bitmap to display 
 		// the Bluetooth animation
 		ble_start();
 		while (mode == DOWNLOAD) {
@@ -184,26 +314,24 @@ int main()
 	TMR0_ITCfg(ENABLE, TMR0_3_IT_CYC_END);
 	PFIC_EnableIRQ(TMR0_IRQn);
 
-	fblist_init(FB_WIDTH);
+	bmlist_init(LED_COLS * 4);
+	
+	play_splash(&splash, 0, 0);
 
-	draw_testfb();
+	load_bmlist();
 
 	btn_init();
 	btn_onOnePress(KEY1, change_mode);
-	btn_onOnePress(KEY2, fb_transition);
+	btn_onOnePress(KEY2, bm_transition);
 	btn_onLongPress(KEY1, change_brightness);
 
-    while (1) {
-		uint32_t i = 0;
-		while (isPressed(KEY2)) {
-			i++;
-			if (i>10) {
-				reset_jump();
-			}
-			DelayMs(200);
-		}
+	ble_setup();
+
+	spawn_tasks();
+	while (1) {
 		handle_mode_transition();
-    }
+		TMOS_SystemProcess();
+	}
 }
 
 __INTERRUPT
@@ -213,30 +341,16 @@ void TMR0_IRQHandler(void)
 	static int i;
 
 	if (TMR0_GetITFlag(TMR0_3_IT_CYC_END)) {
-
-		fb_t *fb = fblist_currentfb();
 		i += 1;
 		if (i >= LED_COLS) {
 			i = 0;
-			if ((fb->modes & 0x0f) == LEFT) {
-				fb->scroll++;
-				if (fb->scroll >= (fb->width-LED_COLS)*SCROLL_IRATIO) {
-					fb->scroll = 0;
-				}
-			}
 		}
 		
 		if (i % 2) {
 			if ((brightness + 1) % 2) 
 				leds_releaseall();
 		} else {
-			if (i + fb->scroll/SCROLL_IRATIO >= fb->width) {
-				leds_releaseall();
-				return;
-			}
-			led_write2dcol(i/2, 
-				fb->buf[i+ fb->scroll/SCROLL_IRATIO], 
-				fb->buf[i+ fb->scroll/SCROLL_IRATIO + 1]);
+			led_write2dcol(i/2, fb[i], fb[i + 1]);
 		}
 
 		TMR0_ClearITFlag(TMR0_3_IT_CYC_END);

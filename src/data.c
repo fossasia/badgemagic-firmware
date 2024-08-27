@@ -24,33 +24,47 @@ uint32_t data_flatSave(uint8_t *data, uint32_t len)
 	return EEPROM_WRITE(0, data, len);
 }
 
+data_legacy_t *data_get_header(int read_anyway)
+{
+	static data_legacy_t *cache;
+
+	if (cache == NULL) {
+		cache = malloc(sizeof(data_legacy_t));
+		read_anyway = 1;
+	}
+
+	if (read_anyway) {
+		EEPROM_READ(0, cache, LEGACY_HEADER_SIZE);
+	}
+	return cache;
+}
+
 uint16_t data_flash2newmem(uint8_t **chunk, uint32_t n)
 {
-	data_legacy_t header;
-	EEPROM_READ(0, &header, LEGACY_HEADER_SIZE);
+	data_legacy_t *header = data_get_header(0);
 
-	uint16_t size = bswap16(header.sizes[n]) * LED_ROWS;
+	uint16_t size = bswap16(header->sizes[n]) * LED_ROWS;
 	if (size == 0)
 		return 0;
 
 	uint16_t offs = LEGACY_HEADER_SIZE
-		+ bigendian16_sum(header.sizes, n) * LED_ROWS;
+		+ bigendian16_sum(header->sizes, n) * LED_ROWS;
 
 	*chunk = malloc(size);
 	EEPROM_READ(offs, *chunk, size);
 	return size;
 }
 
-static void __chunk2buffer(uint16_t *fb, uint8_t *chunk, int col) 
+static void __chunk2buffer(uint16_t *bm, uint8_t *chunk, int col) 
 {
-	uint16_t tmpfb[8] = {0};
+	uint16_t tmpbm[8] = {0};
 	for (int i=0; i<8; i++) {
 		for (int j=0; j<11; j++) {
-			tmpfb[i] |= ((chunk[j] >> (7-i)) & 0x01) << j;
+			tmpbm[i] |= ((chunk[j] >> (7-i)) & 0x01) << j;
 		}
 	}
 	for (int i=0; i<8; i++) {
-		fb[col+i] = tmpfb[i];
+		bm[col+i] = tmpbm[i];
 	}
 }
 
@@ -61,24 +75,32 @@ void chunk2buffer(uint8_t *chunk, uint16_t size, uint16_t *buf)
 	}
 }
 
-void chunk2fb(uint8_t *chunk, uint16_t size, fb_t *fb)
+void chunk2bm(uint8_t *chunk, uint16_t size, bm_t *bm)
 {
-	chunk2buffer(chunk, size, fb->buf);
+	chunk2buffer(chunk, size, bm->buf);
 }
 
-fb_t *chunk2newfb(uint8_t *chunk, uint16_t size)
+bm_t *chunk2newbm(uint8_t *chunk, uint16_t size)
 {
-	fb_t *fb = fb_new((size*8)/11);
-	chunk2fb(chunk, size, fb);
-	return fb;
+	bm_t *bm = bm_new((size*8)/11);
+	chunk2bm(chunk, size, bm);
+	return bm;
 }
 
-fb_t *flash2newfb(uint32_t n)
+bm_t *flash2newbm(uint32_t n)
 {
 	uint8_t *buf;
 	uint16_t size = data_flash2newmem(&buf, n);
 	if (size == 0)
 		return NULL;
-	return chunk2newfb(buf, size);
+
+	bm_t *bm = chunk2newbm(buf, size);
+	data_legacy_t *header = data_get_header(0);
+
+	bm->is_flash = (header->flash & (1 << n)) != 0;
+	bm->is_marquee = (header->marquee & (1 << n)) != 0;
+	bm->modes = header->modes[n];
+
 	free(buf);
+	return bm;
 }

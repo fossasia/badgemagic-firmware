@@ -51,7 +51,7 @@ CH5xx_ble_firmware_library/RVMSIS/core_riscv.c \
 src/main.c \
 src/leddrv.c \
 src/button.c \
-src/fb.c \
+src/bmlist.c \
 src/ble/profile/legacy.c \
 src/ble/profile/devinfo.c \
 src/ble/setup.c \
@@ -64,6 +64,10 @@ src/usb/debug.c \
 src/usb/dev.c \
 src/usb/composite/hiddev.c \
 src/usb/composite/cdc-serial.c \
+src/xbm.c \
+src/resource.c \
+src/animation.c \
+
 
 # ASM sources
 ASM_SOURCES =  \
