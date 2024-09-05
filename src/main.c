@@ -79,6 +79,9 @@ void play_splash(xbm_t *xbm, int col, int row)
 
 void load_bmlist()
 {
+	if (data_get_header(0) == 0) // There is no bitmap stored in flash
+		return; // skip
+
 	bm_t *curr_bm = bmlist_current();
 
 	for (int i=0; i<8; i++) {
