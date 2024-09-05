@@ -43,6 +43,9 @@ uint16_t data_flash2newmem(uint8_t **chunk, uint32_t n)
 {
 	data_legacy_t *header = data_get_header(0);
 
+	if (memcmp(header->header, "wang", 5))
+		return 0;
+
 	uint16_t size = bswap16(header->sizes[n]) * LED_ROWS;
 	if (size == 0)
 		return 0;
