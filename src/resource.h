@@ -6,5 +6,7 @@
 
 extern xbm_t bluetooth;
 extern xbm_t splash;
+extern xbm_t bat_xbm;
+extern xbm_t batwarn_xbm;
 
 #endif /* __RES_H__ */
