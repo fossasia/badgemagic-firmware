@@ -50,7 +50,7 @@ enum MODES {
 static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
 volatile uint16_t fb[LED_COLS] = {0};
-volatile int mode, brightness = 0;
+volatile int mode, is_play_sequentially = 1, brightness = 0;
 
 __HIGH_CODE
 static void change_brightness()
@@ -68,7 +68,17 @@ static void change_mode()
 __HIGH_CODE
 static void bm_transition()
 {
+	if (is_play_sequentially) {
+		is_play_sequentially = 0;
+		bmlist_gohead();
+		return;
+	}
+
 	bmlist_gonext();
+	if (bmlist_current() == bmlist_head()) {
+		is_play_sequentially = 1;
+		return;
+	}
 }
 void play_splash(xbm_t *xbm, int col, int row)
 {
@@ -126,7 +136,7 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 
 	if(events & ANI_NEXT_STEP) {
 
-		static void (*animations[])(bm_t *bm, uint16_t *fb) = {
+		static int (*animations[])(bm_t *bm, uint16_t *fb) = {
 			ani_scroll_left,
 			ani_scroll_right,
 			ani_scroll_up,
@@ -140,7 +150,10 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 
 		bm_t *bm = bmlist_current();
 		if (animations[LEGACY_GET_ANIMATION(bm->modes)])
-			animations[LEGACY_GET_ANIMATION(bm->modes)](bm, fb);
+			if (animations[LEGACY_GET_ANIMATION(bm->modes)](bm, fb) == 0
+				&& is_play_sequentially) {
+				bmlist_gonext();
+			}
 
 		if (bm->is_flash) {
 			ani_flash(bm, fb, flash_step);

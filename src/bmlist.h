@@ -36,6 +36,8 @@ bm_t *bmlist_goprev() ;
 bm_t *bmlist_gohead();
 bm_t *bmlist_current();
 
+bm_t *bmlist_head();
+
 void bmlist_init(uint16_t first_bm_width);
 
 #endif /* __BMLIST_H__ */

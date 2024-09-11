@@ -45,6 +45,11 @@ bm_t *bmlist_gohead()
 	return current;
 }
 
+bm_t *bmlist_head()
+{
+	return head;
+}
+
 bm_t *bmlist_current()
 {
 	return current;
@@ -59,6 +64,10 @@ static void list_del(bm_t *prev, bm_t *next)
 bm_t *bmlist_drop(bm_t *bm)
 {
 	list_del(bm->prev, bm->next);
+	if (bm == head)
+		head = bm->next;
+	if (bm == tail)
+		tail = bm->prev;
 	return bm->next;
 }
 
