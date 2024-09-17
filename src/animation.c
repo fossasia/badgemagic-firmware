@@ -141,9 +141,11 @@ int ani_xbm_scrollup_inf(xbm_t *xbm, uint16_t *fb,
 	return ++i;
 }
 
-void ani_scroll_x(bm_t *bm, uint16_t *fb, int dir)
+int ani_scroll_x(bm_t *bm, uint16_t *fb, int dir)
 {
-	int x = mod(bm->anim_step, bm->width + LED_COLS) - LED_COLS;
+	int total_steps = bm->width + LED_COLS;
+	int step = mod(bm->anim_step, total_steps);
+	int x = step - LED_COLS;
 	bm->anim_step += (dir) ? -1 : 1;
 
 	for (int i = 0; i < LED_COLS; i++) {
@@ -153,16 +155,17 @@ void ani_scroll_x(bm_t *bm, uint16_t *fb, int dir)
 		}
 		fb[i] = (i + x) >= 0 ? bm->buf[i + x] : 0;
 	}
+	return mod(bm->anim_step, total_steps); // How many steps left until restart again
 }
 
-void ani_scroll_left(bm_t *bm, uint16_t *fb)
+int ani_scroll_left(bm_t *bm, uint16_t *fb)
 {
-	ani_scroll_x(bm, fb, 0);
+	return ani_scroll_x(bm, fb, 0);
 }
 
-void ani_scroll_right(bm_t *bm, uint16_t *fb)
+int ani_scroll_right(bm_t *bm, uint16_t *fb)
 {
-	ani_scroll_x(bm, fb, 1);
+	return ani_scroll_x(bm, fb, 1);
 }
 
 void ani_shift_y(bm_t *bm, uint16_t *fb, int y, int frame)
@@ -184,7 +187,8 @@ void ani_scroll_y(bm_t *bm, uint16_t *fb)
 {
 	int frame_steps = LED_ROWS * 3; // in-still-out
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
-	int frame = mod(bm->anim_step, frame_steps*frames)/frame_steps;
+	int total_steps = frame_steps * frames;
+	int frame = mod(bm->anim_step, total_steps)/frame_steps;
 
 	int y = mod(bm->anim_step, frame_steps);
 
@@ -197,16 +201,28 @@ void ani_scroll_y(bm_t *bm, uint16_t *fb)
 	}
 }
 
-void ani_scroll_up(bm_t *bm, uint16_t *fb)
+int ani_scroll_up(bm_t *bm, uint16_t *fb)
 {
 	ani_scroll_y(bm, fb);
+
+	int frame_steps = LED_ROWS * 3; // in-still-out
+	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
+	int total_steps = frame_steps * frames;
 	bm->anim_step++;
+
+	return mod(bm->anim_step, total_steps);
 }
 
-void ani_scroll_down(bm_t *bm, uint16_t *fb)
+int ani_scroll_down(bm_t *bm, uint16_t *fb)
 {
 	ani_scroll_y(bm, fb);
+
+	int frame_steps = LED_ROWS * 3; // in-still-out
+	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
+	int total_steps = frame_steps * frames;
 	bm->anim_step--;
+	
+	return mod(bm->anim_step, total_steps);
 }
 
 static void laser_in(bm_t *bm, uint16_t *fb, int step, int frame)
@@ -258,11 +274,12 @@ static void still(bm_t *bm, uint16_t *fb, int frame)
 	}
 }
 
-void ani_laser(bm_t *bm, uint16_t *fb)
+int ani_laser(bm_t *bm, uint16_t *fb)
 {
 	int frame_steps = LED_COLS * 3; // in-still-out
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
-	int frame = mod(bm->anim_step, frame_steps*frames)/frame_steps;
+	int total_steps = frame_steps * frames;
+	int frame = mod(bm->anim_step, total_steps)/frame_steps;
 
 	int c = mod(bm->anim_step, frame_steps);
 	bm->anim_step++;
@@ -273,6 +290,8 @@ void ani_laser(bm_t *bm, uint16_t *fb)
 		still(bm, fb, frame);
 	else
 		laser_out(bm, fb, c - LED_COLS * 2, frame);
+
+	return mod(bm->anim_step, total_steps);
 }
 
 static uint32_t b16dialate(uint16_t w, int from, int to)
@@ -332,11 +351,12 @@ static void snowflake_out(bm_t *bm, uint16_t *fb, int step, int frame)
 	}
 }
 
-void ani_snowflake(bm_t *bm, uint16_t *fb)
+int ani_snowflake(bm_t *bm, uint16_t *fb)
 {
 	int frame_steps = LED_ROWS * 6; // in-still-out, each costs 2xLED_ROWS step
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
-	int frame = mod(bm->anim_step, frame_steps*frames)/frame_steps;
+	int total_steps = frame_steps * frames;
+	int frame = mod(bm->anim_step, total_steps)/frame_steps;
 
 	int c = mod(bm->anim_step, frame_steps);
 	bm->anim_step++;
@@ -348,27 +368,35 @@ void ani_snowflake(bm_t *bm, uint16_t *fb)
 	} else {
 		snowflake_out(bm, fb, -(c - LED_ROWS * 4), frame);
 	}
+
+	return mod(bm->anim_step, total_steps);
 }
 
-void ani_animation(bm_t *bm, uint16_t *fb)
+int ani_animation(bm_t *bm, uint16_t *fb)
 {
 	int frame_steps = ANI_ANIMATION_STEPS;
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
-	int frame = mod(bm->anim_step, frame_steps*frames)/frame_steps;
+	int total_steps = frame_steps * frames;
+	int frame = mod(bm->anim_step, total_steps)/frame_steps;
 
 	bm->anim_step++;
 
 	still(bm, fb, frame);
+
+	return mod(bm->anim_step, total_steps);
 }
 
-void ani_fixed(bm_t *bm, uint16_t *fb)
+int ani_fixed(bm_t *bm, uint16_t *fb)
 {
 	int frame_steps = ANI_FIXED_STEPS;
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
-	int frame = mod(bm->anim_step, frame_steps*frames)/frame_steps;
+	int total_steps = frame_steps * frames;
+	int frame = mod(bm->anim_step, total_steps)/frame_steps;
 
 	bm->anim_step++;
 	still(bm, fb, frame);
+
+	return mod(bm->anim_step, total_steps);
 }
 
 static void picture(bm_t *bm, uint16_t *fb, int step, int frame)
@@ -420,11 +448,12 @@ static void picture_out(bm_t *bm, uint16_t *fb, int step)
 	fb[hc - i] = -1;
 }
 
-void ani_picture(bm_t *bm, uint16_t *fb)
+int ani_picture(bm_t *bm, uint16_t *fb)
 {
 	int last_steps = LED_COLS / 2;
 	int frame_steps = LED_COLS;
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS + 1;
+	int total_steps = frame_steps * frames - last_steps;
 	int frame = mod(bm->anim_step, frame_steps*frames)/frame_steps;
 	bm->anim_step++;
 
@@ -434,10 +463,13 @@ void ani_picture(bm_t *bm, uint16_t *fb)
 		/* picture_out() costs only half LED_COLS */
 		if (mod(bm->anim_step, LED_COLS) >= last_steps) {
 			bm->anim_step = 0;
+			return 0;
 		}
-		return;
+		return mod(bm->anim_step, total_steps);
 	}
 	picture(bm, fb, bm->anim_step, frame);
+
+	return mod(bm->anim_step, total_steps);
 }
 
 void ani_marque(bm_t *bm, uint16_t *fb, int step)
