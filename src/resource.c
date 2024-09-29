@@ -4,6 +4,7 @@
 #include "res/foss-asia-2.xbm"
 #include "res/bat-icon.xbm"
 #include "res/bat-warn-icon.xbm"
+#include "res/fossasia-badgemagic-ani.xbm"
 
 xbm_t bluetooth = {
 	.bits = bluetooth_bits, 
@@ -30,5 +31,12 @@ xbm_t batwarn_xbm = {
 	.bits = bat_warn_icon_bits, 
 	.w = bat_warn_icon_width, 
 	.h = bat_warn_icon_height,
+	.fh = 11
+};
+
+xbm_t fabm_xbm = {
+	.bits = fossasia_badgemagic_ani_bits, 
+	.w = fossasia_badgemagic_ani_width, 
+	.h = fossasia_badgemagic_ani_height,
 	.fh = 11
 };

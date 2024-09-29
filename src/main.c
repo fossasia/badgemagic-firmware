@@ -7,6 +7,7 @@
 #include "bmlist.h"
 #include "resource.h"
 #include "animation.h"
+#include "font.h"
 
 #include "power.h"
 #include "data.h"
@@ -25,7 +26,8 @@
 					(v) = (min)
 
 enum MODES {
-	NORMAL = 0,
+	BOOT = 0,
+	NORMAL,
 	DOWNLOAD,
 	POWER_OFF,
 	MODES_COUNT,
@@ -383,16 +385,38 @@ static int bat_raw2percent(int r)
 	return 100;
 }
 
+static void fb_putchar(char c, int col, int row)
+{
+	for (int i=0; i < 6; i++) {
+		if (col + i >= LED_COLS) break;
+		fb[col + i] = (fb[col + i] & ~(0x7f << row)) 
+				| (font5x7[c - ' '][i] << row);
+	}
+}
+
+static void fb_puts(char *s, int len, int col, int row)
+{
+	while (*s && len--) {
+		fb_putchar(*s, col, row);
+		col += 6;
+		s++;
+	}
+}
+
 static void disp_charging()
 {
 	int blink = 0;
-	while (1) {
+	while (mode == BOOT) {
 		int percent = bat_raw2percent(read_batt_raw());
 
 		if (is_charging()) {
-			disp_bat_stt(blink ? percent : 0, 7, 2);
+			disp_bat_stt(blink ? percent : 0, 2, 2);
+			if (ani_xbm_next_frame(&fabm_xbm, fb, 16, 0) == 0) {
+				fb_puts("v0.1", 4, 16, 2); // TODO: get version from git tag
+				fb_putchar(' ', 40, 2);
+			}
 			blink = !blink;
-			DelayMs(300);
+			DelayMs(500);
 		} else {
 			disp_bat_stt(percent, 7, 2);
 			DelayMs(500);
@@ -419,20 +443,22 @@ int main()
 
 	bmlist_init(LED_COLS * 4);
 
+	btn_init();
+	btn_onOnePress(KEY1, change_mode);
+	btn_onOnePress(KEY2, bm_transition);
+	btn_onLongPress(KEY1, change_brightness);
+
 	disp_charging();
 	
 	play_splash(&splash, 0, 0);
 
 	load_bmlist();
 
-	btn_init();
-	btn_onOnePress(KEY1, change_mode);
-	btn_onOnePress(KEY2, bm_transition);
-	btn_onLongPress(KEY1, change_brightness);
-
 	ble_setup();
 
 	spawn_tasks();
+
+	mode = NORMAL;
 	while (1) {
 		handle_mode_transition();
 		TMOS_SystemProcess();

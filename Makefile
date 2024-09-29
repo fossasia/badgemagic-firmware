@@ -67,6 +67,7 @@ src/usb/composite/cdc-serial.c \
 src/xbm.c \
 src/resource.c \
 src/animation.c \
+src/font.c \
 
 
 # ASM sources
