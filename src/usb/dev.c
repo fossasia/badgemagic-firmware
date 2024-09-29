@@ -53,16 +53,30 @@ static uint16_t product_info[] = {
 	'M', 'a', 'g', 'i', 'c'
 };
 
-// TODO: auto update firmware version by CI here
 static uint16_t serial_number[] = {
-	47 * 2 | /* bLength */
+#ifdef USBC_VERSION
+	4 +
+#endif
+	(12 + sizeof(VERSION_ABBR) - 1) * 2 | /* bLength */
 	0x03 << 8, /* bDescriptorType */
 
 	/* bString */
-	'N', 'o', 't', ' ', 'y', 'e', 't', ' ',
-	'i', 'm', 'p', 'l', 'e', 'm', 'e', 'n', 't', 'e', 'd', '\n',
-	'P', 'R', 'E', 'S', 'S', ' ', 'A', 'L', 'T', '+', 'F', '4', ' ',
-	'T', 'O', ' ', 'C', 'O', 'N', 'T', 'I', 'N', 'U', 'E', '.'
+	'B', 'M', '1', '1', '4', '4', 
+#ifdef USBC_VERSION
+	'-', 'C',
+#endif
+	' ',
+	'f', 'w', ':',' ',
+	/* vX.Y */
+	VERSION[0],
+	VERSION[1],
+	VERSION[2],
+	VERSION[3],
+	VERSION[4],
+	VERSION[5],
+	VERSION[6],
+	VERSION[7],
+	VERSION[8]
 };
 
 static void desc_dev(USB_SETUP_REQ *request)
