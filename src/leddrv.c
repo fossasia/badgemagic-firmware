@@ -88,7 +88,11 @@ static const pinctrl_t led_pins[LED_PINCOUNT] = {
 	PINCTRL(B, 4),  // Q
 	PINCTRL(B, 2),  // R
 	PINCTRL(B, 1),  // S
+#ifdef USBC_VERSION
+	PINCTRL(B, 6), // T
+#else
 	PINCTRL(B, 23), // T
+#endif
 	PINCTRL(B, 21), // U
 	PINCTRL(B, 20), // V
 	PINCTRL(B, 19), // W

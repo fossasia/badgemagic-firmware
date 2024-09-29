@@ -9,6 +9,8 @@ TARGET = badgemagic-ch582
 ######################################
 # Uncomment below line to enable debugging
 # DEBUG = 1
+# Uncomment below to build for USB-C version
+# USBC_VERSION = 1
 # optimization for size
 OPT = -Os
 
@@ -118,6 +120,10 @@ CFLAGS = $(MCU) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2 -DDEBUG=$(DEBUG)
+endif
+
+ifeq ($(USBC_VERSION), 1)
+CFLAGS += -DUSBC_VERSION=$(USBC_VERSION)
 endif
 
 
