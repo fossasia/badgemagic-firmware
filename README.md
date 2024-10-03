@@ -14,7 +14,7 @@ MCU type has changed depending on manufacturer batches.
 
 * ARM M0 variant based on [MM32L062PF](http://www.mindmotion.com.cn/en/download.aspx?cid=2564)
 * ARM M0 variant based on [MM32W062](http://www.mindmotion.com.cn/en/download.aspx?cid=2564)
-* RISC-V variant based on [CH582](https://www.wch.cn/products/CH583.html)
+* RISC-V variant based on [CH582M](https://www.wch.cn/products/CH583.html)
 
 See specific pages regarding each version of the hardware below
 
