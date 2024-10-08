@@ -425,7 +425,7 @@ static void disp_charging()
 		if (is_charging()) {
 			disp_bat_stt(blink ? percent : 0, 2, 2);
 			if (ani_xbm_next_frame(&fabm_xbm, fb, 16, 0) == 0) {
-				fb_puts("v0.1", 4, 16, 2); // TODO: get version from git tag
+				fb_puts(VERSION_ABBR, sizeof(VERSION_ABBR), 16, 2);
 				fb_putchar(' ', 40, 2);
 			}
 			blink = !blink;
