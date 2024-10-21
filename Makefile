@@ -16,6 +16,15 @@ OPT = -Os
 
 
 #######################################
+# Get current version
+#######################################
+VERSION = $(shell git describe --tags --dirty)
+VERSION_ABBR = $(shell git describe --abbrev=0 --tags 2>/dev/null || echo "unknown")
+ifeq ($(VERSION_ABBR),unknown)
+	$(warning Unable to determine version from git tags)
+endif
+
+#######################################
 # paths
 #######################################
 # Build path
@@ -127,6 +136,7 @@ ifeq ($(USBC_VERSION), 1)
 CFLAGS += -DUSBC_VERSION=$(USBC_VERSION)
 endif
 
+CFLAGS += -DVERSION='"$(VERSION)"' -DVERSION_ABBR='"$(VERSION_ABBR)"'
 
 # Generate dependency information
 CFLAGS += -MMD -MP
