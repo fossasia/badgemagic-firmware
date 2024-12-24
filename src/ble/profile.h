@@ -3,5 +3,6 @@
 
 int legacy_registerService();
 int devInfo_registerService();
+int batt_registerService();
 
 #endif /* __BLE_UART_SERVICE_H__ */

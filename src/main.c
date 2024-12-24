@@ -49,8 +49,6 @@ enum MODES {
 #define SCAN_BOOTLD_BTN     (1 << 3)
 #define BLE_NEXT_STEP       (1 << 4)
 
-#define CHARGE_STT_PIN      GPIO_Pin_0 // PA0
-
 static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
 volatile uint16_t fb[LED_COLS] = {0};
@@ -106,24 +104,6 @@ void load_bmlist()
 	bmlist_gonext();
 
 	bmlist_drop(curr_bm);
-}
-
-void poweroff()
-{
-	// Stop wasting energy
-	GPIOA_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_Floating);
-	GPIOB_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_Floating);
-
-	// Configure wake-up
-	GPIOA_ModeCfg(KEY1_PIN, GPIO_ModeIN_PD);
-	GPIOA_ITModeCfg(KEY1_PIN, GPIO_ITMode_RiseEdge);
-	GPIOA_ModeCfg(CHARGE_STT_PIN, GPIO_ModeIN_PU);
-	GPIOA_ITModeCfg(CHARGE_STT_PIN, GPIO_ITMode_FallEdge);
-	PFIC_EnableIRQ(GPIO_A_IRQn);
-	PWR_PeriphWakeUpCfg(ENABLE, RB_SLP_GPIO_WAKE, Long_Delay);
-
-	/* Good bye */
-	LowPower_Shutdown(0);
 }
 
 static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
@@ -229,6 +209,7 @@ void ble_setup()
 
 	devInfo_registerService();
 	legacy_registerService();
+	batt_registerService();
 }
 
 static void usb_receive(uint8_t *buf, uint16_t len)
@@ -328,37 +309,6 @@ static void debug_init()
 	UART1_BaudRateCfg(921600);
 }
 
-uint16_t adcBuff[40];
-static int read_batt_raw()
-{
-	int ret = 0;
-	/* adc 1 - pa5 */
-	PRINT("\n2.Single channel sampling...\n");
-	GPIOA_ModeCfg(GPIO_Pin_5, GPIO_ModeIN_Floating);
-	ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
-
-	int16_t RoughCalib_Value = ADC_DataCalib_Rough();
-	PRINT("RoughCalib_Value =%d \n", RoughCalib_Value);
-
-	ADC_ChannelCfg(1);
-
-	for(int i = 0; i < 20; i++) {
-		adcBuff[i] = ADC_ExcutSingleConver() + RoughCalib_Value;
-		ret += adcBuff[i];
-	}
-	for(int i = 0; i < 20; i++) {
-		PRINT("%d \n", adcBuff[i]);
-	}
-
-	return ret / 20;
-}
-
-static int is_charging()
-{
-	GPIOA_ModeCfg(CHARGE_STT_PIN, GPIO_ModeIN_PU);
-	return GPIOA_ReadPortPin(CHARGE_STT_PIN) == 0;
-}
-
 static void disp_bat_stt(int bat_percent, int col, int row)
 {
 	if (bat_percent < 0) {
@@ -371,30 +321,6 @@ static void disp_bat_stt(int bat_percent, int col, int row)
 	for (int i=1; i <= bat_percent; i++) {
 		fb[col + i] = fb[col];
 	}
-}
-
-#define ZERO_PERCENT_THRES      (3.3)
-#define _100_PERCENT_THRES      (4.2)
-#define ADC_MAX_VAL             (4096.0) // 12 bit
-#define ADC_MAX_VOLT            (2.1)   // Volt
-#define R1                      (182.0) // kOhm
-#define R2                      (100.0) // kOhm
-#define PERCENT_RANGE           (_100_PERCENT_THRES - ZERO_PERCENT_THRES)
-#define VOLT_DIV(v)             ((v) / (R1 + R2) * R2) // Voltage divider
-#define VOLT_DIV_INV(v)         ((v) / R2 * (R1 + R2)) // .. Inverse
-#define ADC2VOLT(raw)           ((raw) / ADC_MAX_VAL * ADC_MAX_VOLT)
-#define VOLT2ADC(volt)          ((volt) / ADC_MAX_VOLT * ADC_MAX_VAL)
-
-static int bat_raw2percent(int r)
-{
-	float vadc = ADC2VOLT(r);
-	float vbat = VOLT_DIV_INV(vadc);
-	float strip = vbat - ZERO_PERCENT_THRES;
-	if (strip < PERCENT_RANGE) {
-		// Negative values meaning the battery is not connected or died
-		return (int)(strip / PERCENT_RANGE * 100.0);
-	}
-	return 100;
 }
 
 static void fb_putchar(char c, int col, int row)
@@ -419,9 +345,9 @@ static void disp_charging()
 {
 	int blink = 0;
 	while (mode == BOOT) {
-		int percent = bat_raw2percent(read_batt_raw());
+		int percent = batt_raw2percent(batt_raw());
 
-		if (is_charging()) {
+		if (charging_status()) {
 			disp_bat_stt(blink ? percent : 0, 2, 2);
 			if (ani_xbm_next_frame(&fabm_xbm, fb, 16, 0) == 0) {
 				fb_puts(VERSION_ABBR, sizeof(VERSION_ABBR), 16, 2);
@@ -460,6 +386,7 @@ int main()
 	btn_onOnePress(KEY2, bm_transition);
 	btn_onLongPress(KEY1, change_brightness);
 
+	power_init();
 	disp_charging();
 
 	play_splash(&splash, 0, 0);
