@@ -304,6 +304,7 @@ void handle_mode_transition()
 		while(mode == SNAKE){
 			run_game(fb);
 		}
+		break;
 	case DOWNLOAD:
 		// Disable bitmap transition while in download mode
 		btn_onOnePress(KEY2, NULL);

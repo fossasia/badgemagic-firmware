@@ -22,12 +22,12 @@ static void draw_pixel(int x, int y, int state, uint16_t *fb) {
     }
 }
 
-static void display_game_over(uint16_t *fb) {
+static void display_text(uint16_t *fb,char* first, char* second) {
     // Clear Screen and Display "Game Over"
     clear_screen(fb);
-    fb_displays("Game", sizeof("Game"), 10, 2, fb);
+    fb_displays(first, sizeof(first), 10, 2, fb);
     DelayMs(500);
-    fb_displays("Over", sizeof("Over"), 10, 2, fb);
+    fb_displays(second, sizeof(second), 10, 2, fb);
     DelayMs(500);
     return;
 }
@@ -91,7 +91,7 @@ static int move_snake(uint16_t *fb) {
     if (check_collision(new_head)) {
         // Display game over message 2 Times
         for (int i = 0; i < 2; i++) {
-            display_game_over(fb);
+            display_text(fb, "Game", "Over");
         }
         return 0;
     }
@@ -104,9 +104,18 @@ static int move_snake(uint16_t *fb) {
 
     // Check for collision with food
     if (snake[0].x == food.x && snake[0].y == food.y) {
-        snake_length++;
-        snake[snake_length-1] = snake[snake_length-2];
-        generate_food();
+        if (snake_length <= 100){
+            snake_length++;
+            snake[snake_length-1] = snake[snake_length-2];
+            generate_food();
+        }
+        else {
+            // Display game over message 2 Times
+            for (int i = 0; i < 2; i++) {
+                display_text(fb, "You", "Won");
+            }
+            return 0;
+        }
     }
 
     // Draw the snake
@@ -126,7 +135,7 @@ void init_game(uint16_t *fb){
     generate_food();
 }
 
-int run_game(uint16_t *fb) {
+void run_game(uint16_t *fb) {
     clear_screen(fb);
     // Game loop
     draw_pixel(food.x, food.y, 1, fb);
