@@ -79,6 +79,8 @@ src/xbm.c \
 src/resource.c \
 src/animation.c \
 src/font.c \
+src/util.c\
+src/game.c \
 
 
 # ASM sources
