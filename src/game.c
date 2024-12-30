@@ -46,12 +46,35 @@ static int check_collision(Position pos) {
     return 0;
 }
 
-static void generate_food() {
+static int is_free_space_available() {
+    for (int x = 0; x < LED_COLS; x++) {
+        for (int y = 0; y < LED_ROWS; y++) {
+            Position pos = {x, y};
+            if (!check_collision(pos)) {
+                // Free space available
+                return 1;
+            }
+        }
+    }
+    // No free space available
+    return 0;
+}
+
+static void generate_food(uint16_t *fb) {
+    // Check if there is any free space available
+    if (!is_free_space_available()) {
+        // Display "You Won" message 2 Times
+        for (int i = 0; i < 2; i++) {
+            display_text(fb, "You", "Won");
+        }
+        return;
+    }
+
     // Generate food at a random position
-    while(1){
+    while (1) {
         food.x = rand() % LED_COLS;
         food.y = rand() % LED_ROWS;
-        if (!check_collision(food)){
+        if (!check_collision(food)) {
             return;
         }
     }
@@ -107,7 +130,7 @@ static int move_snake(uint16_t *fb) {
         if (snake_length <= 100){
             snake_length++;
             snake[snake_length-1] = snake[snake_length-2];
-            generate_food();
+            generate_food(fb);
         }
         else {
             // Display game over message 2 Times
@@ -132,7 +155,7 @@ void init_game(uint16_t *fb){
     snake[0].x = LED_COLS / 2;
     snake[0].y = LED_ROWS / 2;
 
-    generate_food();
+    generate_food(fb);
 }
 
 void run_game(uint16_t *fb) {
