@@ -2,7 +2,7 @@
 
 #define LED_PINCOUNT (23)
 
-volatile int drive_strength;
+static uint32_t g_pindrive_strong;
 
 typedef enum {
 	FLOATING,
@@ -10,133 +10,155 @@ typedef enum {
 	HIGH,
 } tristate_t;
 
-typedef struct {
-	uint32_t *port_buf;
-	uint32_t *cfg_buf;
-	uint32_t pin;
-} pinctrl_t;
+typedef struct pinbank {
+	volatile uint8_t *base;
 
-static void gpio_buf_set(pinctrl_t pinctl, tristate_t state)
+	uint32_t bankpins_mask;
+
+	uint32_t out_val;
+	uint32_t dir_val;
+	uint32_t drv_val;
+} pinbank_t;
+
+typedef struct pindesc {
+	pinbank_t *bank;
+	uint32_t pin_mask;
+} pindesc_t;
+
+static struct pinbanks {
+	pinbank_t A;
+	pinbank_t B;
+} g_PinBanks;
+
+
+static void gpio_pin_set(const pindesc_t *desc, tristate_t state)
 {
-	if (state == FLOATING) {
-		*(pinctl.cfg_buf) &= ~pinctl.pin;
-	} else {
-		if (state == HIGH)
-			*(pinctl.port_buf) |= pinctl.pin;
-		else
-			*(pinctl.port_buf) &= ~pinctl.pin;
-
-		*(pinctl.cfg_buf) |= pinctl.pin;
+	switch(state) {
+	case FLOATING:
+		desc->bank->dir_val &= ~desc->pin_mask;
+		break;
+	case HIGH:
+		desc->bank->dir_val |= desc->pin_mask;
+		desc->bank->out_val |= desc->pin_mask;
+		break;
+	default:
+		desc->bank->dir_val |= desc->pin_mask;
+		desc->bank->out_val &= ~desc->pin_mask;
 	}
 }
 
-void led_setDriveStrength(int is_20mA)
+static void gpio_bank_tristate(pinbank_t *bank)
 {
-	drive_strength = is_20mA;
+	volatile uint32_t *out = (volatile uint32_t *)(bank->base + GPIO_OUT);
+	volatile uint32_t *drv = (volatile uint32_t *)(bank->base + GPIO_PD_DRV);
+	volatile uint32_t *dir = (volatile uint32_t *)(bank->base + GPIO_DIR);
+	uint32_t bankpins_mask;
+
+	// Get state for pins we do NOT control
+	bankpins_mask = bank->bankpins_mask;
+	bank->out_val =
+		(bank->out_val & bankpins_mask) | (*out & ~bankpins_mask);
+	bank->dir_val =
+		(bank->dir_val & bankpins_mask) | (*dir & ~bankpins_mask);
+	bank->drv_val =
+		(g_pindrive_strong & bank->dir_val & bankpins_mask) | (*drv & ~bankpins_mask);
+
+	// ... and tristate pins, we DO control
+	*dir = (bank->dir_val & ~bankpins_mask);
 }
 
-static void gpio_buf_apply(
-				volatile uint8_t *gpio_base,
-				uint32_t *port, uint32_t *cfg,
-				uint32_t *mask)
+static void gpio_bank_apply(pinbank_t *bank)
 {
-	volatile uint32_t *drv = (volatile uint32_t *)(gpio_base + GPIO_PD_DRV);
-	volatile uint32_t *dir = (volatile uint32_t *)(gpio_base + GPIO_DIR);
-	volatile uint32_t *out = (volatile uint32_t *)(gpio_base + GPIO_OUT);
-	uint32_t drv_val, dir_val, out_val;
+	volatile uint32_t *out = (volatile uint32_t *)(bank->base + GPIO_OUT);
+	volatile uint32_t *drv = (volatile uint32_t *)(bank->base + GPIO_PD_DRV);
+	volatile uint32_t *dir = (volatile uint32_t *)(bank->base + GPIO_DIR);
 
-	drv_val = 0;
-	if (drive_strength) {
-		drv_val = *drv;
-	}
-	dir_val = *dir;
-	out_val = *out;
-
-	drv_val = (drv_val & ~*mask) | (*cfg & *mask);
-	out_val = (out_val & ~*mask) | (*port & *mask);
-	dir_val = (dir_val & ~*mask); // first turn off drive to all Pins
-
-	*dir = dir_val;
-	*out = out_val;
-	if (drive_strength) {
-		*drv = drv_val;
-	}
-	dir_val = dir_val | (*cfg & *mask); // now turn on drive to right Pins
-	*dir = dir_val;
+	*out = bank->out_val;
+	*drv = bank->drv_val;
+	*dir = bank->dir_val;
 }
 
-static uint32_t PA_buf;
-static uint32_t PB_buf;
-static uint32_t PAcfg_buf;
-static uint32_t PBcfg_buf;
-static uint32_t PA_mask;
-static uint32_t PB_mask;
+#define GPIO_APPLY_ALL() do { \
+	gpio_bank_tristate(&g_PinBanks.A); \
+	gpio_bank_tristate(&g_PinBanks.B); \
+	gpio_bank_apply(&g_PinBanks.A); \
+	gpio_bank_apply(&g_PinBanks.B); \
+} while (0)
 
-#define GPIO_APPLY_ALL() \
-	gpio_buf_apply(BA_PA, &PA_buf, &PAcfg_buf, &PA_mask); \
-	gpio_buf_apply(BA_PB, &PB_buf, &PBcfg_buf, &PB_mask)
 
-#define PINCTRL(x, pin) {	\
-	&P##x##_buf, 		\
-	&P##x##cfg_buf, 	\
-	GPIO_Pin_##pin 			\
+#define PINDESC(bank_, pinnr_) { \
+	&g_PinBanks.bank_ , \
+	GPIO_Pin_##pinnr_ \
 }
 
-static const pinctrl_t led_pins[LED_PINCOUNT] = {
-	PINCTRL(A, 15), // A
-	PINCTRL(B, 18), // B
-	PINCTRL(B, 0),  // C
-	PINCTRL(B, 7),  // D
-	PINCTRL(A, 12), // E
-	PINCTRL(A, 10), // F
-	PINCTRL(A, 11), // G
-	PINCTRL(B, 9),  // H
-	PINCTRL(B, 8),  // I
-	PINCTRL(B, 15), // J
-	PINCTRL(B, 14), // K
-	PINCTRL(B, 13), // L
-	PINCTRL(B, 12), // M
-	PINCTRL(B, 5),  // N
-	PINCTRL(A, 4),  // O
-	PINCTRL(B, 3),  // P
-	PINCTRL(B, 4),  // Q
-	PINCTRL(B, 2),  // R
-	PINCTRL(B, 1),  // S
+static const pindesc_t led_pins[LED_PINCOUNT] = {
+	PINDESC(A, 15), // A
+	PINDESC(B, 18), // B
+	PINDESC(B, 0),  // C
+	PINDESC(B, 7),  // D
+	PINDESC(A, 12), // E
+	PINDESC(A, 10), // F
+	PINDESC(A, 11), // G
+	PINDESC(B, 9),  // H
+	PINDESC(B, 8),  // I
+	PINDESC(B, 15), // J
+	PINDESC(B, 14), // K
+	PINDESC(B, 13), // L
+	PINDESC(B, 12), // M
+	PINDESC(B, 5),  // N
+	PINDESC(A, 4),  // O
+	PINDESC(B, 3),  // P
+	PINDESC(B, 4),  // Q
+	PINDESC(B, 2),  // R
+	PINDESC(B, 1),  // S
 #ifdef USBC_VERSION
-	PINCTRL(B, 6), // T
+	PINDESC(B, 6), // T
 #else
-	PINCTRL(B, 23), // T
+	PINDESC(B, 23), // T
 #endif
-	PINCTRL(B, 21), // U
-	PINCTRL(B, 20), // V
-	PINCTRL(B, 19), // W
+	PINDESC(B, 21), // U
+	PINDESC(B, 20), // V
+	PINDESC(B, 19), // W
 };
 
 void led_init()
 {
-	for (int i=0; i<LED_PINCOUNT; i++) {
-		if (led_pins[i].port_buf == &PA_buf)
-			PA_mask |= led_pins[i].pin;
-		else
-			PB_mask |= led_pins[i].pin;
+	int i;
+
+	g_PinBanks.A.base = BA_PA;
+	g_PinBanks.B.base = BA_PB;
+	for (i = 0; i < LED_PINCOUNT; i++) {
+		led_pins[i].bank->bankpins_mask |= led_pins[i].pin_mask;
 	}
 }
 
 void leds_releaseall() {
 	for (int i=0; i<LED_PINCOUNT; i++)
-		gpio_buf_set(led_pins[i], FLOATING);
+		gpio_pin_set(led_pins + i, FLOATING);
+	g_pindrive_strong = 0x00000000;
 	GPIO_APPLY_ALL();
 }
 
 static void led_write2dcol_raw(int dcol, uint32_t val)
 {
-	// TODO: assert params
-	gpio_buf_set(led_pins[dcol], HIGH);
+	int on_count;
+	int pin_value;
+
+	gpio_pin_set(led_pins + dcol, HIGH);
+	on_count = 0;
 	for (int i=0; i<LED_PINCOUNT; i++) {
 		if (i == dcol) continue;
-		gpio_buf_set(led_pins[i], (val & 0x01) ? LOW : FLOATING); // danger: floating=0 (led off) or low=1 (led on)
+		pin_value = FLOATING;
+		if (val & 0x01) {
+			on_count++;
+			pin_value = LOW; // pin LOW => LED on
+		}
+		gpio_pin_set(led_pins + i, pin_value);
 		val >>= 1;
 	}
+	g_pindrive_strong = 0x00000000;
+	if (on_count > 5)
+		g_pindrive_strong = 0xFFFFFFFF;
 	GPIO_APPLY_ALL();
 }
 
@@ -170,13 +192,24 @@ void led_write2dcol(int dcol, uint16_t col1_val, uint16_t col2_val)
 
 void led_write2row_raw(int row, int which_half, uint32_t val)
 {
-	row = row*2 + (which_half != 0);
+	int on_count;
+	int pin_value;
 
-	gpio_buf_set(led_pins[row], LOW);
+	row = row*2 + (which_half != 0);
+	gpio_pin_set(led_pins + row, LOW);
+	on_count = 0;
 	for (int i=0; i<LED_PINCOUNT; i++) {
 		if (i == row) continue;
-		gpio_buf_set(led_pins[i], (val & 0x01) ? HIGH : FLOATING);
+		pin_value = FLOATING;
+		if (val & 0x01) {
+			on_count++;
+			pin_value = HIGH;
+		}
+		gpio_pin_set(led_pins + i, pin_value);
 		val >>= 1;
 	}
+	g_pindrive_strong = 0x00000000;
+	if (on_count > 5)
+		g_pindrive_strong = 0xFFFFFFFF;
 	GPIO_APPLY_ALL();
 }

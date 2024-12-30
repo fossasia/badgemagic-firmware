@@ -60,7 +60,6 @@ __HIGH_CODE
 static void change_brightness()
 {
 	NEXT_STATE(brightness, 0, BRIGHTNESS_LEVELS);
-	led_setDriveStrength(brightness / 2);
 }
 
 __HIGH_CODE
@@ -272,7 +271,7 @@ void spawn_tasks()
 
 	tmos_start_reload_task(common_taskid, ANI_MARQUE, ANI_MARQUE_SPEED_T / 625);
 	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
-	tmos_start_reload_task(common_taskid, SCAN_BOOTLD_BTN, 
+	tmos_start_reload_task(common_taskid, SCAN_BOOTLD_BTN,
 				SCAN_BOOTLD_BTN_SPEED_T / 625);
 	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
 }
@@ -300,20 +299,20 @@ void handle_mode_transition()
 		// Disable bitmap transition while in download mode
 		btn_onOnePress(KEY2, NULL);
 
-		// Take control of the current bitmap to display 
+		// Take control of the current bitmap to display
 		// the Bluetooth animation
 		ble_start();
 		while (mode == DOWNLOAD) {
 			TMOS_SystemProcess();
 		}
-		// If not being flashed, pressing KEY1 again will 
+		// If not being flashed, pressing KEY1 again will
 		// make the badge goes off:
-		
+
 		// fallthrough
 	case POWER_OFF:
 		poweroff();
 		break;
-	
+
 	default:
 		break;
 	}
@@ -402,7 +401,7 @@ static void fb_putchar(char c, int col, int row)
 {
 	for (int i=0; i < 6; i++) {
 		if (col + i >= LED_COLS) break;
-		fb[col + i] = (fb[col + i] & ~(0x7f << row)) 
+		fb[col + i] = (fb[col + i] & ~(0x7f << row))
 				| (font5x7[c - ' '][i] << row);
 	}
 }
@@ -462,7 +461,7 @@ int main()
 	btn_onLongPress(KEY1, change_brightness);
 
 	disp_charging();
-	
+
 	play_splash(&splash, 0, 0);
 
 	load_bmlist();
@@ -489,9 +488,9 @@ void TMR0_IRQHandler(void)
 		if (i >= LED_COLS) {
 			i = 0;
 		}
-		
+
 		if (i % 2) {
-			if ((brightness + 1) % 2) 
+			if ((brightness + 1) % 2)
 				leds_releaseall();
 		} else {
 			led_write2dcol(i/2, fb[i], fb[i + 1]);
