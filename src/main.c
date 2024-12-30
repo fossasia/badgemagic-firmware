@@ -449,7 +449,7 @@ int main()
 	usb_start();
 
 	led_init();
-	TMR0_TimerInit(SCAN_T / 2);
+	TMR0_TimerInit(SCAN_T / 4);
 	TMR0_ITCfg(ENABLE, TMR0_3_IT_CYC_END);
 	PFIC_EnableIRQ(TMR0_IRQn);
 
@@ -482,19 +482,19 @@ __HIGH_CODE
 void TMR0_IRQHandler(void)
 {
 	static int i;
+	int state;
 
 	if (TMR0_GetITFlag(TMR0_3_IT_CYC_END)) {
-		i += 1;
-		if (i >= LED_COLS) {
-			i = 0;
-		}
+		i++;
+		state = i&3;
 
-		if (i % 2) {
-			if ((brightness + 1) % 2)
-				leds_releaseall();
-		} else {
-			led_write2dcol(i/2, fb[i], fb[i + 1]);
+		if (state == 0) {
+			if ((i >> 1) >= LED_COLS)
+				i = 0;
+			led_write2dcol(i >> 2, fb[i >> 1], fb[(i >> 1) + 1]);
 		}
+		else if (state > (brightness&3))
+			leds_releaseall();
 
 		TMR0_ClearITFlag(TMR0_3_IT_CYC_END);
 	}
