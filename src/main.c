@@ -28,6 +28,7 @@
 enum MODES {
 	BOOT = 0,
 	NORMAL,
+	SNAKE,
 	DOWNLOAD,
 	POWER_OFF,
 	MODES_COUNT,
@@ -296,6 +297,13 @@ void handle_mode_transition()
 
 	switch (mode)
 	{
+	case SNAKE:
+		// Initialise the game
+		init_game(fb);
+		// Keep the Game running until a mode change
+		while(mode == SNAKE){
+			run_game(fb);
+		}
 	case DOWNLOAD:
 		// Disable bitmap transition while in download mode
 		btn_onOnePress(KEY2, NULL);
