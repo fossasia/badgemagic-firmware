@@ -96,6 +96,15 @@ static int move_snake(uint16_t *fb) {
     if (!check_collision(left)) possible_positions[num_possible_positions++] = left;
     if (!check_collision(right)) possible_positions[num_possible_positions++] = right;
 
+    // Check if no possible positions are available
+    if (num_possible_positions == 0) {
+        // Display "Game Over" message 2 Times
+        for (int i = 0; i < 2; i++) {
+            display_text(fb, "Game", "Over");
+        }
+        return 0;
+    }
+
     // Choose the best direction towards food
     Position best_position = possible_positions[0];
     int min_distance = abs(food.x - best_position.x) + abs(food.y - best_position.y);
@@ -109,15 +118,6 @@ static int move_snake(uint16_t *fb) {
     }
 
     new_head = best_position;
-
-    // Check for collision
-    if (check_collision(new_head)) {
-        // Display game over message 2 Times
-        for (int i = 0; i < 2; i++) {
-            display_text(fb, "Game", "Over");
-        }
-        return 0;
-    }
 
     for (int i = snake_length - 1; i > 0; i--) {
         snake[i] = snake[i - 1];
