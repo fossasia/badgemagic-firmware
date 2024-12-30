@@ -21,9 +21,9 @@ static void gpio_buf_set(pinctrl_t pinctl, tristate_t state)
 	if (state == FLOATING) {
 		*(pinctl.cfg_buf) &= ~pinctl.pin;
 	} else {
-		if (state == HIGH) 
+		if (state == HIGH)
 			*(pinctl.port_buf) |= pinctl.pin;
-		else 
+		else
 			*(pinctl.port_buf) &= ~pinctl.pin;
 
 		*(pinctl.cfg_buf) |= pinctl.pin;
@@ -36,19 +36,33 @@ void led_setDriveStrength(int is_20mA)
 }
 
 static void gpio_buf_apply(
-				volatile uint8_t *gpio_base, 
-				uint32_t *port, uint32_t *cfg, 
+				volatile uint8_t *gpio_base,
+				uint32_t *port, uint32_t *cfg,
 				uint32_t *mask)
 {
-	if (drive_strength) {
-		uint32_t *drv = (uint32_t *)(gpio_base + GPIO_PD_DRV);
-		*drv = (*drv & ~*mask) | (*cfg & *mask);
-	}
-	uint32_t *dir = (uint32_t *)(gpio_base + GPIO_DIR);
-	*dir = (*dir & ~*mask) | (*cfg & *mask);
+	volatile uint32_t *drv = (volatile uint32_t *)(gpio_base + GPIO_PD_DRV);
+	volatile uint32_t *dir = (volatile uint32_t *)(gpio_base + GPIO_DIR);
+	volatile uint32_t *out = (volatile uint32_t *)(gpio_base + GPIO_OUT);
+	uint32_t drv_val, dir_val, out_val;
 
-	uint32_t *out = (uint32_t *)(gpio_base + GPIO_OUT);
-	*out = (*out & ~*mask) | (*port & *mask);
+	drv_val = 0;
+	if (drive_strength) {
+		drv_val = *drv;
+	}
+	dir_val = *dir;
+	out_val = *out;
+
+	drv_val = (drv_val & ~*mask) | (*cfg & *mask);
+	out_val = (out_val & ~*mask) | (*port & *mask);
+	dir_val = (dir_val & ~*mask); // first turn off drive to all Pins
+
+	*dir = dir_val;
+	*out = out_val;
+	if (drive_strength) {
+		*drv = drv_val;
+	}
+	dir_val = dir_val | (*cfg & *mask); // now turn on drive to right Pins
+	*dir = dir_val;
 }
 
 static uint32_t PA_buf;
@@ -69,7 +83,7 @@ static uint32_t PB_mask;
 }
 
 static const pinctrl_t led_pins[LED_PINCOUNT] = {
-	PINCTRL(A, 15), // A 
+	PINCTRL(A, 15), // A
 	PINCTRL(B, 18), // B
 	PINCTRL(B, 0),  // C
 	PINCTRL(B, 7),  // D
@@ -126,7 +140,7 @@ static void led_write2dcol_raw(int dcol, uint32_t val)
 	GPIO_APPLY_ALL();
 }
 
-static uint32_t combine_cols(uint16_t col1_val, uint16_t col2_val) 
+static uint32_t combine_cols(uint16_t col1_val, uint16_t col2_val)
 {
 	uint32_t dval = 0;
 	dval |= ((col1_val & 0x01) << (LED_ROWS*2));
