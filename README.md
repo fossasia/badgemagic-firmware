@@ -1,6 +1,6 @@
 # badgemagic-firmware
 
-Hardware details and information to build an open firmware for Bluetooth LED badges, compatible with [Badge Magic app](https://github.com/fossasia/badgemagic-android)
+Hardware details and information to build an open firmware for Bluetooth LED badges, compatible with [Badge Magic app](https://github.com/fossasia/badgemagic-app)
 
 ## Installation
 
@@ -21,7 +21,7 @@ works.
 
 ## Usage
 
-For usual usages, please refer to [badgemagic-android](https://github.com/fossasia/badgemagic-android) and [led-name-badge-ls32](https://github.com/fossasia/led-name-badge-ls32).
+For usual usages, please refer to [badgemagic-app](https://github.com/fossasia/badgemagic-app) and [led-name-badge-ls32](https://github.com/fossasia/led-name-badge-ls32).
 
 ### Transferring Bitmap
 
@@ -201,7 +201,7 @@ Here is some documentation on the [BLE package format](BadgeBLE.md). There still
 
 See original [led-name-badge-ls32](https://github.com/fossasia/led-name-badge-ls32) for USB update protocol reverse engineering
 
-See [Badge Magic app](https://github.com/fossasia/badgemagic-android) for Bluetooth update protocol
+See [Badge Magic app](https://github.com/fossasia/badgemagic-app) for Bluetooth update protocol
 
 #### Bluetooth Stack
 
