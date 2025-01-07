@@ -65,7 +65,7 @@ static bStatus_t write_handler(uint16 connHandle, gattAttribute_t *pAttr,
 	return ATT_ERR_ATTR_NOT_FOUND;
 }
 
-gattServiceCBs_t service_handlers = {
+static gattServiceCBs_t service_handlers = {
 	NULL,
 	write_handler,
 	NULL

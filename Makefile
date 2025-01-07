@@ -64,6 +64,7 @@ src/leddrv.c \
 src/button.c \
 src/bmlist.c \
 src/ble/profile/legacy.c \
+src/ble/profile/batt.c \
 src/ble/profile/devinfo.c \
 src/ble/setup.c \
 src/ble/peripheral.c \
@@ -79,6 +80,7 @@ src/xbm.c \
 src/resource.c \
 src/animation.c \
 src/font.c \
+src/power.c \
 
 
 # ASM sources
