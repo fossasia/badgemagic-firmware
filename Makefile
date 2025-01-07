@@ -47,25 +47,25 @@ CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_clk.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_uart0.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_timer1.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_pwm.c \
-CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usbhostClass.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_adc.c \
-CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usbhostBase.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_timer3.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_timer0.c \
-CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usb2hostClass.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_flash.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_uart1.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usb2dev.c \
-CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usb2hostBase.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_spi1.c \
 CH5xx_ble_firmware_library/RVMSIS/core_riscv.c \
 src/main.c \
+src/debug.c \
 src/leddrv.c \
 src/button.c \
 src/bmlist.c \
 src/ble/profile/legacy.c \
 src/ble/profile/batt.c \
 src/ble/profile/devinfo.c \
+src/ble/profile/ng.c \
+src/config.c \
+src/ngctrl.c \
 src/ble/setup.c \
 src/ble/peripheral.c \
 src/data.c \
@@ -129,6 +129,7 @@ C_INCLUDES =  \
 ASFLAGS = $(MCU) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
 CFLAGS = $(MCU) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+CFLAGS += -Werror=implicit-function-declaration
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2 -DDEBUG=$(DEBUG)
