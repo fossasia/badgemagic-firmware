@@ -1,7 +1,8 @@
-#include <CH58xBLE_LIB.h>
+#include <CH58x_common.h>
 
 #include "power.h"
 #include "button.h"
+#include "debug.h"
 
 void poweroff()
 {

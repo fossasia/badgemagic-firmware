@@ -11,14 +11,13 @@
 
 #include "power.h"
 #include "data.h"
+#include "config.h"
+#include "debug.h"
 
 #include "ble/setup.h"
 #include "ble/profile.h"
 
 #include "usb/usb.h"
-
-#define SCAN_F          (2000)
-#define SCAN_T          (FREQ_SYS / SCAN_F)
 
 #define NEXT_STATE(v, min, max) \
 				(v)++; \
@@ -81,10 +80,10 @@ static void bm_transition()
 		return;
 	}
 }
-void play_splash(xbm_t *xbm, int col, int row)
+void play_splash(xbm_t *xbm, int col, int row, int spT)
 {
 	while (ani_xbm_scrollup_pad(xbm, 11, 11, 11, fb, 0, 0) != 0) {
-		DelayMs(30);
+		DelayMs(spT);
 	}
 }
 
@@ -205,11 +204,15 @@ void ble_setup()
 	tmos_clockInit();
 
 	peripheral_init();
-	ble_disable_advertise();
+
+	if (! badge_cfg.ble_always_on) {
+		ble_disable_advertise();
+	}
 
 	devInfo_registerService();
 	legacy_registerService();
 	batt_registerService();
+	ng_registerService();
 }
 
 static void usb_receive(uint8_t *buf, uint16_t len)
@@ -246,7 +249,7 @@ static void usb_receive(uint8_t *buf, uint16_t len)
 	}
 }
 
-void spawn_tasks()
+static void spawn_tasks()
 {
 	common_taskid = TMOS_ProcessEventRegister(common_tasks);
 
@@ -257,16 +260,69 @@ void spawn_tasks()
 	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
 }
 
-void ble_start()
+static void start_ble_animation()
 {
-	ble_enable_advertise();
-
 	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
 	memset(fb, 0, sizeof(fb));
 
 	tmos_start_reload_task(common_taskid, BLE_NEXT_STEP, 500000 / 625);
+}
+
+static void ble_start()
+{
+	ble_enable_advertise();
+	start_ble_animation();
+}
+
+static void start_normal_animation()
+{
+	tmos_start_reload_task(common_taskid, ANI_MARQUE, ANI_MARQUE_SPEED_T / 625);
+	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
+	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
+}
+
+static void resume_normal()
+{
+	if (badge_cfg.ble_always_on) {
+		start_normal_animation();
+	} else {
+		start_ble_animation();
+	}
+}
+
+static void stop_all_animation()
+{
+	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
+	tmos_stop_task(common_taskid, ANI_MARQUE);
+	tmos_stop_task(common_taskid, ANI_FLASH);
+	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	memset(fb, 0, sizeof(fb));
+}
+
+int streaming_enabled;
+
+uint8_t streaming_setting(uint8_t *params, uint16_t len)
+{
+	if (params[0] == 0x00) { // enter streaming mode
+		stop_all_animation();
+		streaming_enabled = 1;
+	} else if (params[0] == 0x01) { // return to normal mode
+		resume_normal();
+		streaming_enabled = 0;
+	}
+	return 0;
+}
+
+uint8_t stream_bitmap(uint8_t *params, uint16_t len)
+{
+	if (! streaming_enabled) {
+		return -1;
+	}
+
+	tmos_memcpy(fb, params, min(LED_COLS, len));
+	return 0;
 }
 
 void handle_mode_transition()
@@ -277,6 +333,9 @@ void handle_mode_transition()
 	switch (mode)
 	{
 	case DOWNLOAD:
+		if (badge_cfg.ble_always_on) {
+			poweroff();
+		}
 		// Disable bitmap transition while in download mode
 		btn_onOnePress(KEY2, NULL);
 
@@ -375,7 +434,7 @@ int main()
 	usb_start();
 
 	led_init();
-	TMR0_TimerInit(SCAN_T / 4);
+	TMR0_TimerInit((FREQ_SYS / 2000) / 2);
 	TMR0_ITCfg(ENABLE, TMR0_3_IT_CYC_END);
 	PFIC_EnableIRQ(TMR0_IRQn);
 
@@ -388,8 +447,14 @@ int main()
 
 	power_init();
 	disp_charging();
-
-	play_splash(&splash, 0, 0);
+	cfg_init();
+	xbm_t spl = {
+		.bits = &(badge_cfg.splash_bm_bits),
+		.w = badge_cfg.splash_bm_w,
+		.h = badge_cfg.splash_bm_h,
+		.fh = badge_cfg.splash_bm_fh,
+	};
+	play_splash(&spl, 0, 0, badge_cfg.splash_speedT);
 
 	load_bmlist();
 
