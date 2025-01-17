@@ -1,163 +1,81 @@
+/**
+ * TODO: needs constraints checking as some of the config fields may have
+ * invalid values which will make the badge broke.
+ */
 #include "config.h"
 #include "resource.h"
 #include "res/foss-asia-2.xbm"
+#include "debug.h"
+#include "util/crc.h"
 
 #include "ISP583.h"
 #include <stdlib.h>
 
-#define __ble_name "LED Badge Magic"
-// static sfmem_t ble_name = {sizeof(__ble_name) - 1, (uint8_t *)__ble_name};
+#define CFG_SIZE sizeof(badge_cfg_t)
+#define CFG_DEF_FLASH_OFFS (EEPROM_MAX_SIZE - CFG_SIZE - 1) // Default offset
 
-// Default configuration
-badge_cfg_t badge_cfg = {
-	.ble.always_on = 1,
-	.ble.devname.len = sizeof(__ble_name) - 1,
-	.ble.devname.ptr = __ble_name,
+badge_cfg_t badge_cfg;
 
-	.led.brightness = 0,
-	.led.scan_freq = 2000,
-
-	.splash.bm.bits = foss_asia_2_bits,
-	.splash.bm.w = 44,
-	.splash.bm.h = 22,
-	.splash.bm.fh = 11,
-	.splash.speed_t = 30, // ms
-};
-
-// uint32_t cfglen(badge_cfg_t cfg)
-// {
-// 	uint32_t len = sizeof(badge_cfg_t);
-// 	uint32_t len = sizeof(splash_cfg_t);
-// 	uint32_t len = sizeof(led_cfg_t);
-// 	uint32_t len = sizeof(ble_cfg_t);
-// }
-
-static int flash_write(uint8_t *buf, uint32_t base_addr, uint16_t len)
+// In case of first time firmware upgrading
+void cfg_fallback()
 {
-	return EEPROM_WRITE(base_addr, buf, len);
+	badge_cfg.ble_always_on = 1;
+	memcpy(badge_cfg.ble_devname, "LED Badge Magic\0\0\0\0", 20);
+
+	badge_cfg.led_brightness = 0;
+	badge_cfg.led_scan_freq = 2000;
+
+	badge_cfg.splash_speedT = 30; // ms
+
+	int splash_size = ALIGN_1BYTE(splash.w) * splash.h;
+	memcpy(badge_cfg.splash_bm_bits, splash.bits, splash_size);
+	badge_cfg.splash_bm_w = splash.w;
+	badge_cfg.splash_bm_h = splash.h;
+	badge_cfg.splash_bm_fh = splash.fh;
 }
 
-static int flash_read(uint8_t *buf, uint32_t base_addr, uint16_t len)
+void cfg_update_crc(badge_cfg_t *cfg)
 {
-	return EEPROM_READ(base_addr, buf, len);
+	cfg->crc = crc_cal((uint8_t *)cfg, CFG_SIZE - 1);
 }
 
-static int ble_cfg_write(ble_cfg_t *cfg, uint32_t base_addr)
+int cfg_writeflash(uint16_t flash_offs, badge_cfg_t *cfg)
 {
-	int ret;
-	ret = flash_write(cfg, base_addr, sizeof(ble_cfg_t));
-	if (ret) {
-		return ret;
+	if (flash_offs + CFG_SIZE > EEPROM_MAX_SIZE) {
+		return -1;
 	}
-
-	base_addr += sizeof(ble_cfg_t);
-	ret = flash_write(cfg->devname.ptr, base_addr, cfg->devname.len);
-	if (ret) {
-		return ret;
-	}
-
-	return 0;
+	cfg_update_crc(&badge_cfg);
+	return EEPROM_WRITE(flash_offs, cfg, CFG_SIZE);
 }
 
-static int ble_cfg_read(ble_cfg_t *cfg, uint32_t base_addr)
+int cfg_readflash(uint16_t flash_offs, badge_cfg_t *cfg)
 {
-	int ret;
-	ret = flash_read(cfg, base_addr, sizeof(ble_cfg_t));
-	if (ret) {
+	int ret = EEPROM_READ(flash_offs, cfg, CFG_SIZE);
+	if (ret)
 		return ret;
-	}
 
-	uint32_t devname_offs = (uint32_t)cfg->devname.ptr;
-	ret = flash_read(cfg->devname.ptr, devname_offs, cfg->devname.len);
-	if (ret) {
-		return ret;
-	}
-
-	return 0;
+	return crc_cal((uint8_t *)cfg, CFG_SIZE);
 }
 
-#define XBM_BYTE_PER_ROW(xbm) xbm.w / 8 + ((xbm.w % 8)>0) // Number of bytes in a row
-
-static int splash_cfg_read(splash_cfg_t *cfg, uint32_t base_addr)
+int cfg_readflash_def(badge_cfg_t *cfg)
 {
-	int ret;
-	ret = flash_read(cfg, base_addr, sizeof(splash_cfg_t));
-	if (ret) {
-		return ret;
-	}
-
-	uint32_t devname_offs = (uint32_t) cfg->bm.bits;
-	int len = XBM_BYTE_PER_ROW(cfg->bm) * cfg->bm.h;
-	ret = flash_read(cfg->bm.bits, devname_offs, len);
-	if (ret) {
-		return ret;
-	}
-
-	return 0;
+	return cfg_readflash(CFG_DEF_FLASH_OFFS, cfg);
 }
 
-// cfg.bm.bits will be written next to cfg header and its pointer will be
-// modified to be cfg.xbm.bits = base_addr + sizeof(splash_cfg_t) instead of
-// pointer in memory
-static int splash_cfg_write(splash_cfg_t *cfg, uint32_t base_addr)
+int cfg_writeflash_def(badge_cfg_t *cfg)
 {
-	int ret;
-
-	// write bits next to splash cfg
-	int len = XBM_BYTE_PER_ROW(cfg->bm) * (cfg->bm.h);
-	int bits_offs = base_addr + sizeof(splash_cfg_t);
-	ret = flash_write(cfg->bm.bits, bits_offs, len);
-	if (ret) {
-		return ret;
-	}
-
-	// point to eeprom offset instead of mem
-	cfg->bm.bits = base_addr + sizeof(splash_cfg_t);
-
-	// write splash cfg
-	ret = flash_write(cfg, base_addr, sizeof(splash_cfg_t));
-	if (ret) {
-		return ret;
-	}
-
-	return 0;
+	return cfg_writeflash(CFG_DEF_FLASH_OFFS, cfg);
 }
 
-int cfg_read(badge_cfg_t *cfg, uint32_t base_addr)
+void cfg_init()
 {
-	int ret = flash_read(cfg, base_addr, sizeof(badge_cfg_t));
-	if (ret) {
-		return ret;
+	badge_cfg_t cfg;
+	int r = cfg_readflash_def(&cfg);
+	if (r) {
+		cfg_fallback();
+		PRINT("configuration falling back: %02x\n", r);
+	} else {
+		memcpy(&badge_cfg, &cfg, CFG_SIZE);
+		PRINT("configuration read from flash successfully\n");
 	}
-	return 0;
-}
-
-int cfg_init()
-{
-	
-}
-
-int cfg_read_alloc(badge_cfg_t **buf, uint32_t base_addr)
-{
-	int ret;
-	*buf = malloc(sizeof(badge_cfg_t));
-	ret = cfg_read(base_addr, *buf);
-	if (ret) {
-		return ret;
-	}
-
-	(*buf)->ble.devname.ptr = malloc(sizeof((*buf)->ble.devname.len));
-	ret = ble_cfg_read((*buf)->ble.devname.ptr, (*buf)->ble.devname.len);
-	if (ret) {
-		return ret;
-	}
-
-	int rb = XBM_BYTE_PER_ROW((*buf)->splash.bm);
-	(*buf)->splash.bm.bits = malloc(rb);
-	ret = splash_cfg_read((*buf)->splash.bm.bits, rb);
-	if (ret) {
-		return ret;
-	}
-
-	return 0;
 }

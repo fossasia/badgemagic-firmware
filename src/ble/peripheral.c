@@ -39,9 +39,6 @@ static uint8 advertData[] = {
 	HI_UINT16(ADV_UUID)
 };
 
-// GAP GATT Attributes
-static uint8 devName[GAP_DEVICE_NAME_LEN] = "LED Badge Magic";
-
 // Connection item list
 static peripheralConnItem_t conn_list;
 
@@ -232,14 +229,14 @@ static void gap_init()
 	uint16_t max_interval = 500;
 
 	// Set the GAP Role Parameters
-	setup_scan_rsp(badge_cfg.ble.devname.ptr, badge_cfg.ble.devname.len);
+	setup_scan_rsp(badge_cfg.ble_devname, 20);
 	GAPRole_SetParameter(GAPROLE_ADVERT_DATA, sizeof(advertData), advertData);
 	GAPRole_SetParameter(GAPROLE_MIN_CONN_INTERVAL, sizeof(uint16), &min_interval);
 	GAPRole_SetParameter(GAPROLE_MAX_CONN_INTERVAL, sizeof(uint16), &max_interval);
 	
 	// Set the GAP Characteristics
-	GGS_SetParameter(GGS_DEVICE_NAME_ATT, badge_cfg.ble.devname.len,
-				badge_cfg.ble.devname.ptr);
+	GGS_SetParameter(GGS_DEVICE_NAME_ATT, 20,
+				badge_cfg.ble_devname);
 	GAP_SetParamValue(TGAP_DISC_ADV_INT_MIN, MIN_ADV_INTERVAL);
 	GAP_SetParamValue(TGAP_DISC_ADV_INT_MAX, MAX_ADV_INTERVAL);
 

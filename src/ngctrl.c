@@ -6,6 +6,7 @@
 #include "ble/profile.h"
 #include "power.h"
 #include "debug.h"
+#include "config.h"
 
 uint8_t next_packet(uint8_t *val, uint16_t len)
 {
@@ -14,6 +15,7 @@ uint8_t next_packet(uint8_t *val, uint16_t len)
 	return 0;
 }
 
+// power off, screen off, screen on
 uint8_t power_switch(uint8_t *val, uint16_t len)
 {
 	PRINT(__func__);
@@ -32,17 +34,54 @@ uint8_t ble_setting(uint8_t *val, uint16_t len)
 uint8_t flash_splash_screen(uint8_t *val, uint16_t len)
 {
 	PRINT(__func__);
-	PRINT(": to be implemented\n");
+	PRINT("\n");
+	
+	uint8_t w = val[0];
+	uint8_t h = val[1];
+	uint8_t fh = val[2];
+	uint8_t sz = len - 3;
+
+	if (w > SPLASH_MAX_WIDTH)
+		return -1;
+	if (h > SPLASH_MAX_HEIGHT)
+		return -2;
+	if (sz > SPLASH_MAX_SIZE)
+		return -3;
+	if (len < 3)
+		return -4;
+
+	tmos_memcpy(badge_cfg.splash_bm_bits, &val[3], sz);
+	badge_cfg.splash_bm_w = w;
+	badge_cfg.splash_bm_h = h;
+	badge_cfg.splash_bm_fh = fh;
+
+	return 0;
+}
+
+uint8_t save_cfg(uint8_t *val, uint16_t len)
+{
+	PRINT(__func__);
+	PRINT("\n");
+	return (uint8_t)cfg_writeflash_def(&badge_cfg);
+}
+
+uint8_t load_fallback_cfg(uint8_t *val, uint16_t len)
+{
+	PRINT(__func__);
+	PRINT("\n");
+	cfg_fallback(&badge_cfg);
 	return 0;
 }
 
 const uint8_t (*cmd_lut[])(uint8_t *val, uint16_t len) = {
-	next_packet,
+	next_packet, // Unsure if we need this
 	power_switch,
 	streaming_setting,
 	stream_bitmap,
 	ble_setting, // always-on, adv name
-	flash_splash_screen
+	flash_splash_screen,
+	save_cfg,
+	load_fallback_cfg,
 };
 
 #define CMD_LUT_LEN (sizeof(cmd_lut) / sizeof(cmd_lut[0]))

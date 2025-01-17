@@ -205,7 +205,7 @@ void ble_setup()
 
 	peripheral_init();
 
-	if (! badge_cfg.ble.always_on) {
+	if (! badge_cfg.ble_always_on) {
 		ble_disable_advertise();
 	}
 
@@ -285,7 +285,7 @@ static void start_normal_animation()
 
 static void resume_normal()
 {
-	if (badge_cfg.ble.always_on) {
+	if (badge_cfg.ble_always_on) {
 		start_normal_animation();
 	} else {
 		start_ble_animation();
@@ -333,7 +333,7 @@ void handle_mode_transition()
 	switch (mode)
 	{
 	case DOWNLOAD:
-		if (badge_cfg.ble.always_on) {
+		if (badge_cfg.ble_always_on) {
 			poweroff();
 		}
 		// Disable bitmap transition while in download mode
@@ -446,9 +446,14 @@ int main()
 	btn_onLongPress(KEY1, change_brightness);
 
 	disp_charging();
-	
-	xbm_t a = badge_cfg.splash.bm;
-	play_splash(&a, 0, 0, badge_cfg.splash.speed_t);
+	cfg_init();
+	xbm_t spl = {
+		.bits = &(badge_cfg.splash_bm_bits),
+		.w = badge_cfg.splash_bm_w,
+		.h = badge_cfg.splash_bm_h,
+		.fh = badge_cfg.splash_bm_fh,
+	};
+	play_splash(&spl, 0, 0, badge_cfg.splash_speedT);
 
 	load_bmlist();
 
