@@ -1,4 +1,4 @@
-#include "CH58x_common.h"
+#include "debug.h"
 
 void print_setuppk(USB_SETUP_REQ *request)
 {

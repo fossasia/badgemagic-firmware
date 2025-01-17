@@ -11,14 +11,13 @@
 
 #include "power.h"
 #include "data.h"
+#include "config.h"
+#include "debug.h"
 
 #include "ble/setup.h"
 #include "ble/profile.h"
 
 #include "usb/usb.h"
-
-#define SCAN_F          (2000)
-#define SCAN_T          (FREQ_SYS / SCAN_F)
 
 #define NEXT_STATE(v, min, max) \
 				(v)++; \
@@ -48,8 +47,6 @@ enum MODES {
 #define ANI_FLASH           (1 << 2)
 #define SCAN_BOOTLD_BTN     (1 << 3)
 #define BLE_NEXT_STEP       (1 << 4)
-
-#define CHARGE_STT_PIN      GPIO_Pin_0 // PA0
 
 static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
@@ -83,10 +80,10 @@ static void bm_transition()
 		return;
 	}
 }
-void play_splash(xbm_t *xbm, int col, int row)
+void play_splash(xbm_t *xbm, int col, int row, int spT)
 {
 	while (ani_xbm_scrollup_pad(xbm, 11, 11, 11, fb, 0, 0) != 0) {
-		DelayMs(30);
+		DelayMs(spT);
 	}
 }
 
@@ -106,24 +103,6 @@ void load_bmlist()
 	bmlist_gonext();
 
 	bmlist_drop(curr_bm);
-}
-
-void poweroff()
-{
-	// Stop wasting energy
-	GPIOA_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_Floating);
-	GPIOB_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_Floating);
-
-	// Configure wake-up
-	GPIOA_ModeCfg(KEY1_PIN, GPIO_ModeIN_PD);
-	GPIOA_ITModeCfg(KEY1_PIN, GPIO_ITMode_RiseEdge);
-	GPIOA_ModeCfg(CHARGE_STT_PIN, GPIO_ModeIN_PU);
-	GPIOA_ITModeCfg(CHARGE_STT_PIN, GPIO_ITMode_FallEdge);
-	PFIC_EnableIRQ(GPIO_A_IRQn);
-	PWR_PeriphWakeUpCfg(ENABLE, RB_SLP_GPIO_WAKE, Long_Delay);
-
-	/* Good bye */
-	LowPower_Shutdown(0);
 }
 
 static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
@@ -225,10 +204,15 @@ void ble_setup()
 	tmos_clockInit();
 
 	peripheral_init();
-	ble_disable_advertise();
+
+	if (! badge_cfg.ble_always_on) {
+		ble_disable_advertise();
+	}
 
 	devInfo_registerService();
 	legacy_registerService();
+	batt_registerService();
+	ng_registerService();
 }
 
 static void usb_receive(uint8_t *buf, uint16_t len)
@@ -265,7 +249,7 @@ static void usb_receive(uint8_t *buf, uint16_t len)
 	}
 }
 
-void spawn_tasks()
+static void spawn_tasks()
 {
 	common_taskid = TMOS_ProcessEventRegister(common_tasks);
 
@@ -276,16 +260,69 @@ void spawn_tasks()
 	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
 }
 
-void ble_start()
+static void start_ble_animation()
 {
-	ble_enable_advertise();
-
 	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
 	memset(fb, 0, sizeof(fb));
 
 	tmos_start_reload_task(common_taskid, BLE_NEXT_STEP, 500000 / 625);
+}
+
+static void ble_start()
+{
+	ble_enable_advertise();
+	start_ble_animation();
+}
+
+static void start_normal_animation()
+{
+	tmos_start_reload_task(common_taskid, ANI_MARQUE, ANI_MARQUE_SPEED_T / 625);
+	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
+	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
+}
+
+static void resume_normal()
+{
+	if (badge_cfg.ble_always_on) {
+		start_normal_animation();
+	} else {
+		start_ble_animation();
+	}
+}
+
+static void stop_all_animation()
+{
+	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
+	tmos_stop_task(common_taskid, ANI_MARQUE);
+	tmos_stop_task(common_taskid, ANI_FLASH);
+	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	memset(fb, 0, sizeof(fb));
+}
+
+int streaming_enabled;
+
+uint8_t streaming_setting(uint8_t *params, uint16_t len)
+{
+	if (params[0] == 0x00) { // enter streaming mode
+		stop_all_animation();
+		streaming_enabled = 1;
+	} else if (params[0] == 0x01) { // return to normal mode
+		resume_normal();
+		streaming_enabled = 0;
+	}
+	return 0;
+}
+
+uint8_t stream_bitmap(uint8_t *params, uint16_t len)
+{
+	if (! streaming_enabled) {
+		return -1;
+	}
+
+	tmos_memcpy(fb, params, min(LED_COLS, len));
+	return 0;
 }
 
 void handle_mode_transition()
@@ -296,6 +333,9 @@ void handle_mode_transition()
 	switch (mode)
 	{
 	case DOWNLOAD:
+		if (badge_cfg.ble_always_on) {
+			poweroff();
+		}
 		// Disable bitmap transition while in download mode
 		btn_onOnePress(KEY2, NULL);
 
@@ -328,37 +368,6 @@ static void debug_init()
 	UART1_BaudRateCfg(921600);
 }
 
-uint16_t adcBuff[40];
-static int read_batt_raw()
-{
-	int ret = 0;
-	/* adc 1 - pa5 */
-	PRINT("\n2.Single channel sampling...\n");
-	GPIOA_ModeCfg(GPIO_Pin_5, GPIO_ModeIN_Floating);
-	ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
-
-	int16_t RoughCalib_Value = ADC_DataCalib_Rough();
-	PRINT("RoughCalib_Value =%d \n", RoughCalib_Value);
-
-	ADC_ChannelCfg(1);
-
-	for(int i = 0; i < 20; i++) {
-		adcBuff[i] = ADC_ExcutSingleConver() + RoughCalib_Value;
-		ret += adcBuff[i];
-	}
-	for(int i = 0; i < 20; i++) {
-		PRINT("%d \n", adcBuff[i]);
-	}
-
-	return ret / 20;
-}
-
-static int is_charging()
-{
-	GPIOA_ModeCfg(CHARGE_STT_PIN, GPIO_ModeIN_PU);
-	return GPIOA_ReadPortPin(CHARGE_STT_PIN) == 0;
-}
-
 static void disp_bat_stt(int bat_percent, int col, int row)
 {
 	if (bat_percent < 0) {
@@ -371,30 +380,6 @@ static void disp_bat_stt(int bat_percent, int col, int row)
 	for (int i=1; i <= bat_percent; i++) {
 		fb[col + i] = fb[col];
 	}
-}
-
-#define ZERO_PERCENT_THRES      (3.3)
-#define _100_PERCENT_THRES      (4.2)
-#define ADC_MAX_VAL             (4096.0) // 12 bit
-#define ADC_MAX_VOLT            (2.1)   // Volt
-#define R1                      (182.0) // kOhm
-#define R2                      (100.0) // kOhm
-#define PERCENT_RANGE           (_100_PERCENT_THRES - ZERO_PERCENT_THRES)
-#define VOLT_DIV(v)             ((v) / (R1 + R2) * R2) // Voltage divider
-#define VOLT_DIV_INV(v)         ((v) / R2 * (R1 + R2)) // .. Inverse
-#define ADC2VOLT(raw)           ((raw) / ADC_MAX_VAL * ADC_MAX_VOLT)
-#define VOLT2ADC(volt)          ((volt) / ADC_MAX_VOLT * ADC_MAX_VAL)
-
-static int bat_raw2percent(int r)
-{
-	float vadc = ADC2VOLT(r);
-	float vbat = VOLT_DIV_INV(vadc);
-	float strip = vbat - ZERO_PERCENT_THRES;
-	if (strip < PERCENT_RANGE) {
-		// Negative values meaning the battery is not connected or died
-		return (int)(strip / PERCENT_RANGE * 100.0);
-	}
-	return 100;
 }
 
 static void fb_putchar(char c, int col, int row)
@@ -419,9 +404,9 @@ static void disp_charging()
 {
 	int blink = 0;
 	while (mode == BOOT) {
-		int percent = bat_raw2percent(read_batt_raw());
+		int percent = batt_raw2percent(batt_raw());
 
-		if (is_charging()) {
+		if (charging_status()) {
 			disp_bat_stt(blink ? percent : 0, 2, 2);
 			if (ani_xbm_next_frame(&fabm_xbm, fb, 16, 0) == 0) {
 				fb_puts(VERSION_ABBR, sizeof(VERSION_ABBR), 16, 2);
@@ -449,7 +434,7 @@ int main()
 	usb_start();
 
 	led_init();
-	TMR0_TimerInit(SCAN_T / 4);
+	TMR0_TimerInit((FREQ_SYS / 2000) / 2);
 	TMR0_ITCfg(ENABLE, TMR0_3_IT_CYC_END);
 	PFIC_EnableIRQ(TMR0_IRQn);
 
@@ -461,8 +446,14 @@ int main()
 	btn_onLongPress(KEY1, change_brightness);
 
 	disp_charging();
-
-	play_splash(&splash, 0, 0);
+	cfg_init();
+	xbm_t spl = {
+		.bits = &(badge_cfg.splash_bm_bits),
+		.w = badge_cfg.splash_bm_w,
+		.h = badge_cfg.splash_bm_h,
+		.fh = badge_cfg.splash_bm_fh,
+	};
+	play_splash(&spl, 0, 0, badge_cfg.splash_speedT);
 
 	load_bmlist();
 

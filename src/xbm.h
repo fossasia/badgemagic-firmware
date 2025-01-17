@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define ALIGN_1BYTE(x) (((x % 8)>0) + (x / 8))
+#define ALIGN_8BIT(x) (ALIGN_1BYTE(x) * 8)
+
 typedef struct {
 	uint8_t *bits;
 	int     w; // Width

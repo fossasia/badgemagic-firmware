@@ -8,9 +8,9 @@ TARGET = badgemagic-ch582
 # building variables
 ######################################
 # Uncomment below line to enable debugging
-# DEBUG = 1
+DEBUG = 1
 # Uncomment below to build for USB-C version
-# USBC_VERSION = 1
+USBC_VERSION = 1
 # optimization for size
 OPT = -Os
 
@@ -47,24 +47,26 @@ CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_clk.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_uart0.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_timer1.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_pwm.c \
-CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usbhostClass.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_adc.c \
-CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usbhostBase.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_timer3.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_timer0.c \
-CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usb2hostClass.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_flash.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_uart1.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usb2dev.c \
-CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usb2hostBase.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_spi1.c \
 CH5xx_ble_firmware_library/RVMSIS/core_riscv.c \
 src/main.c \
+src/debug.c \
 src/leddrv.c \
 src/button.c \
 src/bmlist.c \
 src/ble/profile/legacy.c \
+src/ble/profile/batt.c \
 src/ble/profile/devinfo.c \
+src/ble/profile/ng.c \
+src/config.c \
+src/util/crc.c \
+src/ngctrl.c \
 src/ble/setup.c \
 src/ble/peripheral.c \
 src/data.c \
@@ -79,6 +81,7 @@ src/xbm.c \
 src/resource.c \
 src/animation.c \
 src/font.c \
+src/power.c \
 
 
 # ASM sources
@@ -127,6 +130,7 @@ C_INCLUDES =  \
 ASFLAGS = $(MCU) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
 CFLAGS = $(MCU) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+CFLAGS += -Werror=implicit-function-declaration
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2 -DDEBUG=$(DEBUG)
