@@ -3,6 +3,7 @@
 #include "xbm.h"
 #include "leddrv.h"
 #include "bmlist.h"
+#include "debug.h"
 
 #define ANI_ANIMATION_STEPS     (5) // steps
 #define ANI_FIXED_STEPS         (LED_COLS) // steps
@@ -404,7 +405,7 @@ static void picture(bm_t *bm, uint16_t *fb, int step, int frame)
 	int hc = LED_COLS / 2;
 	int range = mod(step - 1, LED_COLS);
 
-	if (range > LED_COLS/2) {
+	if (range > hc) {
 		still(bm, fb, frame);
 		return;
 	}
@@ -418,15 +419,10 @@ static void picture(bm_t *bm, uint16_t *fb, int step, int frame)
 				0 : bm->buf[hc - i + frame];
 	}
 
-	if (i >= LED_COLS)
+	if (i >= hc)
 		return;
 	fb[hc + i - 1] = -1;
 	fb[hc - i] = -1;
-
-	for (i++; i< LED_COLS; i++) {
-		fb[hc + i - 1] = 0;
-		fb[hc - i] = 0;
-	}
 }
 
 static void picture_out(bm_t *bm, uint16_t *fb, int step)
@@ -442,7 +438,7 @@ static void picture_out(bm_t *bm, uint16_t *fb, int step)
 		fb[hc + i - 1] = 0;
 		fb[hc - i] = 0;
 	}
-	if (i >= LED_COLS)
+	if (i >= hc)
 		return;
 	fb[hc + i - 1] = -1;
 	fb[hc - i] = -1;
