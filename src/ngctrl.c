@@ -8,6 +8,10 @@
 #include "debug.h"
 #include "config.h"
 
+// TODO: Some of configs can be added, just listing:
+// - Remote brighness adjusting
+// - Upload bitmap to ram
+
 uint8_t next_packet(uint8_t *val, uint16_t len)
 {
 	PRINT(__func__);
@@ -15,12 +19,38 @@ uint8_t next_packet(uint8_t *val, uint16_t len)
 	return 0;
 }
 
-// power off, screen off, screen on
-uint8_t power_switch(uint8_t *val, uint16_t len)
+static void cfg_reset_rx(uint8_t *state, uint16_t len)
+{
+	badge_cfg.reset_rx = !!state[0];
+}
+
+inline static void __poweroff(uint8_t *val, uint16_t len)
+{
+	poweroff();
+}
+
+inline static void __reset(uint8_t *val, uint16_t len)
+{
+	SYS_ResetExecute();
+}
+
+// Power off, reset after bitmap received.
+uint8_t power_setting(uint8_t *val, uint16_t len)
 {
 	PRINT(__func__);
-	PRINT(": to be implemented\n");
-	poweroff();
+	PRINT("\n");
+
+	const void (*ble_lut[])(uint8_t *, uint16_t) = {
+		__poweroff,
+		cfg_reset_rx,
+		__reset,
+	};
+
+	uint8_t fn = val[0];
+	if (fn >= (sizeof(ble_lut) / sizeof(ble_lut[0])))
+		return -1;
+
+	ble_lut[fn](&val[1], len - 1);
 	return 0;
 }
 
@@ -34,6 +64,9 @@ static void cfg_ble_alwayon(uint8_t *val, uint16_t len)
 	badge_cfg.ble_always_on = val[0] != 0;
 }
 
+/* always-on, adv name
+Screen off/on can be archived by entering/leaving streaming mode
+ */
 uint8_t ble_setting(uint8_t *val, uint16_t len)
 {
 	PRINT(__func__);
@@ -94,13 +127,13 @@ uint8_t load_fallback_cfg(uint8_t *val, uint16_t len)
 	cfg_fallback(&badge_cfg);
 	return 0;
 }
-
+/* TODO: add a way to read configs */
 const uint8_t (*cmd_lut[])(uint8_t *val, uint16_t len) = {
 	next_packet, // Unsure if we need this
-	power_switch,
+	power_setting,
 	streaming_setting,
 	stream_bitmap,
-	ble_setting, // always-on, adv name
+	ble_setting,
 	flash_splash_screen,
 	save_cfg,
 	load_fallback_cfg,

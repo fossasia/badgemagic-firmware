@@ -8,7 +8,7 @@
 // };
 
 uint8_t next_packet(uint8_t *val, uint16_t len);
-uint8_t power_switch(uint8_t *val, uint16_t len);
+uint8_t power_setting(uint8_t *val, uint16_t len);
 uint8_t ble_setting(uint8_t *val, uint16_t len);
 uint8_t streaming_setting(uint8_t *val, uint16_t len);
 uint8_t stream_bitmap(uint8_t *val, uint16_t len);

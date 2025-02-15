@@ -65,6 +65,7 @@ src/ble/profile/batt.c \
 src/ble/profile/devinfo.c \
 src/ble/profile/ng.c \
 src/config.c \
+src/legacyctrl.c \
 src/util/crc.c \
 src/ngctrl.c \
 src/ble/setup.c \

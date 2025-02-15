@@ -16,11 +16,13 @@
 
 badge_cfg_t badge_cfg;
 
-// In case of first time firmware upgrading
+/* In case of first time firmware upgrading */
 void cfg_fallback()
 {
-	badge_cfg.ble_always_on = 0;
+	badge_cfg.ble_always_on = 1;
 	memcpy(badge_cfg.ble_devname, "LED Badge Magic\0\0\0\0", 20);
+	/* OEM app testing: */
+	// memcpy(badge_cfg.ble_devname, "LSLED\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 20);
 
 	badge_cfg.led_brightness = 0;
 	badge_cfg.led_scan_freq = 2000;
@@ -32,11 +34,15 @@ void cfg_fallback()
 	badge_cfg.splash_bm_w = splash.w;
 	badge_cfg.splash_bm_h = splash.h;
 	badge_cfg.splash_bm_fh = splash.fh;
+
+	badge_cfg.reset_rx = FALSE;
 }
 
 void cfg_update_crc(badge_cfg_t *cfg)
 {
 	cfg->crc = crc_cal((uint8_t *)cfg, CFG_SIZE - 1);
+	PRINT(__func__);
+	PRINT(": crc: %02X\n", cfg->crc);
 }
 
 int cfg_writeflash(uint16_t flash_offs, badge_cfg_t *cfg)

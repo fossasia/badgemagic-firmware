@@ -18,6 +18,7 @@
 #include "ble/profile.h"
 
 #include "usb/usb.h"
+#include "legacyctrl.h"
 
 #define NEXT_STATE(v, min, max) \
 				(v)++; \
@@ -59,10 +60,22 @@ static void change_brightness()
 	NEXT_STATE(brightness, 0, BRIGHTNESS_LEVELS);
 }
 
+static void mode_setup_download();
+static void mode_setup_normal();
+
 __HIGH_CODE
 static void change_mode()
 {
 	NEXT_STATE(mode, 0, MODES_COUNT);
+	const static void (*modes[])(void) = {
+		NULL,
+		mode_setup_normal,
+		mode_setup_download,
+		poweroff
+	};
+
+	if (modes[mode])
+		modes[mode]();
 }
 
 __HIGH_CODE
@@ -89,8 +102,10 @@ void play_splash(xbm_t *xbm, int col, int row, int spT)
 
 void load_bmlist()
 {
-	if (data_get_header(0) == 0) // There is no bitmap stored in flash
-		return; // skip
+	data_legacy_t header;
+	data_get_header(&header);
+	if (memcmp(header.header, "wang", 5))
+		return; // There is no bitmap stored in flash
 
 	bm_t *curr_bm = bmlist_current();
 
@@ -215,40 +230,6 @@ void ble_setup()
 	ng_registerService();
 }
 
-static void usb_receive(uint8_t *buf, uint16_t len)
-{
-	static uint16_t rx_len, data_len;
-	static uint8_t *data;
-
-	PRINT("dump first 8 bytes: %02x %02x %02x %02x %02x %02x %02x %02x\n",
-				buf[0], buf[1], buf[2], buf[3],
-				buf[4], buf[5], buf[6], buf[7]);
-
-	if (rx_len == 0) {
-		if (memcmp(buf, "wang", 5))
-			return;
-
-		int init_len = len > LEGACY_HEADER_SIZE ? len : sizeof(data_legacy_t);
-		init_len += MAX_PACKET_SIZE;
-		data = malloc(init_len);
-	}
-
-	memcpy(data + rx_len, buf, len);
-	rx_len += len;
-
-	if (!data_len) {
-		data_legacy_t *d = (data_legacy_t *)data;
-		uint16_t n = bigendian16_sum(d->sizes, 8);
-		data_len = LEGACY_HEADER_SIZE + LED_ROWS * n;
-		data = realloc(data, data_len);
-	}
-
-	if ((rx_len > LEGACY_HEADER_SIZE) && rx_len >= data_len) {
-		data_flatSave(data, data_len);
-		SYS_ResetExecute();
-	}
-}
-
 static void spawn_tasks()
 {
 	common_taskid = TMOS_ProcessEventRegister(common_tasks);
@@ -270,20 +251,15 @@ static void start_ble_animation()
 	tmos_start_reload_task(common_taskid, BLE_NEXT_STEP, 500000 / 625);
 }
 
-static void ble_start()
-{
-	ble_enable_advertise();
-	start_ble_animation();
-}
-
 static void start_normal_animation()
 {
 	tmos_start_reload_task(common_taskid, ANI_MARQUE, ANI_MARQUE_SPEED_T / 625);
 	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
 	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
+	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
 }
 
-static void resume_normal()
+static void resume_from_streaming()
 {
 	if (badge_cfg.ble_always_on) {
 		start_normal_animation();
@@ -309,7 +285,7 @@ uint8_t streaming_setting(uint8_t *params, uint16_t len)
 		stop_all_animation();
 		streaming_enabled = 1;
 	} else if (params[0] == 0x01) { // return to normal mode
-		resume_normal();
+		resume_from_streaming();
 		streaming_enabled = 0;
 	}
 	return 0;
@@ -323,40 +299,6 @@ uint8_t stream_bitmap(uint8_t *params, uint16_t len)
 
 	tmos_memcpy(fb, params, min(LED_COLS, len));
 	return 0;
-}
-
-void handle_mode_transition()
-{
-	static int prev_mode;
-	if (prev_mode == mode) return;
-
-	switch (mode)
-	{
-	case DOWNLOAD:
-		if (badge_cfg.ble_always_on) {
-			poweroff();
-		}
-		// Disable bitmap transition while in download mode
-		btn_onOnePress(KEY2, NULL);
-
-		// Take control of the current bitmap to display
-		// the Bluetooth animation
-		ble_start();
-		while (mode == DOWNLOAD) {
-			TMOS_SystemProcess();
-		}
-		// If not being flashed, pressing KEY1 again will
-		// make the badge goes off:
-
-		// fallthrough
-	case POWER_OFF:
-		poweroff();
-		break;
-
-	default:
-		break;
-	}
-	prev_mode = mode;
 }
 
 static void debug_init()
@@ -422,6 +364,51 @@ static void disp_charging()
 	}
 }
 
+static void mode_setup_download()
+{
+	// If always-on BLE is enabled, then skip this mode, jump to next mode
+	if (badge_cfg.ble_always_on) {
+		change_mode();
+	}
+
+	// Disable bitmap transition while in download mode
+	btn_onOnePress(KEY2, NULL);
+
+	// Take control of the current bitmap to display
+	// the Bluetooth animation
+	ble_enable_advertise();
+	start_ble_animation();
+}
+
+void clean_bmlist()
+{
+	bm_t *curr_bm = bmlist_current();
+	while (curr_bm->next != curr_bm)
+		bmlist_drop(curr_bm->next);
+}
+
+void reload_bmlist()
+{
+	clean_bmlist();
+	load_bmlist();
+}
+
+static void mode_setup_normal()
+{
+	btn_onOnePress(KEY2, bm_transition);
+	reload_bmlist();
+	start_normal_animation();
+}
+
+void handle_after_rx()
+{
+	if (badge_cfg.reset_rx) {
+		SYS_ResetExecute();
+	} else {
+		mode_setup_normal();
+	}
+}
+
 int main()
 {
 	SetSysClock(CLK_SOURCE_PLL_60MHz);
@@ -429,8 +416,8 @@ int main()
 	debug_init();
 	PRINT("\nDebug console is on UART%d\n", DEBUG);
 
-	cdc_onWrite(usb_receive);
-	hiddev_onWrite(usb_receive);
+	cdc_onWrite(legacy_usb_rx);
+	hiddev_onWrite(legacy_usb_rx);
 	usb_start();
 
 	led_init();
@@ -464,7 +451,6 @@ int main()
 
 	mode = NORMAL;
 	while (1) {
-		handle_mode_transition();
 		TMOS_SystemProcess();
 	}
 }
