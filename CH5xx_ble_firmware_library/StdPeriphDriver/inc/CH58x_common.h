@@ -36,15 +36,6 @@
 #endif
 #endif
 
-#define Debug_UART0        0
-#define Debug_UART1        1
-#define Debug_UART2        2
-#define Debug_UART3        3
-
-#ifdef DEBUG
-#include <stdio.h>
-#endif
-
 /**
  * @brief  系统主频时钟（Hz）
  */
