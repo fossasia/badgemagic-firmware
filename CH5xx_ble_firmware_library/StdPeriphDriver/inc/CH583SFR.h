@@ -123,12 +123,6 @@ typedef volatile unsigned long long  *PUINT64V;
 #define max(a,b)                (((a) > (b)) ? (a) : (b))
 #endif
 
-#ifdef  DEBUG
-#define PRINT(X...) printf(X)
-#else
-#define PRINT(X...)
-#endif
-
 /* Calculate the byte offset of a field in a structure of type */
 #define FIELD_OFFSET(Type, Field)    ((UINT16)&(((Type *)0)->Field))
 

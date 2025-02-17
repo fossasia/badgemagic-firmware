@@ -68,6 +68,7 @@ bm_t *bmlist_drop(bm_t *bm)
 		head = bm->next;
 	if (bm == tail)
 		tail = bm->prev;
+	free(bm);
 	return bm->next;
 }
 

@@ -1,5 +1,6 @@
 #include "CH58xBLE_LIB.h"
 #include "setup.h"
+#include "../config.h"
 
 #define ADV_UUID    (0xFEE0)
 
@@ -24,29 +25,6 @@ typedef struct
 
 #define CONN_TIMEOUT        100 // Supervision timeout (units of 10ms)
 
-// GAP - SCAN RSP data (max size = 31 bytes)
-static uint8 scanRspData[] = {
-	// complete name
-	16, // length of this section
-	GAP_ADTYPE_LOCAL_NAME_COMPLETE,
-	'L', 'E','D', ' ',
-	'B', 'a','d', 'g', 'e', ' ',
-	'M', 'a','g', 'i', 'c',
-
-	// connection interval range
-	0x05, // length of this section
-	GAP_ADTYPE_SLAVE_CONN_INTERVAL_RANGE,
-	LO_UINT16(MIN_CONN_INTERVAL),
-	HI_UINT16(MIN_CONN_INTERVAL),
-	LO_UINT16(MAX_CONN_INTERVAL),
-	HI_UINT16(MAX_CONN_INTERVAL),
-
-	// Tx power level
-	0x02, // length of this data
-	GAP_ADTYPE_POWER_LEVEL,
-	9 // 9dBm
-};
-
 // GAP - Advertisement data (max size = 31 bytes)
 // keep short, save energy, save the planet
 static uint8 advertData[] = {
@@ -60,9 +38,6 @@ static uint8 advertData[] = {
 	LO_UINT16(ADV_UUID),
 	HI_UINT16(ADV_UUID)
 };
-
-// GAP GATT Attributes
-static uint8 devName[GAP_DEVICE_NAME_LEN] = "LED Badge Magic";
 
 // Connection item list
 static peripheralConnItem_t conn_list;
@@ -210,21 +185,58 @@ void ble_disable_advertise()
 	GAPRole_SetParameter(GAPROLE_ADVERT_ENABLED, sizeof(uint8), &e);
 }
 
+// len should not exceed 20 chars excluding null-terminate char. Otherwise it
+// will be trimmed off and return -1
+static int setup_scan_rsp(char *name, uint8_t len)
+{
+	int ret = 0;
+	// GAP - SCAN RSP data (max size = 31 bytes)
+	uint8_t scanRspData[31] = {
+		// connection interval range
+		0x05, // length of this section
+		GAP_ADTYPE_SLAVE_CONN_INTERVAL_RANGE,
+		LO_UINT16(MIN_CONN_INTERVAL),
+		HI_UINT16(MIN_CONN_INTERVAL),
+		LO_UINT16(MAX_CONN_INTERVAL),
+		HI_UINT16(MAX_CONN_INTERVAL),
+
+		// Tx power level
+		0x02, // length of this data
+		GAP_ADTYPE_POWER_LEVEL,
+		9, // 9dBm
+
+		len + 1,
+		GAP_ADTYPE_LOCAL_NAME_COMPLETE,
+	};
+	
+	if (len < (31 - 11)) {
+		tmos_memcpy(&scanRspData[11], name, len);
+		ret = -1;
+	} else {
+		tmos_memcpy(&scanRspData[11], name, 20);
+	}
+	int total_len = 11 + len;
+	tmos_memset(&scanRspData[total_len], 0, 31 - total_len);
+	GAPRole_SetParameter(GAPROLE_SCAN_RSP_DATA, total_len, scanRspData);
+	return ret;
+}
+
 static void gap_init()
 {
 	GAPRole_PeripheralInit();
 
-	static uint16 desired_min_interval = 6;
-	static uint16 desired_max_interval = 500;
+	uint16_t min_interval = 6;
+	uint16_t max_interval = 500;
 
 	// Set the GAP Role Parameters
-	GAPRole_SetParameter(GAPROLE_SCAN_RSP_DATA, sizeof(scanRspData), scanRspData);
+	setup_scan_rsp(badge_cfg.ble_devname, 20);
 	GAPRole_SetParameter(GAPROLE_ADVERT_DATA, sizeof(advertData), advertData);
-	GAPRole_SetParameter(GAPROLE_MIN_CONN_INTERVAL, sizeof(uint16), &desired_min_interval);
-	GAPRole_SetParameter(GAPROLE_MAX_CONN_INTERVAL, sizeof(uint16), &desired_max_interval);
+	GAPRole_SetParameter(GAPROLE_MIN_CONN_INTERVAL, sizeof(uint16), &min_interval);
+	GAPRole_SetParameter(GAPROLE_MAX_CONN_INTERVAL, sizeof(uint16), &max_interval);
 	
 	// Set the GAP Characteristics
-	GGS_SetParameter(GGS_DEVICE_NAME_ATT, GAP_DEVICE_NAME_LEN, devName);
+	GGS_SetParameter(GGS_DEVICE_NAME_ATT, 20,
+				badge_cfg.ble_devname);
 	GAP_SetParamValue(TGAP_DISC_ADV_INT_MIN, MIN_ADV_INTERVAL);
 	GAP_SetParamValue(TGAP_DISC_ADV_INT_MAX, MAX_ADV_INTERVAL);
 

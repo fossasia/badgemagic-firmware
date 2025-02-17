@@ -6,28 +6,39 @@
 #include "CH58x_common.h"
 
 #ifndef BLE_BUFF_LEN
-#define BLE_BUFF_LEN 27
+// MTU = 64 but clients should request new MTU, otherwise default will be 23
+#define BLE_BUFF_LEN (64 + 4)
 #endif
-#ifndef BLE_BUFF_NUM
-#define BLE_BUFF_NUM                        5
-#endif
+
 #ifndef BLE_TX_NUM_EVENT
 #define BLE_TX_NUM_EVENT                    1
 #endif
+
 #ifndef BLE_TX_POWER
 #define BLE_TX_POWER                        LL_TX_POWEER_6_DBM
+// #define BLE_TX_POWER                        LL_TX_POWEER_MINUS_16_DBM
 #endif
+
 #ifndef BLE_MEMHEAP_SIZE
-#define BLE_MEMHEAP_SIZE                    (1024*6)
+#define BLE_MEMHEAP_SIZE                    (1024 * 6)
 #endif
+
 #ifndef CENTRAL_MAX_CONNECTION
-#define CENTRAL_MAX_CONNECTION              3
+#define CENTRAL_MAX_CONNECTION              1
 #endif
+
+#ifndef BLE_BUFF_NUM
+// The BLE lib automatically stack up Write Long messages in Write handler.
+// A connection will be disconnected if this number is some how not enough.
+#define BLE_BUFF_NUM        (512 / 23)
+#endif
+
 #ifndef PERIPHERAL_MAX_CONNECTION
 #define PERIPHERAL_MAX_CONNECTION           1
 #endif
 
-static __attribute__((aligned(4))) uint32_t MEM_BUF[BLE_MEMHEAP_SIZE / 4];
+static __attribute__((aligned(4), section(".noinit")))
+uint32_t MEM_BUF[BLE_MEMHEAP_SIZE / 4];
 
 static void lsi_calib(void)
 {
