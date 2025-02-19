@@ -18,15 +18,15 @@ void ani_shift_y(bm_t *bm, uint16_t *fb, int dir, int frame);
 void ani_scroll_x(bm_t *bm, uint16_t *fb, int dir);
 void ani_scroll_y(bm_t *bm, uint16_t *fb);
 
-void ani_scroll_left(bm_t *bm, uint16_t *fb);
-void ani_scroll_right(bm_t *bm, uint16_t *fb);
-void ani_scroll_up(bm_t *bm, uint16_t *fb);
-void ani_scroll_down(bm_t *bm, uint16_t *fb);
-void ani_fixed(bm_t *bm, uint16_t *fb);
-void ani_laser(bm_t *bm, uint16_t *fb);
-void ani_snowflake(bm_t *bm, uint16_t *fb);
-void ani_animation(bm_t *bm, uint16_t *fb);
-void ani_picture(bm_t *bm, uint16_t *fb);
+int ani_scroll_left(bm_t *bm, uint16_t *fb);
+int ani_scroll_right(bm_t *bm, uint16_t *fb);
+int ani_scroll_up(bm_t *bm, uint16_t *fb);
+int ani_scroll_down(bm_t *bm, uint16_t *fb);
+int ani_fixed(bm_t *bm, uint16_t *fb);
+int ani_laser(bm_t *bm, uint16_t *fb);
+int ani_snowflake(bm_t *bm, uint16_t *fb);
+int ani_animation(bm_t *bm, uint16_t *fb);
+int ani_picture(bm_t *bm, uint16_t *fb);
 
 void ani_marque(bm_t *bm, uint16_t *fb, int step);
 void ani_flash(bm_t *bm, uint16_t *fb, int step);
