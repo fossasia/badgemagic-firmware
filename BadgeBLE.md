@@ -2,14 +2,33 @@
 
 ### Connection Information
 
-The pixel data is transferred to the badge via BLE. The badge advertizes the name "LSLED" and uses a vendor specific service/characteristic:
+#### OEM Firmware
 
-- Service-UUID: 0000fee0-0000-1000-8000-00805f9b34fb
-- Characteristic: 0000fee1-0000-1000-8000-00805f9b34fb
+The pixel data is transferred to the badge via BLE. The OEM firmware advertises
+the name 'LSLED' and a 16-bit vendor-specific service/characteristic pair:
 
-The characteristic accepts 16 byte long data packets.
+- Service-UUID: 0xFEE0 (128-bit equivalent:
+  0000fee0-0000-1000-8000-00805f9b34fb)
+- Characteristic: 0xFEE1 (128-bit equivalent:
+  0000fee1-0000-1000-8000-00805f9b34fb)
 
-### Data Format
+The characteristic of the OEM firmware has Read/Write/Notify properties. It
+accepts 16 byte long data packets on writing. Its Read/Notify behavior is
+currently unknown and needs to be investigated.
+
+#### Open Firmware
+
+This open firmware advertises the service/characteristic pair 0xFEE0/0xFEE1 in
+the same way as the OEM firmware and uses the name "LED Badge Magic" which can
+be renamed via the [next-gen profile](#next-gen-profile). The characteristic
+0xFEE1, marked as the legacy profile, is write-only. Read/Notify functionality
+will be supported once its behavior is fully understood.
+
+An additional custom profile has been implemented, enabling more remote features
+and configuration over the BLE connection, see the [next-gen
+profile](#next-gen-profile) for details.
+
+### Data Format (Legacy)
 
 The badge supports up to 8 bitmaps which can have various features enabled.
 
@@ -50,3 +69,147 @@ The "mode" bytes are a combination of two 4 bit values. The high nibble describe
 | 0x07 | "picture"         |
 | 0x08 | "laser"           |
 
+### Next-Gen profile
+
+ 16-bit Service/characteristic:
+
+- Service-UUID: 0xF055 (128-bit equivalent:
+  0000f055-0000-1000-8000-00805f9b34fb)
+- Characteristic: 0xF056 (128-bit equivalent:
+  0000f056-0000-1000-8000-00805f9b34fb)
+  - Write property: to receive controls and configs
+  - Notify property: to return error codes
+  - Read property: to be implemented
+
+#### Protocol
+
+The next-gen characteristic accepts messages of varying lengths (0 to 512
+bytes). The first byte represents the function/command code, while the remaining
+bytes contain parameters for the corresponding function/command.
+
+![next-gen message format](/assets/ng-protocol.svg)
+
+Supported functions/commands:
+
+- power_setting
+- streaming_setting
+- stream_bitmap
+- ble_setting
+- flash_splash_screen
+- save_cfg
+- load_fallback_cfg
+
+The client app should enable notifications for the characteristic to receive the
+returned error code (e.g., by using setCharacteristicNotification() on Android).
+
+##### power_setting
+
+Function/Command code: `0x01`.
+
+Parameters:
+
+- Power off: `0x00`.
+- Enable resetting after uploading is done: `[0x01, 0x00]`. Note: call
+  the [save_cfg](#save_cfg) command to save this config.
+- Disable resetting after uploading is done: `[0x01, 0x01]`. Note: call
+  the [save_cfg](#save_cfg) command to save this config.
+- Power off: `0x02`.
+
+Returns:
+
+- Parameters out of range: `0xff`.
+- Success: `0x00`.
+
+##### streaming_setting
+
+Function/Command code: `0x02`.
+
+Parameters:
+
+- Enter streaming mode `0x00`. This command stops all animations, clears the
+  screen, and switches the device to streaming mode.
+- Leave streaming mode `0x01`. This command resumes all normal operations.
+
+Returns:
+
+- Parameters out of range: `0xff`.
+- Success: `0x00`.
+
+##### stream_bitmap
+
+Function/Command code: `0x03`.
+
+Parameters:
+
+- Array of bitmap in word (16-bit). Each word represents a column. The
+  least-significant bit of each word represents the top pixel of each column.
+  The length of the word array must be less than the number of columns on the
+  screen; otherwise, any overflow pixels will be ignored.
+
+Returns:
+
+- Parameters out of range or streaming not enabled: `0xff`.
+- Success: `0x00`.
+
+##### ble_setting
+
+Function/Command code: `0x04`.
+
+Parameters:
+
+- Disable always-on BLE: `[0x00, 0x00]`. Note: Call the save_cfg command to save
+  this configuration.
+- Enable always-on BLE: `[0x00, 0x01]`. Note: Call the save_cfg command to save
+  this configuration.
+- Change BLE device name: `[0x01, "This is name"]`. The name must be less than
+  or equal to 20 characters. Note: Call the save_cfg command to save this
+  configuration.
+
+Returns:
+
+- Parameters out of range: `0xff`.
+- Success: `0x00`.
+
+##### flash_splash_screen
+
+Function/Command code: `0x05`.
+
+Parameters:
+
+- The first byte describes the width of the image.
+- The second byte describes the height of the image.
+- The third byte describes the frame height that will be displayed on the
+  screen.
+- The rest are pixel content in `xbm` format.
+
+Returns:
+
+- Parameters out of range: `0xff`.
+- The width is larger than the maximum allowed (currently 48 pixels): `0xff`.
+- The height is larger than the maximum allowed (currently 44 pixels): `0xfe`.
+- Message length is not matched (currently 44 pixels): `0xfd`.
+- Missing pixel contents: `0xfc`.
+- Success: `0x00`.
+
+##### save_cfg
+
+Save configs to flash.
+
+Command code: `0x06`.
+
+Returns:
+
+- Parameters out of range: `0xff`.
+- Flash writing error: `0x01`.
+- Success: `0x00`.
+
+##### load_fallback_cfg
+
+Load firmware default configuration. Note: call the [save_cfg](#save_cfg)
+command to save this config.
+
+Function/Command code: `0x07`.
+
+Returns:
+
+- Success: `0x00`.
