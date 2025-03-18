@@ -20,7 +20,7 @@ wchisp flash badgemagic-ch582.bin
 Install and run [wchisp studio](https://www.wch-ic.com/downloads/WCHISPTool_Setup_exe.html)
 connect the badge with usb and enter bootloader.
 
-device will be displayed automatically on the UI.
+The device will automatically appear in the UI.
 
 Select the badgemagic-ch582.bin file and hit download.
 
