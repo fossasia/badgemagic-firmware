@@ -8,9 +8,14 @@ TARGET = badgemagic-ch582
 # building variables
 ######################################
 # Uncomment below line to enable debugging
-# DEBUG = 1
+DEBUG ?= 1
+
 # Uncomment below to build for USB-C version
 # USBC_VERSION = 1
+
+PREFIX ?= riscv-none-embed-
+OPENOCD ?= ../MRS_Toolchain_Linux_x64_V1.91/OpenOCD/bin/openocd
+
 # optimization for size
 OPT = -Os
 
@@ -92,7 +97,6 @@ CH5xx_ble_firmware_library/Startup/startup_CH583.S
 #######################################
 # binaries
 #######################################
-PREFIX ?= riscv-none-embed-
 
 CC = $(PREFIX)gcc
 AS = $(PREFIX)gcc -x assembler-with-cpp
@@ -199,7 +203,10 @@ $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf
 # Program
 #######################################
 program: $(BUILD_DIR)/$(TARGET).elf
-	sudo wch-openocd -f /usr/share/wch-openocd/openocd/scripts/interface/wch-riscv.cfg -c 'init; halt; program $(BUILD_DIR)/$(TARGET).elf; reset; wlink_reset_resume; exit;'
+	$(OPENOCD) -f interface/wch-riscv.cfg -c 'init; halt; program $(BUILD_DIR)/$(TARGET).elf; reset; wlink_reset_resume; exit;'
+
+debug:
+	$(OPENOCD) -f debug.cfg
 
 isp: $(BUILD_DIR)/$(TARGET).bin
 	wchisp flash $(BUILD_DIR)/$(TARGET).bin
