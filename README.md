@@ -22,7 +22,7 @@ Connect the badge via USB and enter bootloader mode.
 
 The device will automatically appear in the UI.
 
-Select the badgemagic-ch582.bin file and hit download.
+Select the `badgemagic-ch582.bin` file and click 'Download'.
 
 Where badgemagic-ch582.bin is the binary downloaded above, the .elf file also
 works.
