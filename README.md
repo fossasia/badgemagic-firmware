@@ -2,9 +2,8 @@
 
 Hardware details and information to build an open firmware for Bluetooth LED badges, compatible with [Badge Magic app](https://github.com/fossasia/badgemagic-app)
 
-## Installation
+## Installation (Unix and Windows)
 
-### Unix
 Install [wchisp](https://github.com/ch32-rs/wchisp?tab=readme-ov-file#installing).
 
 Download prebuilt binaries from [release](https://github.com/fossasia/badgemagic-firmware/releases) or [the latest development builds](https://github.com/fossasia/badgemagic-firmware/tree/bin).
@@ -15,15 +14,6 @@ USB port) while plugging in the USB to enter the bootloader. Then run:
 ```sh
 wchisp flash badgemagic-ch582.bin
 ```
-
-### Windows
-Install and run [wchisp studio](https://www.wch-ic.com/downloads/WCHISPTool_Setup_exe.html)
-Connect the badge via USB and enter bootloader mode.
-
-The device will automatically appear in the UI.
-
-Select the `badgemagic-ch582.bin` file and click 'Download'.
-
 Where badgemagic-ch582.bin is the binary downloaded above, the .elf file also
 works.
 
