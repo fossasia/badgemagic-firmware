@@ -1,0 +1,7 @@
+[submodule "external/mcuboot"]
+	path = external/mcuboot
+	url = https://github.com/mcu-tools/mcuboot.git
+	branch = v2.1.0
+[submodule "external/tinycrypt"]
+	path = external/tinycrypt
+	url = https://github.com/intel/tinycrypt.git

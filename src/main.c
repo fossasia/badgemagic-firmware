@@ -20,6 +20,8 @@
 #include "usb/usb.h"
 #include "legacyctrl.h"
 
+#include <bootutil/bootutil.h>
+
 #define NEXT_STATE(v, min, max) \
 				(v)++; \
 				if ((v) >= (max)) \
