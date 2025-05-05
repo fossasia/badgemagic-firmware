@@ -2,8 +2,8 @@ ENTRY( _start )
 
 MEMORY
 {
-	FLASH (rx) : ORIGIN = 0x00010000, LENGTH = 384k
-	RAM (xrw) : ORIGIN = 0x20003800, LENGTH = 32K
+	FLASH (rx) : ORIGIN = 0x00010200, LENGTH = (448K - 0x00010200)
+	RAM (xrw) : ORIGIN = 0x20000000, LENGTH = 32K
 }
 
 SECTIONS
@@ -13,37 +13,14 @@ SECTIONS
 		_sinit = .;
 		. = ALIGN(4);
 		KEEP(*(SORT_NONE(.init)))
+		KEEP(*(SORT_NONE(.handle_reset)))
 		. = ALIGN(4);
 		_einit = .;
 	} >FLASH AT>FLASH
-	
-/*	.vector :
-	{
-		*(.vector);
-	} >FLASH AT>FLASH */
-	
-	.highcodelalign : 
-	{
-		. = ALIGN(4);
-		PROVIDE(_highcode_lma = .); 
-	} >FLASH AT>FLASH 
-	
-	.highcode : 
-	{
-		. = ALIGN(4);
-		PROVIDE(_highcode_vma_start = .);
-		*(.vector);
-		KEEP(*(SORT_NONE(.vector_handler)))
-		*(.highcode);
-		*(.highcode.*);
-		. = ALIGN(4); 
-		PROVIDE(_highcode_vma_end = .);
-	} >RAM AT>FLASH
-	
+
 	.text :
 	{
 		. = ALIGN(4);
-		KEEP(*(SORT_NONE(.handle_reset)))
 		*(.text)
 		*(.text.*)
 		*(.rodata)
@@ -119,10 +96,28 @@ SECTIONS
 		KEEP (*(.dtors))
 	} >FLASH AT>FLASH 
 
+	.highcodelalign : 
+	{
+		. = ALIGN(4);
+		PROVIDE(_highcode_lma = .); 
+	} >FLASH AT>FLASH 
+	
+	.highcode : 
+	{
+		. = ALIGN(4);
+		PROVIDE(_highcode_vma_start = .);
+		*(.vector);
+		KEEP(*(SORT_NONE(.vector_handler)))
+		*(.highcode);
+		*(.highcode.*);
+		. = ALIGN(4); 
+		PROVIDE(_highcode_vma_end = .);
+	} >RAM AT>FLASH
+
 	.dalign : 
 	{
 		. = ORIGIN(RAM) + MAX(0x800 , SIZEOF(.highcode));
-	} >RAM AT>FLASH	
+	} >RAM AT>FLASH
 
 	.dlalign :
 	{

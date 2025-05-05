@@ -12,4 +12,6 @@
 #define _TRACE() PRINT("> "); PRINT(__FILE__); PRINT(": "); PRINT(__func__); \
 				PRINT("()\n")
 
+void dump_mem(void *ptr, int len);
+
 #endif /* __COMMON_DEBUG_H__ */

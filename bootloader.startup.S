@@ -1,15 +1,3 @@
-/********************************** (C) COPYRIGHT *******************************
- * File Name          : startup_ch58x.s
- * Author             : WCH
- * Version            : V1.0.0
- * Date               : 2021/02/25
- * Description        :
- *********************************************************************************
- * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
- * Attention: This software (modified or not) and binary are used for 
- * microcontroller manufactured by Nanjing Qinheng Microelectronics.
- *******************************************************************************/
-
 	.section	.init,"ax",@progbits
 	.global	_start
 	.align	1
@@ -23,20 +11,21 @@ _vector_base:
 
     .word   0
     .word   0
-    .word   NMI_Handler                 /* NMI Handler */
-    .word   HardFault_Handler           /* Hard Fault Handler */
+    .word   NMI_Handler
+    .word   HardFault_Handler
     .word   0xF5F9BDA9
-    .word   Ecall_M_Mode_Handler        /* 5 */
+    .word   Ecall_M_Mode_Handler
     .word   0
     .word   0
-    .word   Ecall_U_Mode_Handler		/* 8 */
-    .word   Break_Point_Handler			/* 9 */
+    .word   Ecall_U_Mode_Handler
+    .word   Break_Point_Handler
     .word   0
     .word   0
-    .word   SysTick_Handler            /* SysTick Handler */
+    .word   SysTick_Handler
     .word   0
-    .word   SW_Handler                 /* SW Handler */
+    .word   SW_Handler
     .word   0
+
     /* External Interrupts */
     .word   TMR0_IRQHandler            /* 0:  TMR0 */
     .word   GPIOA_IRQHandler           /* GPIOA */
@@ -90,33 +79,33 @@ _vector_base:
     .weak   UART3_IRQHandler
     .weak   WDOG_BAT_IRQHandler
 
-NMI_Handler:         1:  j 1b
-HardFault_Handler:   1:  j 1b
-Ecall_M_Mode_Handler:   1:  j 1b
-Ecall_U_Mode_Handler:   1:  j 1b
-Break_Point_Handler:   1:  j 1b
-SysTick_Handler:     1:  j 1b
-SW_Handler:          1:  j 1b
-TMR0_IRQHandler:     1:  j 1b
-GPIOA_IRQHandler:    1:  j 1b
-GPIOB_IRQHandler:    1:  j 1b
-SPI0_IRQHandler:     1:  j 1b
-BB_IRQHandler:       1:  j 1b
-LLE_IRQHandler:      1:  j 1b
-USB_IRQHandler:      1:  j 1b
-USB2_IRQHandler:      1:  j 1b
-TMR1_IRQHandler:     1:  j 1b
-TMR2_IRQHandler:     1:  j 1b
-UART0_IRQHandler:    1:  j 1b
-UART1_IRQHandler:    1:  j 1b
-RTC_IRQHandler:      1:  j 1b
-ADC_IRQHandler:      1:  j 1b
-I2C_IRQHandler:		 1:  j 1b
-PWMX_IRQHandler:     1:  j 1b
-TMR3_IRQHandler:     1:  j 1b
-UART2_IRQHandler:    1:  j 1b
-UART3_IRQHandler:    1:  j 1b
-WDOG_BAT_IRQHandler: 1:  j 1b
+NMI_Handler:          1: j 1b
+HardFault_Handler:    1: j 1b
+Ecall_M_Mode_Handler: 1: j 1b
+Ecall_U_Mode_Handler: 1: j 1b
+Break_Point_Handler:  1: j 1b
+SysTick_Handler:      1: j 1b
+SW_Handler:           1: j 1b
+TMR0_IRQHandler:      1: j 1b
+GPIOA_IRQHandler:     1: j 1b
+GPIOB_IRQHandler:     1: j 1b
+SPI0_IRQHandler:      1: j 1b
+BB_IRQHandler:        1: j 1b
+LLE_IRQHandler:       1: j 1b
+USB_IRQHandler:       1: j 1b
+USB2_IRQHandler:      1: j 1b
+TMR1_IRQHandler:      1: j 1b
+TMR2_IRQHandler:      1: j 1b
+UART0_IRQHandler:     1: j 1b
+UART1_IRQHandler:     1: j 1b
+RTC_IRQHandler:       1: j 1b
+ADC_IRQHandler:       1: j 1b
+I2C_IRQHandler:       1: j 1b
+PWMX_IRQHandler:      1: j 1b
+TMR3_IRQHandler:      1: j 1b
+UART2_IRQHandler:     1: j 1b
+UART3_IRQHandler:     1: j 1b
+WDOG_BAT_IRQHandler:  1: j 1b
 
 	.section	.handle_reset,"ax",@progbits
 	.weak	handle_reset
@@ -164,25 +153,36 @@ handle_reset:
 	addi a0, a0, 4
 	bltu a0, a1, 1b
 2:
-	/* 流水线控制位 & 动态预测控制位 */
+
+	/* Microprocessor Configuration Registers (corecfgr) */
+	/*
+	This register is mainly used to configure the microprocessor pipeline,
+	instruction prediction and other related features, and generally does not
+	need to be operated. The relevant MCU products are configured with default
+	values in the startup file */
 	li t0, 0x1f
 	csrw 0xbc0, t0
-	/* 打开嵌套中断、硬件压栈功能 */
+
+	/* Interrupt System Control Register (INTSYSCR) */
+	/* INESTEN = 1: Interrupt nesting function enabled */
+	/* HWSTKEN = 1: HPE function enabled */
 	li t0, 0x3
 	csrw 0x804, t0
-	
-    li t0, 0x88
-    csrs mstatus, t0
-	la t0, _vector_base
 
-	/* 配置向量表模式为绝对地址模式 */
-    ori t0, t0, 3
+	/* Machine Mode Status Register (mstatus) */
+	/* MPIE = 1: Interrupt enable state before entering interrupt */
+	/* MIE = 1: Machine mode interrupt enable */
+	li t0, 0x88
+	csrs mstatus, t0
+
+	csrs pmpaddr0, x0
+
+	/* Configure The interrupt vector table base address to `_vector_base` */
+	/* MODE1 = 1: Identify by absolute address, support full range, but must jump to 
+	absolute address mode */
+	/* MODE0 = 1: Address offset based on interrupt number *4. */
+	la t0, _vector_base
+	ori t0, t0, 3
 	csrw mtvec, t0
 
-	la t0, main
-	csrw mepc, t0
-	
-	
-	mret
-
-
+	j boot

@@ -172,4 +172,10 @@
     do {                   \
     } while (0)
 
+#define MCUBOOT_PERUSER_MGMT_GROUP_ENABLED (0)
+#define CRC16_INITIAL_CRC                  (0)
+#define BASE64_ENCODE_SIZE(in_size) ((((((in_size) - 1) / 3) * 4) + 4) + 1)
+#define MCUBOOT_BOOT_MGMT_ECHO 1
+// #define MCUBOOT_SERIAL_DIRECT_IMAGE_UPLOAD 1
+
 #endif /* __MCUBOOT_CONFIG_H__ */

@@ -1,22 +1,11 @@
 #include "CH58x_common.h"
 #include <bootutil/bootutil.h>
 #include <common/debug.h>
+#include <boot_serial/boot_serial.h>
+#include <stdlib.h>
+#include <lwrb/lwrb.h>
 
-// /* Import a binary file */
-// #define IMPORT_BIN(sect, file, sym) asm (\
-//     ".section "#sect "\n" \
-// 	".balign 4\n"                           /* Word alignment */\
-//     ".global " #sym "\n"                    /* Export the object address */\
-//     #sym ":\n"                              /* Define the object label */\
-//     ".incbin \"" file "\"\n"                /* Import the file */\
-//     ".global _sizeof_" #sym "\n"            /* Export the object size */\
-//     ".set _sizeof_" #sym ", . - " #sym "\n" /* Define the object size */\
-//     ".balign 4\n"                           /* Word alignment */\
-//     )
-// 	// __attribute__((section(".highcode")))
-// IMPORT_BIN(.app, "build/badgemagic-ch582.signed.bin", main_bin);
-// /* Declaration of symbols (any type can be used) */
-// extern const unsigned char main_bin[], _sizeof_main_bin[];
+#include "usb/usb.h"
 
 static void debug_init()
 {
@@ -27,49 +16,72 @@ static void debug_init()
 	UART1_BaudRateCfg(921600);
 }
 
-void start_app(uint32_t pc, uint32_t sp) {
-	// __asm volatile ("la sp, %0" : : "r" (sp) : );
-
-	PRINT("Attempting jump pc=%x, sp=%x\n", pc, sp);
-	void (*application_reset_handler)(void) = (void *)pc;
-	((  void  (*)  ( void ))  ((int*)pc))();
+__INTERRUPT
+__HIGH_CODE
+void HardFault_Handler(void)
+{
+	PRINT("HardFault happen\n");
+	while(1);
 }
 
 void do_boot(struct boot_rsp *rsp) {
-	PRINT("Starting Main Application");
-	PRINT("  Image Start Offset: 0x%x", (int)rsp->br_image_off);
+	PRINT(" Image Start Offset: 0x%x", (int)rsp->br_image_off);
 
-	// We run from internal flash. Base address of this medium is 0x0
-	uint32_t vector_table = 0x0 + rsp->br_image_off + rsp->br_hdr->ih_hdr_size;
+	int fw_address = 0x0 + rsp->br_image_off + rsp->br_hdr->ih_hdr_size;
 
-	uint32_t *app_code = (uint32_t *)vector_table;
-	uint32_t app_sp = app_code[0];
-	uint32_t app_start = app_code[1];
-
-	PRINT("  Vector Table Start Address: 0x%x. PC=0x%x, SP=0x%x",
-	(int)vector_table, app_start, app_sp);
-
-	// // We need to move the vector table to reflect the location of the main application
-	// volatile uint32_t *vtor = (uint32_t *)0xE000ED08;
-	// *vtor = (vector_table & 0xFFFFFFF8);
-
-	start_app(vector_table, app_sp);
+	PRINT("Attempting jump pc=%x\n", fw_address);
+	((void (*) ( void )) ((int*)fw_address))();
 }
 
-int main() {
-	SetSysClock(CLK_SOURCE_PLL_60MHz);
+lwrb_t fifo;
+uint8_t fifo_buf[1024];
 
+void rx_to_fifo(uint8_t *buf, uint16_t len)
+{
+	PFIC_DisableAllIRQ();
+	lwrb_write(&fifo, buf, len);
+	PFIC_EnableAllIRQ();
+}
+
+int read(char *str, int cnt, int *newline)
+{
+	int rb = lwrb_read(&fifo, str, cnt);
+	if (rb > 0 && str[rb-1] == '\n') {
+		*newline = 1;
+		PRINT("> read: %d %s\n", rb, str);
+	} else {
+		*newline = 0;
+	}
+	return rb;
+}
+
+void write(const char *ptr, int cnt)
+{
+	PRINT("> write: %s %d\n", ptr, cnt);
+	cdc_tx_poll(ptr, cnt, 1000);
+}
+
+struct boot_uart_funcs boot_uart = {
+	read, write,
+};
+
+int boot() {
+	SetSysClock(CLK_SOURCE_PLL_60MHz);
 	debug_init();
 	PRINT("\nDebug console is on UART%d\n", DEBUG);
+
+	lwrb_init(&fifo, fifo_buf, sizeof(fifo_buf));
+	cdc_onWrite(rx_to_fifo);
+	usb_start();
+	boot_serial_start(&boot_uart);
 
 	struct boot_rsp rsp;
 	int rv = boot_go(&rsp);
 
 	if (rv == 0) {
-		// 'rsp' contains the start address of the image
 		do_boot(&rsp);
 	}
 	PRINT("\rv failed\n");
 
-	while(1);
+	abort();
 }

@@ -59,6 +59,11 @@ int flash_area_open(uint8_t id, const fa_t **area_outp)
 {
 	MCUBOOT_LOG_DBG("%s: ID=%d", __func__, (int)id);
 	*area_outp = fa_lookup(id);
+	// sys_safe_access_enable();
+	// // enable flash Rom write/erase
+	// R8_GLOB_ROM_CFG |= RB_ROM_CTRL_EN | RB_ROM_DATA_WE | RB_ROM_CODE_WE;
+	// sys_safe_access_disable();
+	// FLASH_ROM_START_IO();
 	return area_outp != NULL ? 0 : -1;
 }
 
@@ -90,6 +95,38 @@ int flash_area_read(const fa_t *fa, uint32_t off, void *dst,
 	return 0;
 }
 
+static int write_flash_align(uint32_t addr, const void *src, uint32_t len)
+{
+	int ret, i;
+	uint32_t split_sz = EEPROM_PAGE_SIZE;
+	__attribute__ ((aligned (4))) uint8_t src_aligned [split_sz];
+
+	if ((uint32_t)src % 4 == 0) { // src is aligned to 4
+		return - FLASH_ROM_WRITE(addr, src, len);
+	}
+	
+	if (len <= split_sz) {
+		memcpy(src_aligned, src, len);
+		return - FLASH_ROM_WRITE(addr, src_aligned, len);
+	}
+
+	// if len > split_sz
+	for (i = 0; i < len - split_sz; i += split_sz) {
+		MCUBOOT_LOG_DBG("addr %08x, src_aligned %08x, len %08x", addr + i, (int)src_aligned, split_sz);
+		memcpy(src_aligned, src + i, split_sz);
+		ret = FLASH_ROM_WRITE(addr + i, src_aligned, split_sz);
+		if (ret) {
+			return -1;
+		}
+	}
+	split_sz = i - len; // remain size
+	i = len - split_sz;
+	MCUBOOT_LOG_DBG("addr %08x, src_aligned %08x, len %08x", addr + i, (int)src_aligned, split_sz);
+	memcpy(src_aligned, src + i, split_sz);
+	return - FLASH_ROM_WRITE(addr + i, src_aligned, split_sz);
+}
+
+__HIGH_CODE
 int flash_area_write(const fa_t *fa, uint32_t off, const void *src,
 				uint32_t len)
 {
@@ -103,11 +140,22 @@ int flash_area_write(const fa_t *fa, uint32_t off, const void *src,
 		MCUBOOT_LOG_ERR("%s: Out of Bounds (0x%x vs 0x%x)", __func__, end_offset, fa->fa_size);
 		return -1;
 	}
+	
+	uint32_t addr = fa->fa_off + off;
+	MCUBOOT_LOG_DBG("%s: Addr: 0x%08x Length: %d", __func__, addr, len);
+	if (len == 0) {
+		MCUBOOT_LOG_WRN("Zero length");
+		return 0;
+	}
 
-	const uint32_t addr = fa->fa_off + off;
-	MCUBOOT_LOG_DBG("%s: Addr: 0x%08x Length: %d", __func__, (int)addr, (int)len);
-
-	FLASH_ROM_WRITE(addr, src, len);
+	_TRACE();
+	uint32_t pirqv;
+	MCUBOOT_LOG_DBG("addr %08x, src %08x, len %08x", addr, (int)src, len);
+	// FLASH_ROM_WRITE(addr, src, len);
+	int ret = write_flash_align(addr, src, len);
+	dump_mem(addr, len);
+	// mDelaymS(1);
+	_TRACE();
 	
 	#if VALIDATE_PROGRAM_OP
 	if (FLASH_ROM_VERIFY(addr, src, len) != 0) {
@@ -116,7 +164,7 @@ int flash_area_write(const fa_t *fa, uint32_t off, const void *src,
 	}
 	#endif
 
-	return 0;
+	return ret;
 }
 
 int flash_area_erase(const fa_t *fa, uint32_t off, uint32_t len)
@@ -134,24 +182,31 @@ int flash_area_erase(const fa_t *fa, uint32_t off, uint32_t len)
 	const uint32_t start_addr = fa->fa_off + off;
 	MCUBOOT_LOG_DBG("%s: Addr: 0x%08x Length: %d", __func__, (int)start_addr, (int)len);
 
-	FLASH_ROM_ERASE(start_addr, len);
+	uint32_t *val = (void *)start_addr;
+	// dump_mem(val, 100);
+	if (FLASH_ROM_ERASE(start_addr, len)) {
+		MCUBOOT_LOG_ERR("Flash erase failed");
+		return -1;
+	}
 
-	#if VALIDATE_PROGRAM_OP
-	for (size_t i = 0; i < len; i++) {
-		uint8_t *val = (void *)(start_addr + i);
-		if (*val != 0xff) {
+	// dump_mem(val, 100);
+	// #if VALIDATE_PROGRAM_OP
+	for (size_t i = 0; i < (len / 4) - 1; i++) {
+		val++;
+		// dump_mem(val, 4);
+		if (*val != 0xf3f9bda9) {
 			MCUBOOT_LOG_ERR("%s: Erase at 0x%x Failed", __func__, (int)val);
-			assert(0);
+			while(1);
 		}
 	}
-	#endif
+	// #endif
 
 	return 0;
 }
 
 size_t flash_area_align(const fa_t *area)
 {
-	return FLASH_MIN_WR_SIZE;
+	return 4;
 }
 
 uint8_t flash_area_erased_val(const fa_t *area)

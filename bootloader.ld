@@ -3,8 +3,7 @@ ENTRY( _start )
 MEMORY
 {
 	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 64K
-	/* APP (rx) : ORIGIN = 0x00010000, LENGTH = 200K */
-	RAM (xrw) : ORIGIN = 0x20003800, LENGTH = 32K
+	RAM (xrw) : ORIGIN = 0x20000000, LENGTH = 32K
 }
 
 SECTIONS
@@ -17,11 +16,6 @@ SECTIONS
 		. = ALIGN(4);
 		_einit = .;
 	} >FLASH AT>FLASH
-	
-/*	.vector :
-	{
-		*(.vector);
-	} >FLASH AT>FLASH */
 	
 	.highcodelalign : 
 	{
