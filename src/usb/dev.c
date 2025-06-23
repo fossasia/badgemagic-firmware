@@ -91,16 +91,25 @@ static void desc_config(USB_SETUP_REQ *request)
 
 static void desc_string(USB_SETUP_REQ *request)
 {
-	uint8_t *string_index[32] = {
-		lang_desc,
-		vendor_info,
-		product_info,
-		serial_number
-	};
-	uint8_t index = request->wValue & 0xff;
-	if (index <= sizeof(string_index))
-		ctrl_start_load_block(string_index[index], string_index[index][0]);
+    static const void *string_index[4] = {
+        lang_desc,
+        vendor_info,
+        product_info,
+        serial_number
+    };
+
+    uint8_t index = request->wValue & 0xff;
+    if (index < 4) {
+        uint16_t length;
+        if (index == 0) {
+            length = ((const uint8_t *)string_index[index])[0];
+        } else {
+            length = ((const uint16_t *)string_index[index])[0] & 0xFF;
+        }
+        ctrl_start_load_block((const uint8_t *)string_index[index], length);
+    }
 }
+
 
 static void dev_getDesc(USB_SETUP_REQ *request)
 {

@@ -40,6 +40,12 @@
 static __attribute__((aligned(4), section(".noinit")))
 uint32_t MEM_BUF[BLE_MEMHEAP_SIZE / 4];
 
+if (badge_cfg.ble_always_on) {
+        ble_enable_advertise();
+    } else {
+        ble_disable_advertise();
+    }
+	
 static void lsi_calib(void)
 {
 	Calibration_LSI(Level_128);

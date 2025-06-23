@@ -1,57 +1,64 @@
+
 #include <CH58x_common.h>
 
 #include "power.h"
 #include "button.h"
 #include "debug.h"
+#include "config.h"
 
 void poweroff()
 {
-	// Stop wasting energy
-	GPIOA_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_Floating);
-	GPIOB_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_Floating);
+      if (badge_cfg.ble_always_on) {
+        PRINT("Skipping poweroff due to BLE Always-On\n");
+        return;
+    }
 
-	// Configure wake-up
-	GPIOA_ModeCfg(KEY1_PIN, GPIO_ModeIN_PD);
-	GPIOA_ITModeCfg(KEY1_PIN, GPIO_ITMode_RiseEdge);
-	GPIOA_ModeCfg(CHARGE_STT_PIN, GPIO_ModeIN_PU);
-	GPIOA_ITModeCfg(CHARGE_STT_PIN, GPIO_ITMode_FallEdge);
-	PFIC_EnableIRQ(GPIO_A_IRQn);
-	PWR_PeriphWakeUpCfg(ENABLE, RB_SLP_GPIO_WAKE, Long_Delay);
+    // Stop wasting energy
+    GPIOA_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_Floating);
+    GPIOB_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_Floating);
 
-	/* Good bye */
-	LowPower_Shutdown(0);
+    // Configure wake-up
+    GPIOA_ModeCfg(KEY1_PIN, GPIO_ModeIN_PD);
+    GPIOA_ITModeCfg(KEY1_PIN, GPIO_ITMode_RiseEdge);
+    GPIOA_ModeCfg(CHARGE_STT_PIN, GPIO_ModeIN_PU);
+    GPIOA_ITModeCfg(CHARGE_STT_PIN, GPIO_ITMode_FallEdge);
+    PFIC_EnableIRQ(GPIO_A_IRQn);
+    PWR_PeriphWakeUpCfg(ENABLE, RB_SLP_GPIO_WAKE, Long_Delay);
+
+    /* Good bye */
+    LowPower_Shutdown(0);
 }
 
 void power_init()
 {
-	GPIOA_ModeCfg(GPIO_Pin_5, GPIO_ModeIN_Floating);
-	ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
+    GPIOA_ModeCfg(GPIO_Pin_5, GPIO_ModeIN_Floating);
+    ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
 
-	int16_t adc_calib = ADC_DataCalib_Rough();
-	PRINT("RoughCalib_Value = %d \n", adc_calib);
+    int16_t adc_calib = ADC_DataCalib_Rough();
+    PRINT("RoughCalib_Value = %d \n", adc_calib);
 
-	ADC_ChannelCfg(1);
+    ADC_ChannelCfg(1);
 }
 
 int batt_raw()
 {
-	int ret = 0;
+    int ret = 0;
 
-	PRINT("ADC reading: \n");
-	uint16_t buf[20];
-	for(int i = 0; i < 20; i++) {
-		uint16_t adc = ADC_ExcutSingleConver();
-		ret += adc;
-		PRINT("%d \n", adc);
-	}
+    PRINT("ADC reading: \n");
+    uint16_t buf[20];
+    for(int i = 0; i < 20; i++) {
+        uint16_t adc = ADC_ExcutSingleConver();
+        ret += adc;
+        PRINT("%d \n", adc);
+    }
 
-	return ret / 20;
+    return ret / 20;
 }
 
 int charging_status()
 {
-	GPIOA_ModeCfg(CHARGE_STT_PIN, GPIO_ModeIN_PU);
-	return GPIOA_ReadPortPin(CHARGE_STT_PIN) == 0;
+    GPIOA_ModeCfg(CHARGE_STT_PIN, GPIO_ModeIN_PU);
+    return GPIOA_ReadPortPin(CHARGE_STT_PIN) == 0;
 }
 
 #define ZERO_PERCENT_THRES      (3.3)
@@ -68,12 +75,12 @@ int charging_status()
 
 int batt_raw2percent(int r)
 {
-	float vadc = ADC2VOLT(r);
-	float vbat = VOLT_DIV_INV(vadc);
-	float strip = vbat - ZERO_PERCENT_THRES;
-	if (strip < PERCENT_RANGE) {
-		// Negative values meaning the battery is not connected or died
-		return (int)(strip / PERCENT_RANGE * 100.0);
-	}
-	return 100;
+    float vadc = ADC2VOLT(r);
+    float vbat = VOLT_DIV_INV(vadc);
+    float strip = vbat - ZERO_PERCENT_THRES;
+    if (strip < PERCENT_RANGE) {
+        // Negative values meaning the battery is not connected or died
+        return (int)(strip / PERCENT_RANGE * 100.0);
+    }
+    return 100;
 }

@@ -25,13 +25,12 @@ static bStatus_t write_handler(uint16 connHandle, gattAttribute_t *pAttr,
 
 	uint16_t uuid = BUILD_UINT16(pAttr->type.uuid[0], pAttr->type.uuid[1]);
 	if(uuid == RxCharUUID) {
-		if (legacy_ble_rx(pValue, len)) {
-			return ATT_ERR_UNLIKELY;
-		}
+		legacy_ble_rx(pValue, len);
 		return SUCCESS;
 	}
 	return ATT_ERR_ATTR_NOT_FOUND;
 }
+
 
 static gattServiceCBs_t service_handlers = {
 	NULL,

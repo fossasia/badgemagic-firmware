@@ -4,7 +4,7 @@
 #include "debug.h"
 #include "legacyctrl.h"
 
-int legacy_ble_rx(uint8_t *val, uint16_t len)
+void legacy_ble_rx(uint8_t *val, uint16_t len)
 {
 	_TRACE();
 	static uint16_t c, data_len, n;
@@ -12,7 +12,6 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 
 	if (len != LEGACY_TRANSFER_WIDTH) {
 		PRINT("Transfer width is not matched\n");
-		return -1;
 	}
 
 	PRINT("val[%d]: ", len);
@@ -24,13 +23,11 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 	if (c == 0) {
 		if (memcmp(val, "wang", 5)) {
 			PRINT("Not a header\n");
-			return -2;
 		} else {
 			free(data);
 			data = malloc(sizeof(data_legacy_t));
 			if (!data) {
 				PRINT("insufficient memory\n");
-				return -3;
 			}
 		}
 	} else { // Re attempt after a failed transfer
@@ -40,7 +37,6 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 			data = malloc(sizeof(data_legacy_t));
 			if (!data) {
 				PRINT("insufficient memory\n");
-				return -3;
 			}
 		}
 	}
@@ -56,7 +52,6 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 		data = realloc(data, data_len);
 		if (!data) {
 			PRINT("insufficient memory\n");
-			return -3;
 		}
 	}
 
@@ -70,10 +65,9 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 	}
 
 	c++;
-	return 0;
 }
 
-int legacy_usb_rx(uint8_t *buf, uint16_t len)
+void legacy_usb_rx(uint8_t *buf, uint16_t len)
 {
 	static uint16_t rx_len, data_len;
 	static uint8_t *data;
@@ -83,8 +77,10 @@ int legacy_usb_rx(uint8_t *buf, uint16_t len)
 				buf[4], buf[5], buf[6], buf[7]);
 
 	if (rx_len == 0) {
-		if (memcmp(buf, "wang", 5))
-			return -1;
+if (memcmp(buf, "wang", 5)) {
+    PRINT("Invalid header\n");
+    return; // exit early from void function
+}
 
 		int init_len = len > LEGACY_HEADER_SIZE ? len : sizeof(data_legacy_t);
 		init_len += MAX_PACKET_SIZE;
@@ -106,5 +102,4 @@ int legacy_usb_rx(uint8_t *buf, uint16_t len)
 		free(data);
 		handle_after_rx();
 	}
-	return 0;
 }
