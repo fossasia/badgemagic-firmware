@@ -1,9 +1,13 @@
 #include <memory.h>
 #include <stdlib.h>
-
-#include "setup.h"
-#include "CH58xBLE_LIB.h"
+#include <stdint.h>
+#include <string.h>
 #include "CH58x_common.h"
+
+#include "config.h"
+#include "debug.h"
+#include "legacyctrl.h"
+#include "ngctrl.h"
 
 #ifndef BLE_BUFF_LEN
 // MTU = 64 but clients should request new MTU, otherwise default will be 23
@@ -40,12 +44,6 @@
 static __attribute__((aligned(4), section(".noinit")))
 uint32_t MEM_BUF[BLE_MEMHEAP_SIZE / 4];
 
-if (badge_cfg.ble_always_on) {
-        ble_enable_advertise();
-    } else {
-        ble_disable_advertise();
-    }
-	
 static void lsi_calib(void)
 {
 	Calibration_LSI(Level_128);
@@ -86,4 +84,22 @@ void ble_hardwareInit(void)
 	memcpy(cfg.MacAddr, m, 6);
 
 	BLE_LibInit(&cfg);
+}
+
+void ble_setup(void)
+{
+	ble_hardwareInit();
+	tmos_clockInit();
+	peripheral_init();
+
+	if (badge_cfg.ble_always_on) {
+		ble_enable_advertise();
+	} else {
+		ble_disable_advertise();
+	}
+
+	devInfo_registerService();
+	legacy_registerService();
+	batt_registerService();
+	ng_registerService();
 }

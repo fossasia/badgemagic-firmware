@@ -1,151 +1,137 @@
+#include <stdlib.h>
 
 #include "CH58x_common.h"
 
 #include "utils.h"
-#include "debug.h"
 
-extern void (*if_handlers[])(USB_SETUP_REQ *request);
-extern void (*ep_handlers[])();
+uint8_t *cfg_desc;
 
-void handle_devreq(USB_SETUP_REQ *request);
+// FIXME: here wasting 1KiB of ram
+void (*if_handlers[256])(USB_SETUP_REQ *request);
+void (*ep_handlers[7])();
 
-static uint8_t address;
+/* Configuration Descriptor template */
+USB_CFG_DESCR cfg_static = {
+	.bLength = sizeof(USB_CFG_DESCR),
+	.bDescriptorType = 0x02,
+	.wTotalLength = sizeof(USB_CFG_DESCR), // will be updated on cfg_desc_add()
+	.bNumInterfaces = 0, // will be updated on cfg_desc_add()
+	.bConfigurationValue = 0x01,
+	.iConfiguration = 4,
+	.bmAttributes = 0xA0,
+	.MaxPower = 50 // mA
+};
 
-/* EP0 + EP4(IN + OUT) */
-__attribute__((aligned(4))) uint8_t ep0buf[64 + 64 + 64];
-
-void usb_set_address(uint8_t ad)
+void cfg_desc_append(void *desc)
 {
-	address = ad;
-}
+	uint8_t cfg_len = 0;
+	uint8_t len = ((uint8_t *)desc)[0];
+	if (cfg_desc) // attempting to add a non-Configuration Descriptor
+		cfg_len = ((USB_CFG_DESCR *)cfg_desc)->wTotalLength;
+	uint8_t newlen = cfg_len + len;
 
-void ctrl_start_load_block(void *buf, uint16_t len)
-{
-	usb_start_load_block(ep0buf, buf, len, 1);
-}
-
-static void route_interfaces(USB_SETUP_REQ *request)
-{
-	_TRACE();
-
-	uint8_t ifn = request->wIndex & 0xff;
-	PRINT("wInterfaceNumber: 0x%02x\n", ifn);
-
-	if (if_handlers[ifn])
-		if_handlers[ifn](request);
-}
-
-static void ep_handler()
-{
-	_TRACE();
-
-	USB_SETUP_REQ *request = (USB_SETUP_REQ *)ep0buf;
-	uint8_t req = request->bRequest;
-
-	/* Each interface will have their own request handler */
-	uint8_t recip = request->bRequestType & USB_REQ_RECIP_MASK;
-	if (recip == USB_REQ_RECIP_INTERF) {
-		route_interfaces(request);
+	uint8_t *new_cfg_desc = realloc(cfg_desc, newlen);
+	if (!new_cfg_desc) {
+		// handle memory allocation failure if needed
 		return;
 	}
+	cfg_desc = new_cfg_desc;
 
-	uint8_t token = R8_USB_INT_ST & MASK_UIS_TOKEN;
-	switch(token) {
+	memcpy(cfg_desc + cfg_len, desc, len);
 
-	case UIS_TOKEN_SETUP:
-		print_setuppk(request);
-
-		if (recip == USB_REQ_RECIP_DEVICE) {
-			handle_devreq(request);
-		}
-		break;
-
-	case UIS_TOKEN_OUT:
-		if (req == USB_CLEAR_FEATURE) {
-			ctrl_ack();
-		}
-
-	case UIS_TOKEN_IN:
-		R8_USB_DEV_AD = address;
-		usb_load_next_chunk();
-		break;
-	
-	default:
-		break;
-	}
+	((USB_CFG_DESCR *)cfg_desc)->wTotalLength = newlen;
+	((USB_CFG_DESCR *)cfg_desc)->bNumInterfaces += ((uint8_t *)desc)[1] == 0x04;
 }
 
-void ctrl_init()
+int ep_cb_register(int ep_num, void (*cb)())
 {
-	ep_cb_register(0, ep_handler);
-	dma_register(0, ep0buf);
+	if (ep_num > 6) // Only 0-6 valid for ep_handlers[7]
+		return -1;
+	if (ep_handlers[ep_num]) // already registered
+		return -1;
+
+	ep_handlers[ep_num] = cb;
+	return 0;
 }
 
-static void route_enpoints()
+int if_cb_register(uint8_t if_num, void (*cb)(USB_SETUP_REQ *request))
 {
-	_TRACE();
+	if (if_handlers[if_num]) // already registered
+		return -1;
 
-	/* Workaround to solve a setup packet with EP 0x02 for unknown reason.
-	This happens when return from the bootloader or after a sotfware reset. */
-	uint8_t token = R8_USB_INT_ST & MASK_UIS_TOKEN;
-	if (token == UIS_TOKEN_SETUP) {
-		ep_handlers[0]();
-	}
-
-	uint8_t ep_num = R8_USB_INT_ST & MASK_UIS_ENDP;
-
-	if (ep_num < 8 && ep_handlers[ep_num])
-		ep_handlers[ep_num]();
+	if_handlers[if_num] = cb;
+	return 0;
 }
 
-static void handle_busReset()
+void dma_register(uint8_t ep_num, void *buf)
 {
-	_TRACE();
-	R8_USB_DEV_AD = 0;
-	R8_UEP0_CTRL = UEP_R_RES_ACK | UEP_T_RES_NAK;
-	R8_UEP1_CTRL = UEP_R_RES_ACK | UEP_T_RES_NAK;
-	R8_UEP2_CTRL = UEP_R_RES_ACK | UEP_T_RES_NAK;
-	R8_UEP3_CTRL = UEP_R_RES_ACK | UEP_T_RES_NAK;
-	R8_UEP4_CTRL = UEP_R_RES_ACK | UEP_T_RES_NAK;
-	R8_UEP5_CTRL = UEP_R_RES_ACK | UEP_T_RES_NAK;
-	R8_UEP6_CTRL = UEP_R_RES_ACK | UEP_T_RES_NAK;
-	R8_UEP7_CTRL = UEP_R_RES_ACK | UEP_T_RES_NAK;
+	if (ep_num > 7) // CH582 supports only 8 endpoints
+		return;
+
+	volatile uint16_t *p_regs[] = {
+		&R16_UEP0_DMA,
+		&R16_UEP1_DMA,
+		&R16_UEP2_DMA,
+		&R16_UEP3_DMA,
+		NULL,
+		&R16_UEP5_DMA,
+		&R16_UEP6_DMA,
+		&R16_UEP7_DMA,
+	};
+	volatile uint8_t *ctrl_regs[] = {
+		&R8_UEP0_CTRL,
+		&R8_UEP1_CTRL,
+		&R8_UEP2_CTRL,
+		&R8_UEP3_CTRL,
+		&R8_UEP4_CTRL,
+		&R8_UEP5_CTRL,
+		&R8_UEP6_CTRL,
+		&R8_UEP7_CTRL,
+	};
+	// ep4's dma buffer is hardcoded pointing to 
+	// the next ep0
+	if (ep_num != 4 && p_regs[ep_num] != NULL)
+		*p_regs[ep_num] = (uint16_t)(uint32_t)buf;
+
+	*ctrl_regs[ep_num] = UEP_R_RES_ACK | UEP_T_RES_NAK;
 }
 
-static void handle_powerChange()
+static void init(void)
 {
-	_TRACE();
-	if (R8_USB_MIS_ST & RB_UMS_SUSPEND) {
-		;// suspend
-	}
-	else {
-		;// resume
-	}
+	R8_USB_CTRL = 0x00;
+
+	R8_UEP4_1_MOD = RB_UEP4_RX_EN | RB_UEP4_TX_EN |
+				RB_UEP1_RX_EN | RB_UEP1_TX_EN;
+	R8_UEP2_3_MOD = RB_UEP2_RX_EN | RB_UEP2_TX_EN |
+				RB_UEP3_RX_EN | RB_UEP3_TX_EN;
+	R8_UEP567_MOD = RB_UEP7_RX_EN | RB_UEP7_TX_EN |
+				RB_UEP6_RX_EN | RB_UEP6_TX_EN |
+				RB_UEP5_RX_EN | RB_UEP5_TX_EN;
+
+	R16_PIN_ANALOG_IE |= RB_PIN_USB_IE | RB_PIN_USB_DP_PU;
+	R8_UDEV_CTRL = RB_UD_PD_DIS | RB_UD_PORT_EN;
+
+	R8_USB_DEV_AD = 0x00;
+	R8_USB_INT_FG = 0xFF;
+	R8_USB_CTRL = RB_UC_DEV_PU_EN | RB_UC_INT_BUSY | RB_UC_DMA_EN;
+	R8_USB_INT_EN = RB_UIE_SUSPEND | RB_UIE_BUS_RST | RB_UIE_TRANSFER;
 }
 
-__INTERRUPT
-__HIGH_CODE
-void USB_IRQHandler(void) {
-	uint8_t intflag = R8_USB_INT_FG;
-	clear_handshake_sent_flag();
-	PRINT("\nusb: new interrupt\n");
-	print_intflag_reg();
+void ctrl_init();
+void hiddev_init();
+void cdc_acm_init();
 
-	if (intflag & RB_UIF_TRANSFER) {
-		PRINT("usb: RX Length reg: %d\n", R8_USB_RX_LEN);
-		print_status_reg();
+void usb_start() {
+	cfg_desc_append(&cfg_static);
 
-		route_enpoints();
-	}
-	else if (intflag & RB_UIF_BUS_RST) {
-		handle_busReset();
-	}
-	else if (intflag & RB_UIF_SUSPEND) {
-		handle_powerChange();
-	}
+	ctrl_init();
 
-	if (handshake_sent() == 0) {
-		PRINT("WARN: This transaction is being IGNORED!\n");
-	}
-	R8_USB_INT_FG = intflag; // clear interrupt flags
+	/* This should be placed first, the python script always looks
+	for the first interface (not the interface number) */
+	hiddev_init();
+
+	cdc_acm_init();
+
+	init();
+	PFIC_EnableIRQ(USB_IRQn);
 }

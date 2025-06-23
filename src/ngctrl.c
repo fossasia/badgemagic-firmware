@@ -1,4 +1,3 @@
-
 #include "ngctrl.h"
 
 #include "CH58xBLE_LIB.h"
@@ -9,6 +8,7 @@
 #include "debug.h"
 #include "config.h"
 #include "leddrv.h"
+#include "ble/setup.h"   
 #include <stdbool.h>
 // TODO: Some of configs can be added, just listing:
 // - Remote brighness adjusting

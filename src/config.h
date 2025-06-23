@@ -2,7 +2,7 @@
 #define __CONFIG_H__
 
 #include <stdint.h>
-
+#include <stdbool.h>
 #include "xbm.h"
 #include "leddrv.h"
 
@@ -40,6 +40,8 @@ int cfg_readflash(uint16_t flash_offs, badge_cfg_t *cfg);
 int cfg_writeflash_def(badge_cfg_t *cfg);
 int cfg_readflash_def(badge_cfg_t *cfg);
 void cfg_fallback();
-bool ble_always_on;
+
+// Declare as extern to avoid multiple definition errors
+extern bool ble_always_on;
 
 #endif /* __CONFIG_H__ */

@@ -28,55 +28,38 @@ USB_DEV_DESCR dev_desc = {
 };
 
 /* String Descriptor Zero, Specifying Languages Supported by the Device */
-static uint8_t lang_desc[] = {
+static const uint8_t lang_desc[] = {
 	0x04,       /* bLength */
 	0x03,       /* bDescriptorType */
 	0x09, 0x04  /* wLANGID - en-US */
 };
 
-static uint16_t vendor_info[] = {
-	36 | /* bLength */
-	0x03 << 8, /* bDescriptorType */
-
-	/* bString */
-	'F', 'O', 'S', 'S', 'A', 'S', 'I', 'A', ' ',
-	'W', 'A', 'S', ' ', 'H', 'E', 'R', 'E'
+static const uint8_t vendor_info[] = {
+	36, 0x03,
+	'F', 0, 'O', 0, 'S', 0, 'S', 0, 'A', 0, 'S', 0, 'I', 0, 'A', 0, ' ', 0,
+	'W', 0, 'A', 0, 'S', 0, ' ', 0, 'H', 0, 'E', 0, 'R', 0, 'E', 0
 };
 
-static uint16_t product_info[] = {
-	32 | /* bLength */
-	0x03 << 8, /* bDescriptorType */
-
-	/* bString */
-	'L', 'E', 'D', ' ',
-	'B', 'a', 'd', 'g', 'e', ' ',
-	'M', 'a', 'g', 'i', 'c'
+static const uint8_t product_info[] = {
+	32, 0x03,
+	'L', 0, 'E', 0, 'D', 0, ' ', 0,
+	'B', 0, 'a', 0, 'd', 0, 'g', 0, 'e', 0, ' ', 0,
+	'M', 0, 'a', 0, 'g', 0, 'i', 0, 'c', 0
 };
 
-static uint16_t serial_number[] = {
+static const uint8_t serial_number[] = {
 #ifdef USBC_VERSION
 	4 +
 #endif
-	(12 + sizeof(VERSION_ABBR) - 1) * 2 | /* bLength */
-	0x03 << 8, /* bDescriptorType */
-
-	/* bString */
-	'B', 'M', '1', '1', '4', '4', 
+	(12 + sizeof(VERSION_ABBR) - 1) * 2, 0x03,
+	'B', 0, 'M', 0, '1', 0, '1', 0, '4', 0, '4', 0, 
 #ifdef USBC_VERSION
-	'-', 'C',
+	'-', 0, 'C', 0,
 #endif
-	' ',
-	'f', 'w', ':',' ',
-	/* vX.Y */
-	VERSION[0],
-	VERSION[1],
-	VERSION[2],
-	VERSION[3],
-	VERSION[4],
-	VERSION[5],
-	VERSION[6],
-	VERSION[7],
-	VERSION[8]
+	' ', 0,
+	'f', 0, 'w', 0, ':', 0, ' ', 0,
+	/* vX.Y, VERSION[] is already chars, supply them as {ch, 0} pairs: */
+	VERSION[0], 0, VERSION[1], 0, VERSION[2], 0, VERSION[3], 0, VERSION[4], 0, VERSION[5], 0, VERSION[6], 0, VERSION[7], 0, VERSION[8], 0
 };
 
 static void desc_dev(USB_SETUP_REQ *request)
@@ -91,7 +74,7 @@ static void desc_config(USB_SETUP_REQ *request)
 
 static void desc_string(USB_SETUP_REQ *request)
 {
-    static const void *string_index[4] = {
+    static const uint8_t *string_index[4] = {
         lang_desc,
         vendor_info,
         product_info,
@@ -100,16 +83,10 @@ static void desc_string(USB_SETUP_REQ *request)
 
     uint8_t index = request->wValue & 0xff;
     if (index < 4) {
-        uint16_t length;
-        if (index == 0) {
-            length = ((const uint8_t *)string_index[index])[0];
-        } else {
-            length = ((const uint16_t *)string_index[index])[0] & 0xFF;
-        }
-        ctrl_start_load_block((const uint8_t *)string_index[index], length);
+        uint8_t length = string_index[index][0]; // Always the first byte
+        ctrl_start_load_block(string_index[index], length);
     }
 }
-
 
 static void dev_getDesc(USB_SETUP_REQ *request)
 {
