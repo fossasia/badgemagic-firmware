@@ -21,11 +21,12 @@
 #include "legacyctrl.h"
 
 #define NEXT_STATE(v, min, max) \
-                (v)++; \
-                if ((v) >= (max)) \
-                    (v) = (min)
+    (v)++;                      \
+    if ((v) >= (max))           \
+    (v) = (min)
 
-enum MODES {
+enum MODES
+{
     BOOT = 0,
     NORMAL,
     DOWNLOAD,
@@ -33,21 +34,20 @@ enum MODES {
     MODES_COUNT,
 };
 
-#define ANI_BASE_SPEED_T      (200000) // uS
-#define ANI_MARQUE_SPEED_T    (100000) // uS
-#define ANI_FLASH_SPEED_T     (500000) // uS
-#define SCAN_BOOTLD_BTN_SPEED_T         (200000) // uS
+#define ANI_BASE_SPEED_T (200000)        // uS
+#define ANI_MARQUE_SPEED_T (100000)      // uS
+#define ANI_FLASH_SPEED_T (500000)       // uS
+#define SCAN_BOOTLD_BTN_SPEED_T (200000) // uS
 #define ANI_SPEED_STRATEGY(speed_level) \
-                (ANI_BASE_SPEED_T - ((speed_level) \
-                * ANI_BASE_SPEED_T / 8))
+    (ANI_BASE_SPEED_T - ((speed_level) * ANI_BASE_SPEED_T / 8))
 
-#define ANI_NEXT_STEP       (1 << 0)
-#define ANI_MARQUE          (1 << 1)
-#define ANI_FLASH           (1 << 2)
-#define SCAN_BOOTLD_BTN     (1 << 3)
-#define BLE_NEXT_STEP       (1 << 4)
+#define ANI_NEXT_STEP (1 << 0)
+#define ANI_MARQUE (1 << 1)
+#define ANI_FLASH (1 << 2)
+#define SCAN_BOOTLD_BTN (1 << 3)
+#define BLE_NEXT_STEP (1 << 4)
 
-static tmosTaskID common_taskid = INVALID_TASK_ID ;
+static tmosTaskID common_taskid = INVALID_TASK_ID;
 
 volatile uint16_t fb[LED_COLS] = {0};
 volatile int mode, is_play_sequentially = 1;
@@ -69,8 +69,7 @@ static void change_mode()
         NULL,
         mode_setup_normal,
         mode_setup_download,
-        poweroff
-    };
+        poweroff};
 
     if (modes[mode])
         modes[mode]();
@@ -79,21 +78,24 @@ static void change_mode()
 __HIGH_CODE
 static void bm_transition()
 {
-    if (is_play_sequentially) {
+    if (is_play_sequentially)
+    {
         is_play_sequentially = 0;
         bmlist_gohead();
         return;
     }
 
     bmlist_gonext();
-    if (bmlist_current() == bmlist_head()) {
+    if (bmlist_current() == bmlist_head())
+    {
         is_play_sequentially = 1;
         return;
     }
 }
 void play_splash(xbm_t *xbm, int col, int row, int spT)
 {
-    while (ani_xbm_scrollup_pad(xbm, 11, 11, 11, fb, 0, 0) != 0) {
+    while (ani_xbm_scrollup_pad(xbm, 11, 11, 11, fb, 0, 0) != 0)
+    {
         DelayMs(spT);
     }
 }
@@ -107,7 +109,8 @@ void load_bmlist()
 
     bm_t *curr_bm = bmlist_current();
 
-    for (int i=0; i<8; i++) {
+    for (int i = 0; i < 8; i++)
+    {
         bm_t *bm = flash2newbm(i);
         if (bm == NULL)
             continue;
@@ -122,16 +125,18 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 {
     static int marque_step, flash_step;
 
-    if(events & SYS_EVENT_MSG) {
+    if (events & SYS_EVENT_MSG)
+    {
         uint8 *pMsg = tmos_msg_receive(common_taskid);
-        if(pMsg != NULL)
+        if (pMsg != NULL)
         {
             tmos_msg_deallocate(pMsg);
         }
         return (events ^ SYS_EVENT_MSG);
     }
 
-    if(events & ANI_NEXT_STEP) {
+    if (events & ANI_NEXT_STEP)
+    {
 
         static int (*animations[])(bm_t *bm, uint16_t *fb) = {
             ani_scroll_left,
@@ -142,20 +147,21 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
             ani_animation,
             ani_snowflake,
             ani_picture,
-            ani_laser
-        };
+            ani_laser};
 
         bm_t *bm = bmlist_current();
         if (animations[LEGACY_GET_ANIMATION(bm->modes)])
-            if (animations[LEGACY_GET_ANIMATION(bm->modes)](bm, fb) == 0
-                && is_play_sequentially) {
+            if (animations[LEGACY_GET_ANIMATION(bm->modes)](bm, fb) == 0 && is_play_sequentially)
+            {
                 bmlist_gonext();
             }
 
-        if (bm->is_flash) {
+        if (bm->is_flash)
+        {
             ani_flash(bm, fb, flash_step);
         }
-        if (bm->is_marquee) {
+        if (bm->is_marquee)
+        {
             ani_marque(bm, fb, marque_step);
         }
 
@@ -165,44 +171,52 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
         return events ^ ANI_NEXT_STEP;
     }
 
-    if (events & ANI_MARQUE) {
+    if (events & ANI_MARQUE)
+    {
         bm_t *bm = bmlist_current();
         marque_step++;
-        if (bm->is_marquee) {
+        if (bm->is_marquee)
+        {
             ani_marque(bm, fb, marque_step);
         }
 
         return events ^ ANI_MARQUE;
     }
 
-    if (events & SCAN_BOOTLD_BTN) {
+    if (events & SCAN_BOOTLD_BTN)
+    {
         static uint32_t hold;
         hold = isPressed(KEY2) ? hold + 1 : 0;
-        if (hold > 10) {
+        if (hold > 10)
+        {
             reset_jump();
         }
 
         return events ^ SCAN_BOOTLD_BTN;
     }
 
-    if (events & ANI_FLASH) {
+    if (events & ANI_FLASH)
+    {
         bm_t *bm = bmlist_current();
         flash_step++;
 
-        if (bm->is_flash) {
+        if (bm->is_flash)
+        {
             ani_flash(bm, fb, flash_step);
         }
         /* After flash is applied, it will potentialy overwrite the marque
         effect after it just wrote, results in flickering. So here apply the
         marque effect again */
-        if (bm->is_marquee) {
+        if (bm->is_marquee)
+        {
             ani_marque(bm, fb, marque_step);
         }
 
         return events ^ ANI_FLASH;
     }
 
-    if (events & BLE_NEXT_STEP) {
+    if (events & BLE_NEXT_STEP)
+    {
         ani_xbm_next_frame(&bluetooth, fb, 10, 0);
 
         return events ^ BLE_NEXT_STEP;
@@ -218,7 +232,8 @@ void ble_setup()
 
     peripheral_init();
 
-    if (! badge_cfg.ble_always_on) {
+    if (!badge_cfg.ble_always_on)
+    {
         ble_disable_advertise();
     }
 
@@ -235,7 +250,7 @@ static void spawn_tasks()
     tmos_start_reload_task(common_taskid, ANI_MARQUE, ANI_MARQUE_SPEED_T / 625);
     tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
     tmos_start_reload_task(common_taskid, SCAN_BOOTLD_BTN,
-                SCAN_BOOTLD_BTN_SPEED_T / 625);
+                           SCAN_BOOTLD_BTN_SPEED_T / 625);
     tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
 }
 
@@ -259,9 +274,12 @@ static void start_normal_animation()
 
 static void resume_from_streaming()
 {
-    if (badge_cfg.ble_always_on) {
+    if (badge_cfg.ble_always_on)
+    {
         start_normal_animation();
-    } else {
+    }
+    else
+    {
         start_ble_animation();
     }
 }
@@ -279,10 +297,13 @@ int streaming_enabled;
 
 uint8_t streaming_setting(uint8_t *params, uint16_t len)
 {
-    if (params[0] == 0x00) { // enter streaming mode
+    if (params[0] == 0x00)
+    { // enter streaming mode
         stop_all_animation();
         streaming_enabled = 1;
-    } else if (params[0] == 0x01) { // return to normal mode
+    }
+    else if (params[0] == 0x01)
+    { // return to normal mode
         resume_from_streaming();
         streaming_enabled = 0;
     }
@@ -291,7 +312,8 @@ uint8_t streaming_setting(uint8_t *params, uint16_t len)
 
 uint8_t stream_bitmap(uint8_t *params, uint16_t len)
 {
-    if (! streaming_enabled) {
+    if (!streaming_enabled)
+    {
         return -1;
     }
 
@@ -310,30 +332,34 @@ static void debug_init()
 
 static void disp_bat_stt(int bat_percent, int col, int row)
 {
-    if (bat_percent < 0) {
+    if (bat_percent < 0)
+    {
         xbm2fb(&batwarn_xbm, fb, col, row);
         return;
     }
 
     xbm2fb(&bat_xbm, fb, col, row);
     bat_percent /= 10;
-    for (int i=1; i <= bat_percent; i++) {
+    for (int i = 1; i <= bat_percent; i++)
+    {
         fb[col + i] = fb[col];
     }
 }
 
 static void fb_putchar(char c, int col, int row)
 {
-    for (int i=0; i < 6; i++) {
-        if (col + i >= LED_COLS) break;
-        fb[col + i] = (fb[col + i] & ~(0x7f << row))
-                | (font5x7[c - ' '][i] << row);
+    for (int i = 0; i < 6; i++)
+    {
+        if (col + i >= LED_COLS)
+            break;
+        fb[col + i] = (fb[col + i] & ~(0x7f << row)) | (font5x7[c - ' '][i] << row);
     }
 }
 
 static void fb_puts(char *s, int len, int col, int row)
 {
-    while (*s && len--) {
+    while (*s && len--)
+    {
         fb_putchar(*s, col, row);
         col += 6;
         s++;
@@ -343,18 +369,23 @@ static void fb_puts(char *s, int len, int col, int row)
 static void disp_charging()
 {
     int blink = 0;
-    while (mode == BOOT) {
+    while (mode == BOOT)
+    {
         int percent = batt_raw2percent(batt_raw());
 
-        if (charging_status()) {
+        if (charging_status())
+        {
             disp_bat_stt(blink ? percent : 0, 2, 2);
-            if (ani_xbm_next_frame(&fabm_xbm, fb, 16, 0) == 0) {
+            if (ani_xbm_next_frame(&fabm_xbm, fb, 16, 0) == 0)
+            {
                 fb_puts(VERSION_ABBR, sizeof(VERSION_ABBR), 16, 2);
                 fb_putchar(' ', 40, 2);
             }
             blink = !blink;
             DelayMs(500);
-        } else {
+        }
+        else
+        {
             disp_bat_stt(percent, 7, 2);
             DelayMs(500);
             return;
@@ -365,7 +396,8 @@ static void disp_charging()
 static void mode_setup_download()
 {
     // If always-on BLE is enabled, then skip this mode, jump to next mode
-    if (badge_cfg.ble_always_on) {
+    if (badge_cfg.ble_always_on)
+    {
         change_mode();
     }
 
@@ -400,9 +432,12 @@ static void mode_setup_normal()
 
 void handle_after_rx()
 {
-    if (badge_cfg.reset_rx) {
+    if (badge_cfg.reset_rx)
+    {
         SYS_ResetExecute();
-    } else {
+    }
+    else
+    {
         mode_setup_normal();
     }
 }
@@ -434,7 +469,7 @@ int main()
     disp_charging();
     cfg_init();
     xbm_t spl = {
-		.bits = badge_cfg.splash_bm_bits,
+        .bits = badge_cfg.splash_bm_bits,
         .w = badge_cfg.splash_bm_w,
         .h = badge_cfg.splash_bm_h,
         .fh = badge_cfg.splash_bm_fh,
@@ -448,7 +483,8 @@ int main()
     spawn_tasks();
 
     mode = NORMAL;
-    while (1) {
+    while (1)
+    {
         TMOS_SystemProcess();
     }
 }
@@ -460,19 +496,20 @@ void TMR0_IRQHandler(void)
     static int i;
     int state;
 
-    if (TMR0_GetITFlag(TMR0_3_IT_CYC_END)) {
+    if (TMR0_GetITFlag(TMR0_3_IT_CYC_END))
+    {
         i++;
-        state = i&3;
+        state = i & 3;
 
-        if (state == 0) {
+        if (state == 0)
+        {
             if ((i >> 1) >= LED_COLS)
                 i = 0;
             led_write2dcol(i >> 2, fb[i >> 1], fb[(i >> 1) + 1]);
         }
-        else if (state > (badge_cfg.led_brightness&3))
+        else if (state > (badge_cfg.led_brightness & 3))
             leds_releaseall();
 
         TMR0_ClearITFlag(TMR0_3_IT_CYC_END);
     }
 }
-

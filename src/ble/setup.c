@@ -1,44 +1,52 @@
-#include <memory.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
 #include "CH58x_common.h"
+#include "CH58x_sys.h"
+#include "CH58xBLE_LIB.h"
 
+#include "leddrv.h"
+#include "button.h"
+#include "bmlist.h"
+#include "resource.h"
+#include "animation.h"
+#include "font.h"
+
+#include "power.h"
+#include "data.h"
 #include "config.h"
 #include "debug.h"
+
+#include "ble/setup.h"
+#include "ble/profile.h"
+
+#include "usb/usb.h"
 #include "legacyctrl.h"
-#include "ngctrl.h"
 
 #ifndef BLE_BUFF_LEN
-// MTU = 64 but clients should request new MTU, otherwise default will be 23
-#define BLE_BUFF_LEN (64 + 4)
+#define BLE_BUFF_LEN (64 + 4) // MTU = 64
 #endif
 
 #ifndef BLE_TX_NUM_EVENT
-#define BLE_TX_NUM_EVENT                    1
+#define BLE_TX_NUM_EVENT 1
 #endif
 
 #ifndef BLE_TX_POWER
-#define BLE_TX_POWER                        LL_TX_POWEER_6_DBM
-// #define BLE_TX_POWER                        LL_TX_POWEER_MINUS_16_DBM
+#define BLE_TX_POWER LL_TX_POWEER_6_DBM
+// #define BLE_TX_POWER LL_TX_POWER_MINUS_16_DBM
 #endif
 
 #ifndef BLE_MEMHEAP_SIZE
-#define BLE_MEMHEAP_SIZE                    (1024 * 6)
+#define BLE_MEMHEAP_SIZE (1024 * 6)
 #endif
 
 #ifndef CENTRAL_MAX_CONNECTION
-#define CENTRAL_MAX_CONNECTION              1
+#define CENTRAL_MAX_CONNECTION 1
 #endif
 
 #ifndef BLE_BUFF_NUM
-// The BLE lib automatically stack up Write Long messages in Write handler.
-// A connection will be disconnected if this number is some how not enough.
-#define BLE_BUFF_NUM        (512 / 23)
+#define BLE_BUFF_NUM (512 / 23)
 #endif
 
 #ifndef PERIPHERAL_MAX_CONNECTION
-#define PERIPHERAL_MAX_CONNECTION           1
+#define PERIPHERAL_MAX_CONNECTION 1
 #endif
 
 static __attribute__((aligned(4), section(".noinit")))
@@ -74,9 +82,7 @@ void ble_hardwareInit(void)
 	cfg.TxNumEvent = (uint32_t)BLE_TX_NUM_EVENT;
 	cfg.TxPower = (uint32_t)BLE_TX_POWER;
 	cfg.ConnectNumber = (PERIPHERAL_MAX_CONNECTION & 3) | (CENTRAL_MAX_CONNECTION << 2);
-
 	cfg.SelRTCClock = 1 << 7;
-
 	cfg.rcCB = lsi_calib;
 
 	uint8_t m[6];
@@ -92,9 +98,12 @@ void ble_setup(void)
 	tmos_clockInit();
 	peripheral_init();
 
-	if (badge_cfg.ble_always_on) {
+	if (badge_cfg.ble_always_on)
+	{
 		ble_enable_advertise();
-	} else {
+	}
+	else
+	{
 		ble_disable_advertise();
 	}
 

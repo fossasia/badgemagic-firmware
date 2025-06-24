@@ -15,7 +15,7 @@ USB_CFG_DESCR cfg_static = {
 	.bLength = sizeof(USB_CFG_DESCR),
 	.bDescriptorType = 0x02,
 	.wTotalLength = sizeof(USB_CFG_DESCR), // will be updated on cfg_desc_add()
-	.bNumInterfaces = 0, // will be updated on cfg_desc_add()
+	.bNumInterfaces = 0,				   // will be updated on cfg_desc_add()
 	.bConfigurationValue = 0x01,
 	.iConfiguration = 4,
 	.bmAttributes = 0xA0,
@@ -31,7 +31,8 @@ void cfg_desc_append(void *desc)
 	uint8_t newlen = cfg_len + len;
 
 	uint8_t *new_cfg_desc = realloc(cfg_desc, newlen);
-	if (!new_cfg_desc) {
+	if (!new_cfg_desc)
+	{
 		// handle memory allocation failure if needed
 		return;
 	}
@@ -88,7 +89,7 @@ void dma_register(uint8_t ep_num, void *buf)
 		&R8_UEP6_CTRL,
 		&R8_UEP7_CTRL,
 	};
-	// ep4's dma buffer is hardcoded pointing to 
+	// ep4's dma buffer is hardcoded pointing to
 	// the next ep0
 	if (ep_num != 4 && p_regs[ep_num] != NULL)
 		*p_regs[ep_num] = (uint16_t)(uint32_t)buf;
@@ -101,12 +102,12 @@ static void init(void)
 	R8_USB_CTRL = 0x00;
 
 	R8_UEP4_1_MOD = RB_UEP4_RX_EN | RB_UEP4_TX_EN |
-				RB_UEP1_RX_EN | RB_UEP1_TX_EN;
+					RB_UEP1_RX_EN | RB_UEP1_TX_EN;
 	R8_UEP2_3_MOD = RB_UEP2_RX_EN | RB_UEP2_TX_EN |
-				RB_UEP3_RX_EN | RB_UEP3_TX_EN;
+					RB_UEP3_RX_EN | RB_UEP3_TX_EN;
 	R8_UEP567_MOD = RB_UEP7_RX_EN | RB_UEP7_TX_EN |
-				RB_UEP6_RX_EN | RB_UEP6_TX_EN |
-				RB_UEP5_RX_EN | RB_UEP5_TX_EN;
+					RB_UEP6_RX_EN | RB_UEP6_TX_EN |
+					RB_UEP5_RX_EN | RB_UEP5_TX_EN;
 
 	R16_PIN_ANALOG_IE |= RB_PIN_USB_IE | RB_PIN_USB_DP_PU;
 	R8_UDEV_CTRL = RB_UD_PD_DIS | RB_UD_PORT_EN;
@@ -121,7 +122,8 @@ void ctrl_init();
 void hiddev_init();
 void cdc_acm_init();
 
-void usb_start() {
+void usb_start()
+{
 	cfg_desc_append(&cfg_static);
 
 	ctrl_init();

@@ -8,11 +8,12 @@
 
 #define SPLASH_MIN_SPEED_T (10) // ms
 
-#define SPLASH_MAX_WIDTH (48) // pixels
+#define SPLASH_MAX_WIDTH (48)  // pixels
 #define SPLASH_MAX_HEIGHT (44) // pixels
 #define SPLASH_MAX_SIZE (ALIGN_1BYTE(SPLASH_MAX_WIDTH) * SPLASH_MAX_HEIGHT)
 
-typedef struct {
+typedef struct
+{
 	// Turn on Bluetooth while in Normal mode and disable Downloads mode
 	uint8_t ble_always_on;
 	char ble_devname[20];
@@ -33,7 +34,6 @@ typedef struct {
 } __attribute__((packed)) badge_cfg_t;
 
 extern badge_cfg_t badge_cfg;
-
 void cfg_init();
 int cfg_writeflash(uint16_t flash_offs, badge_cfg_t *cfg);
 int cfg_readflash(uint16_t flash_offs, badge_cfg_t *cfg);

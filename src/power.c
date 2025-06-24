@@ -8,7 +8,8 @@
 
 void poweroff()
 {
-      if (badge_cfg.ble_always_on) {
+    if (badge_cfg.ble_always_on)
+    {
         PRINT("Skipping poweroff due to BLE Always-On\n");
         return;
     }
@@ -46,7 +47,8 @@ int batt_raw()
 
     PRINT("ADC reading: \n");
     uint16_t buf[20];
-    for(int i = 0; i < 20; i++) {
+    for (int i = 0; i < 20; i++)
+    {
         uint16_t adc = ADC_ExcutSingleConver();
         ret += adc;
         PRINT("%d \n", adc);
@@ -61,24 +63,25 @@ int charging_status()
     return GPIOA_ReadPortPin(CHARGE_STT_PIN) == 0;
 }
 
-#define ZERO_PERCENT_THRES      (3.3)
-#define _100_PERCENT_THRES      (4.2)
-#define ADC_MAX_VAL             (4096.0) // 12 bit
-#define ADC_MAX_VOLT            (2.1)   // Volt
-#define R1                      (182.0) // kOhm
-#define R2                      (100.0) // kOhm
-#define PERCENT_RANGE           (_100_PERCENT_THRES - ZERO_PERCENT_THRES)
-#define VOLT_DIV(v)             ((v) / (R1 + R2) * R2) // Voltage divider
-#define VOLT_DIV_INV(v)         ((v) / R2 * (R1 + R2)) // .. Inverse
-#define ADC2VOLT(raw)           ((raw) / ADC_MAX_VAL * ADC_MAX_VOLT)
-#define VOLT2ADC(volt)          ((volt) / ADC_MAX_VOLT * ADC_MAX_VAL)
+#define ZERO_PERCENT_THRES (3.3)
+#define _100_PERCENT_THRES (4.2)
+#define ADC_MAX_VAL (4096.0) // 12 bit
+#define ADC_MAX_VOLT (2.1)   // Volt
+#define R1 (182.0)           // kOhm
+#define R2 (100.0)           // kOhm
+#define PERCENT_RANGE (_100_PERCENT_THRES - ZERO_PERCENT_THRES)
+#define VOLT_DIV(v) ((v) / (R1 + R2) * R2)     // Voltage divider
+#define VOLT_DIV_INV(v) ((v) / R2 * (R1 + R2)) // .. Inverse
+#define ADC2VOLT(raw) ((raw) / ADC_MAX_VAL * ADC_MAX_VOLT)
+#define VOLT2ADC(volt) ((volt) / ADC_MAX_VOLT * ADC_MAX_VAL)
 
 int batt_raw2percent(int r)
 {
     float vadc = ADC2VOLT(r);
     float vbat = VOLT_DIV_INV(vadc);
     float strip = vbat - ZERO_PERCENT_THRES;
-    if (strip < PERCENT_RANGE) {
+    if (strip < PERCENT_RANGE)
+    {
         // Negative values meaning the battery is not connected or died
         return (int)(strip / PERCENT_RANGE * 100.0);
     }

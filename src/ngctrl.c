@@ -8,38 +8,43 @@
 #include "debug.h"
 #include "config.h"
 #include "leddrv.h"
-#include "ble/setup.h"   
+#include "ble/setup.h"
 #include <stdbool.h>
-// TODO: Some of configs can be added, just listing:
-// - Remote brighness adjusting
-// - Upload bitmap to ram
+
 #define CMD_ALWAYS_ON_MODE 0x09
 
-uint8_t enable_always_on_mode(uint8_t *val, uint16_t len) {
-    // Only update and advertise if not already enabled
-    if (!badge_cfg.ble_always_on) {
+uint8_t enable_always_on_mode(uint8_t *val, uint16_t len)
+{
+    if (!badge_cfg.ble_always_on)
+    {
         badge_cfg.ble_always_on = true;
         PRINT("BLE Always-On Mode Triggered by App\n");
-        uint8_t status = cfg_writeflash_def(&badge_cfg) ? 0 : 1; // 0 = success, 1 = fail
-        ble_enable_advertise(); // Immediately start advertising
+        uint8_t status = cfg_writeflash_def(&badge_cfg) ? 0 : 1;
+        ble_enable_advertise();
         ng_notify(&status, 1);
         return status;
-    } else {
+    }
+    else
+    {
         PRINT("BLE Always-On already enabled\n");
-        uint8_t status = 2; // 2 = already enabled
+        uint8_t status = 2;
         ng_notify(&status, 1);
         return status;
     }
 }
-uint8_t disable_always_on_mode(uint8_t *val, uint16_t len) {
-    if (badge_cfg.ble_always_on) {
+uint8_t disable_always_on_mode(uint8_t *val, uint16_t len)
+{
+    if (badge_cfg.ble_always_on)
+    {
         badge_cfg.ble_always_on = false;
         PRINT("BLE Always-On Mode Disabled by App\n");
         uint8_t status = cfg_writeflash_def(&badge_cfg) ? 0 : 1;
         ble_disable_advertise(); // Optionally stop advertising
         ng_notify(&status, 1);
         return status;
-    } else {
+    }
+    else
+    {
         PRINT("BLE Always-On already disabled\n");
         uint8_t status = 2;
         ng_notify(&status, 1);
@@ -97,9 +102,12 @@ static void cfg_ble_alwayon(uint8_t *val, uint16_t len)
 {
     bool new_state = val[0] != 0;
     badge_cfg.ble_always_on = new_state;
-    if (new_state) {
+    if (new_state)
+    {
         ble_enable_advertise();
-    } else {
+    }
+    else
+    {
         ble_disable_advertise(); // If you want to stop when disabling
     }
 }
@@ -114,8 +122,7 @@ uint8_t ble_setting(uint8_t *val, uint16_t len)
 
     const void (*ble_lut[])(uint8_t *, uint16_t) = {
         cfg_ble_alwayon,
-        cfg_ble_devname
-    };
+        cfg_ble_devname};
 
     uint8_t fn = val[0];
     if (fn >= (sizeof(ble_lut) / sizeof(ble_lut[0])))
@@ -130,7 +137,7 @@ uint8_t flash_splash_screen(uint8_t *val, uint16_t len)
 {
     PRINT(__func__);
     PRINT("\n");
-    
+
     uint8_t w = val[0];
     uint8_t h = val[1];
     uint8_t fh = val[2];
@@ -223,8 +230,7 @@ const uint8_t (*cmd_lut[])(uint8_t *val, uint16_t len) = {
     load_fallback_cfg,
     misc,
     enable_always_on_mode,
-    disable_always_on_mode
-};
+    disable_always_on_mode};
 
 #define CMD_LUT_LEN (sizeof(cmd_lut) / sizeof(cmd_lut[0]))
 
@@ -232,16 +238,20 @@ uint8_t ng_parse(uint8_t *val, uint16_t len)
 {
     uint8_t cmd = val[0];
     PRINT("LUT_LEN: %02x \n", CMD_LUT_LEN);
-    if (cmd >= CMD_LUT_LEN) {
+    if (cmd >= CMD_LUT_LEN)
+    {
         PRINT("invalid command!\n");
         return bleInvalidRange;
     }
 
-    if (cmd_lut[cmd]) {
+    if (cmd_lut[cmd])
+    {
         PRINT("executing [cmd %02x] \n", cmd);
         uint8_t ret = (*cmd_lut[cmd])(val + 1, len - 1);
         ng_notify(&ret, 1); // response to the client app
-    } else {
+    }
+    else
+    {
         PRINT("function is not defined!\n");
     }
     return SUCCESS;

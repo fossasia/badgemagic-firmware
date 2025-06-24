@@ -34,25 +34,27 @@ static gattAttribute_t attr_table[] = {
 
 #define notiAttr attr_table[4]
 
-
 static bStatus_t write_handler(uint16 connHandle, gattAttribute_t *pAttr,
-                uint8 *pValue, uint16 len, uint16 offset, uint8 method)
+                               uint8 *pValue, uint16 len, uint16 offset, uint8 method)
 {
     PRINT("ble: write_handler(): connHandle: %04X\n", connHandle);
 
-    if (!gattPermitWrite(pAttr->permissions)) {
+    if (!gattPermitWrite(pAttr->permissions))
+    {
         return ATT_ERR_WRITE_NOT_PERMITTED;
     }
-    
+
     uint16_t uuid = BUILD_UINT16(pAttr->type.uuid[0], pAttr->type.uuid[1]);
-    if(uuid == GATT_CLIENT_CHAR_CFG_UUID) {
+    if (uuid == GATT_CLIENT_CHAR_CFG_UUID)
+    {
         bStatus_t ret = GATTServApp_ProcessCCCWriteReq(connHandle, pAttr, pValue, len,
-                offset, GATT_CLIENT_CFG_NOTIFY);
+                                                       offset, GATT_CLIENT_CFG_NOTIFY);
         PRINT("ble: CCCD changed: %02X\n", TxCCCD->value);
         return ret;
     }
 
-    if (uuid == RxCharUUID) {
+    if (uuid == RxCharUUID)
+    {
         return ng_parse(pValue, len);
     }
 
@@ -60,22 +62,25 @@ static bStatus_t write_handler(uint16 connHandle, gattAttribute_t *pAttr,
 }
 
 static bStatus_t read_handler(uint16_t connHandle, gattAttribute_t *pAttr,
-                uint8_t *pValue, uint16_t *pLen, uint16_t offset,
-                uint16_t maxLen, uint8_t method)
+                              uint8_t *pValue, uint16_t *pLen, uint16_t offset,
+                              uint16_t maxLen, uint8_t method)
 {
-    if (!gattPermitRead(pAttr->permissions)) {
+    if (!gattPermitRead(pAttr->permissions))
+    {
         return ATT_ERR_READ_NOT_PERMITTED;
     }
 
     uint16_t uuid = BUILD_UINT16(pAttr->type.uuid[0], pAttr->type.uuid[1]);
-    if(uuid == GATT_CLIENT_CHAR_CFG_UUID) {
+    if (uuid == GATT_CLIENT_CHAR_CFG_UUID)
+    {
         *pLen = 2;
         tmos_memcpy(pValue, pAttr->pValue, *pLen);
         return SUCCESS;
     }
 
-    if (uuid == TxCharUUID) {
-        *pLen = MIN(TxLen-offset, maxLen);
+    if (uuid == TxCharUUID)
+    {
+        *pLen = MIN(TxLen - offset, maxLen);
         tmos_memcpy(pValue, &pAttr->pValue[offset], *pLen);
         return SUCCESS;
     }
@@ -86,23 +91,22 @@ static bStatus_t read_handler(uint16_t connHandle, gattAttribute_t *pAttr,
 static gattServiceCBs_t service_handlers = {
     read_handler,
     write_handler,
-    NULL
-};
+    NULL};
 
 static void connStatus_handler(uint16 connHandle, uint8 changeType)
 {
-    if(connHandle == LOOPBACK_CONNHANDLE)
+    if (connHandle == LOOPBACK_CONNHANDLE)
         return;
 
     // Reset ClientCharConfig if connection has dropped
-    if((changeType == LINKDB_STATUS_UPDATE_REMOVED)
-                || ((changeType == LINKDB_STATUS_UPDATE_STATEFLAGS)
-                && (!linkDB_Up(connHandle)))) {
+    if ((changeType == LINKDB_STATUS_UPDATE_REMOVED) || ((changeType == LINKDB_STATUS_UPDATE_STATEFLAGS) && (!linkDB_Up(connHandle))))
+    {
         GATTServApp_InitCharCfg(connHandle, TxCCCD);
     }
-    if (badge_cfg.ble_always_on) {
-            PRINT("BLE disconnected, restarting advertising due to Always-On\n");
-            ble_enable_advertise();
+    if (badge_cfg.ble_always_on)
+    {
+        PRINT("BLE disconnected, restarting advertising due to Always-On\n");
+        ble_enable_advertise();
     }
 }
 
@@ -113,9 +117,9 @@ int ng_registerService()
     linkDB_Register(connStatus_handler);
 
     status = GATTServApp_RegisterService(attr_table,
-                GATT_NUM_ATTRS(attr_table),
-                GATT_MAX_ENCRYPT_KEY_SIZE,
-                &service_handlers);
+                                         GATT_NUM_ATTRS(attr_table),
+                                         GATT_MAX_ENCRYPT_KEY_SIZE,
+                                         &service_handlers);
     return (status);
 }
 
@@ -127,28 +131,30 @@ static uint8 isNotifyEnabled(uint16 connHandle)
 /**
  * @brief   Send notify to client. Currently support one client connection
  *          only.
- * 
+ *
  * @param   val Value to be sent
  * @param   len length of val. This should not be larger than MTU.
  * @return  bStatus_t
  */
 bStatus_t ng_notify(uint8_t *val, uint8_t len)
 {
-    if(!isNotifyEnabled(TxCCCD->connHandle)) {
+    if (!isNotifyEnabled(TxCCCD->connHandle))
+    {
         PRINT("ble: ng_notify() notify is not enabled\n");
         return bleIncorrectMode;
     }
-    if(len > ATT_GetMTU(TxCCCD->connHandle)) {
+    if (len > ATT_GetMTU(TxCCCD->connHandle))
+    {
         return bleInvalidRange;
     }
 
     attHandleValueNoti_t noti = {
         .handle = notiAttr.handle,
-        .len = len
-    };
+        .len = len};
     noti.pValue = GATT_bm_alloc(TxCCCD->connHandle, ATT_HANDLE_VALUE_NOTI,
-                len, NULL, 0);
-    if (noti.pValue == NULL) {
+                                len, NULL, 0);
+    if (noti.pValue == NULL)
+    {
         return bleMemAllocError;
     }
 
@@ -156,7 +162,8 @@ bStatus_t ng_notify(uint8_t *val, uint8_t len)
 
     bStatus_t ret = GATT_Notification(TxCCCD->connHandle, &noti, FALSE);
     GATT_bm_free((gattMsg_t *)&noti, ATT_HANDLE_VALUE_NOTI);
-    if (ret != SUCCESS) {
+    if (ret != SUCCESS)
+    {
         PRINT("ble: noti sending failed\n");
         return ret;
     }

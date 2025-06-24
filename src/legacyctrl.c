@@ -6,7 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum {
+typedef enum
+{
     LEGACY_BLE_RX_OK = 0,
     LEGACY_BLE_RX_ERR_WIDTH,
     LEGACY_BLE_RX_ERR_HEADER,
@@ -19,7 +20,8 @@ typedef enum {
 static volatile legacy_ble_rx_error_t legacy_ble_rx_error = LEGACY_BLE_RX_OK;
 
 // Retrieve and clear the last error state
-legacy_ble_rx_error_t legacy_ble_rx_get_last_error(void) {
+legacy_ble_rx_error_t legacy_ble_rx_get_last_error(void)
+{
     legacy_ble_rx_error_t err = legacy_ble_rx_error;
     legacy_ble_rx_error = LEGACY_BLE_RX_OK;
     return err;
@@ -34,38 +36,49 @@ void legacy_ble_rx(uint8_t *val, uint16_t len)
     // Always set error to OK at function start
     legacy_ble_rx_error = LEGACY_BLE_RX_OK;
 
-    if (len != LEGACY_TRANSFER_WIDTH) {
+    if (len != LEGACY_TRANSFER_WIDTH)
+    {
         PRINT("Transfer width is not matched\n");
         legacy_ble_rx_error = LEGACY_BLE_RX_ERR_WIDTH;
         return;
     }
 
     PRINT("val[%d]: ", len);
-    for (int i = 0; i < len; i++) {
+    for (int i = 0; i < len; i++)
+    {
         PRINT("%02X ", val[i]);
     }
     PRINT("\n");
 
-    if (c == 0) {
-        if (memcmp(val, "wang", 5)) {
+    if (c == 0)
+    {
+        if (memcmp(val, "wang", 5))
+        {
             PRINT("Not a header\n");
             legacy_ble_rx_error = LEGACY_BLE_RX_ERR_HEADER;
             return;
-        } else {
+        }
+        else
+        {
             free(data);
             data = malloc(sizeof(data_legacy_t));
-            if (!data) {
+            if (!data)
+            {
                 PRINT("insufficient memory\n");
                 legacy_ble_rx_error = LEGACY_BLE_RX_ERR_MEM;
                 return;
             }
         }
-    } else { // Re attempt after a failed transfer
-        if (!memcmp(val, "wang", 5)) {
+    }
+    else
+    { // Re attempt after a failed transfer
+        if (!memcmp(val, "wang", 5))
+        {
             free(data);
             c = 0;
             data = malloc(sizeof(data_legacy_t));
-            if (!data) {
+            if (!data)
+            {
                 PRINT("insufficient memory\n");
                 legacy_ble_rx_error = LEGACY_BLE_RX_ERR_MEM;
                 return;
@@ -75,27 +88,32 @@ void legacy_ble_rx(uint8_t *val, uint16_t len)
 
     PRINT("Copying BLE value\n");
     // Defensive: check pointer before memcpy
-    if (data == NULL) {
+    if (data == NULL)
+    {
         legacy_ble_rx_error = LEGACY_BLE_RX_ERR_MEM;
         return;
     }
     memcpy(data + c * len, val, len);
 
-    if (c == 1) {
+    if (c == 1)
+    {
         data_legacy_t *d = (data_legacy_t *)data;
         n = bigendian16_sum(d->sizes, 8);
         data_len = LEGACY_HEADER_SIZE + LED_ROWS * n;
         data = realloc(data, data_len);
-        if (!data) {
+        if (!data)
+        {
             PRINT("insufficient memory\n");
             legacy_ble_rx_error = LEGACY_BLE_RX_ERR_MEM;
             return;
         }
     }
 
-    if (c > 2 && ((c + 1) * LEGACY_TRANSFER_WIDTH) >= data_len) {
+    if (c > 2 && ((c + 1) * LEGACY_TRANSFER_WIDTH) >= data_len)
+    {
         PRINT("All bitmaps data received successfully\nWriting to flash.. ");
-        if (data == NULL) {
+        if (data == NULL)
+        {
             legacy_ble_rx_error = LEGACY_BLE_RX_ERR_MEM;
             return;
         }
@@ -116,14 +134,16 @@ void legacy_ble_rx(uint8_t *val, uint16_t len)
 }
 
 // Example of a caller checking for error after calling legacy_ble_rx
-void example_caller(uint8_t *val, uint16_t len) {
+void example_caller(uint8_t *val, uint16_t len)
+{
     legacy_ble_rx(val, len);
     legacy_ble_rx_error_t err = legacy_ble_rx_get_last_error();
-    if (err != LEGACY_BLE_RX_OK) {
+    if (err != LEGACY_BLE_RX_OK)
+    {
         PRINT("legacy_ble_rx failed with error code: %d\n", err);
         // Handle error accordingly
     }
 }
 
-// For thread safety in a multithreaded context, 
+// For thread safety in a multithreaded context,
 // use mutexes or atomic operations around legacy_ble_rx_error access.

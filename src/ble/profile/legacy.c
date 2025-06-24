@@ -17,34 +17,34 @@ static gattAttribute_t attr_table[] = {
 };
 
 static bStatus_t write_handler(uint16 connHandle, gattAttribute_t *pAttr,
-				uint8 *pValue, uint16 len, uint16 offset, uint8 method)
+							   uint8 *pValue, uint16 len, uint16 offset, uint8 method)
 {
-	if(gattPermitAuthorWrite(pAttr->permissions)) {
+	if (gattPermitAuthorWrite(pAttr->permissions))
+	{
 		return ATT_ERR_INSUFFICIENT_AUTHOR;
 	}
 
 	uint16_t uuid = BUILD_UINT16(pAttr->type.uuid[0], pAttr->type.uuid[1]);
-	if(uuid == RxCharUUID) {
+	if (uuid == RxCharUUID)
+	{
 		legacy_ble_rx(pValue, len);
 		return SUCCESS;
 	}
 	return ATT_ERR_ATTR_NOT_FOUND;
 }
 
-
 static gattServiceCBs_t service_handlers = {
 	NULL,
 	write_handler,
-	NULL
-};
+	NULL};
 
 int legacy_registerService()
 {
 	uint8 status = SUCCESS;
 
 	status = GATTServApp_RegisterService(attr_table,
-				GATT_NUM_ATTRS(attr_table),
-				GATT_MAX_ENCRYPT_KEY_SIZE,
-				&service_handlers);
+										 GATT_NUM_ATTRS(attr_table),
+										 GATT_MAX_ENCRYPT_KEY_SIZE,
+										 &service_handlers);
 	return (status);
 }
