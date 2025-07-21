@@ -231,3 +231,9 @@ Returns:
 - Parameters out of range: `0xff`.
 - `speed_ms` or `brightness_level` is out of allowed range: `0x02`.
 - Success: `0x00`.
+
+#### Example
+
+There were some examples created for a better understanding of this next-gen protocol. This requires expect and bluez to be installed.
+
+Put the badge in Bluetooth mode, or enable the always-on BLE. Identify the badge’s MAC address. Put it in the script. Then, in the project root directory, for example, run `./example/streaming.sh` to test the streaming feature.

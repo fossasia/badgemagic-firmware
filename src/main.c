@@ -295,7 +295,7 @@ uint8_t stream_bitmap(uint8_t *params, uint16_t len)
 		return -1;
 	}
 
-	tmos_memcpy(fb, params, min(LED_COLS, len));
+	tmos_memcpy(fb, params, min(LED_COLS * 2, len));
 	return 0;
 }
 
