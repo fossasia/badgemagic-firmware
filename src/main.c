@@ -407,6 +407,18 @@ void handle_after_rx()
 	}
 }
 
+void mic_init() {
+	/* adc 11 - pa7 */
+	GPIOA_ModeCfg(GPIO_Pin_7, GPIO_ModeIN_Floating);
+	ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
+	ADC_ChannelCfg(11);
+}
+
+uint16_t mic_adc() {
+	ADC_ChannelCfg(11);
+	return ADC_ExcutSingleConver();
+}
+
 int main()
 {
 	SetSysClock(CLK_SOURCE_PLL_60MHz);
@@ -431,7 +443,7 @@ int main()
 	btn_onLongPress(KEY1, change_brightness);
 
 	power_init();
-	disp_charging();
+	// disp_charging();
 	cfg_init();
 	xbm_t spl = {
 		.bits = &(badge_cfg.splash_bm_bits),
@@ -446,6 +458,19 @@ int main()
 	ble_setup();
 
 	spawn_tasks();
+	
+	mic_init();
+	while (1) 	{
+		for (int i=0; i<LED_COLS; i++) {
+			// fb[i] = 1;
+			// fb[i] = 1 << (mic_adc() / 128);
+			fb[i] = 1 << (abs(4096 - mic_adc()) / 128);
+			// fb[i] = 1 << (random() % 11);
+		}
+		if (mode =! NORMAL) 
+			poweroff();
+		DelayMs(10);
+	}
 
 	mode = NORMAL;
 	while (1) {
