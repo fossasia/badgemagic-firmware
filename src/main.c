@@ -414,10 +414,40 @@ void mic_init() {
 	ADC_ChannelCfg(11);
 }
 
-uint16_t mic_adc() {
+// TODO: setup an interrupt instead of polling, now is just for POC
+int16_t mic_adc() {
 	ADC_ChannelCfg(11);
-	return ADC_ExcutSingleConver();
+	uint64_t sum = 0;
+	for (int i = 0; i < 64; i++) {
+		sum += ADC_ExcutSingleConver();
+		// mDelayuS(1);
+	}
+
+	// adc idle level is 2048. Normalizing this to 0
+	return sum / 64 - 2048;
 }
+
+uint16_t amp_wav_lut[8] = {
+	0b00000000000,
+	0b00000100000,
+	0b00001110000,
+	0b00011111000,
+	0b00111111100,
+	0b01111111110,
+	0b11111111111,
+	0b11111111111,
+};
+
+uint16_t amp_wav_lut_w1[8] = {
+	0b00000100000,
+	0b00001110000,
+	0b00011111000,
+	0b00111111100,
+	0b01111111110,
+	0b11111111111,
+	0b11111111111,
+	0b11111111111,
+};
 
 int main()
 {
@@ -462,14 +492,17 @@ int main()
 	mic_init();
 	while (1) 	{
 		for (int i=0; i<LED_COLS; i++) {
-			// fb[i] = 1;
-			// fb[i] = 1 << (mic_adc() / 128);
-			fb[i] = 1 << (abs(4096 - mic_adc()) / 128);
-			// fb[i] = 1 << (random() % 11);
+			// need to align this value to center by div by 340
+			int16_t v = mic_adc();
+			// fb[i] = v > 0 ?
+			// 	(1 << 6) << ((v) / 100) :
+			// 	(1 << 6) >> ((-v) / 100);
+			
+			fb[i] = amp_wav_lut[(abs(v) / 300)]; // FIXME: how to adjust this 300 dynamically
 		}
 		if (mode =! NORMAL) 
 			poweroff();
-		DelayMs(10);
+		// DelayMs(10);
 	}
 
 	mode = NORMAL;
