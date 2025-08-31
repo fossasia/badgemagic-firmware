@@ -25,6 +25,7 @@ idProduct=55e0.
 Then run:
 
 ```sh
+wchisp config reset
 wchisp flash badgemagic-ch582.bin
 ```
 
