@@ -40,6 +40,14 @@ Select the `badgemagic-ch582.bin` file and click 'Download'.
 Where badgemagic-ch582.bin is the binary downloaded above, the .elf file also
 works.
 
+### Updating
+
+Once the open source firmware is installed, there is no further need to remove the battery or short-circuit C3 to enter ISP mode. Simply long-press KEY2 to enter ISP mode. Then, flash updated firmware with
+
+```sh
+wchisp config reset
+wchisp flash badgemagic-ch582.bin
+```
 
 ## Usage
 
