@@ -16,7 +16,7 @@ the boot pin is pulled down in one of two ways:
 - Alternatively, connect the USB, press and hold KEY2, then short and release
   the C3 capacitor.
 
-If the badge has succesfully entered ISP mode, a single pixel roughly in the middle of the display will be lit. The badge will stay in ISP mode for approximately ten seconds before rebooting into normal mode.
+If the badge has successfully entered ISP mode, a single pixel roughly in the middle of the display will be lit. The badge will stay in ISP mode for approximately ten seconds before rebooting into normal mode.
 
 You can also check `dmesg` if the chip has entered the ISP mode with idVendor=4348 and
 idProduct=55e0.
