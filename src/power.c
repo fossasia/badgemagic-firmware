@@ -10,11 +10,11 @@ void poweroff()
 	GPIOA_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_Floating);
 	GPIOB_ModeCfg(GPIO_Pin_All, GPIO_ModeIN_Floating);
 
-	// Configure wake-up
+	// Configure wake-up - only KEY1
+	// Note: Charging wake-up (GPIO A0) disabled because it doesn't work
+	// reliably on USB-C version and interferes with KEY1 wake-up
 	GPIOA_ModeCfg(KEY1_PIN, GPIO_ModeIN_PD);
 	GPIOA_ITModeCfg(KEY1_PIN, GPIO_ITMode_RiseEdge);
-	GPIOA_ModeCfg(CHARGE_STT_PIN, GPIO_ModeIN_PU);
-	GPIOA_ITModeCfg(CHARGE_STT_PIN, GPIO_ITMode_FallEdge);
 	PFIC_EnableIRQ(GPIO_A_IRQn);
 	PWR_PeriphWakeUpCfg(ENABLE, RB_SLP_GPIO_WAKE, Long_Delay);
 
