@@ -6,7 +6,7 @@ on:
     branches: [master]
 
 env:
-  MRS_TOOLCHAIN: MRS_Toolchain_Linux_x64_V1.91
+  MRS_TOOLCHAIN: MRS_Toolchain_Linux_x64_V1.92
   USBC_BUILD_DIR: usb-c
   MICROB_BUILD_DIR: micro-b
   BIN_TYPES: '{.bin,.elf}'
@@ -29,7 +29,7 @@ jobs:
       - if: ${{ steps.cache-toolchain.outputs.cache-hit != 'true' }}
         name: Download toolchain
         run: |
-          wget http://file-oss.mounriver.com/tools/${{ env.MRS_TOOLCHAIN }}.tar.xz
+          wget https://github.com/ch32-riscv-ug/MounRiver_Studio_Community_miror/releases/download/1.92-toolchain/${{ env.MRS_TOOLCHAIN }}.tar.xz
           tar -xvf ${{ env.MRS_TOOLCHAIN }}.tar.xz
 
       - name: Build firmware
