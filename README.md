@@ -106,8 +106,9 @@ version repeatedly.
 ### Tools
 
 - [GNU make](https://www.gnu.org/software/make/)
-- [MounRiver Toolchain (removed)](http://file-oss.mounriver.com/tools/MRS_Toolchain_Linux_x64_V1.91.tar.xz)
-- [MounRiver Toolchain (community mirror)](http://file.mounriver.com/tools/MRS_Toolchain_Linux_x64_V1.92.tar.xz)
+- ~[MounRiver Toolchain (removed)](http://file-oss.mounriver.com/tools/MRS_Toolchain_Linux_x64_V1.91.tar.xz)~ 
+- [MounRiver Toolchain (community mirror)](https://github.com/ch32-riscv-ug/MounRiver_Studio_Community_miror/releases), specifically:
+  - [MRS_Toolchain_Linux_x64_V1.92.tar.xz](https://github.com/ch32-riscv-ug/MounRiver_Studio_Community_miror/releases/download/1.92-toolchain/MRS_Toolchain_Linux_x64_V1.92.tar.xz)
 - [wchisp](https://github.com/ch32-rs/wchisp)
 
 ### Build
