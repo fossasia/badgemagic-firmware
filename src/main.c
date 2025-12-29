@@ -46,6 +46,7 @@ enum MODES {
 #define ANI_FLASH           (1 << 2)
 #define SCAN_BOOTLD_BTN     (1 << 3)
 #define BLE_NEXT_STEP       (1 << 4)
+#define DETECT_CHARGING     (1 << 5)
 
 static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
@@ -60,6 +61,7 @@ static void change_brightness()
 
 static void mode_setup_download();
 static void mode_setup_normal();
+static void disp_charging();
 
 __HIGH_CODE
 static void change_mode()
@@ -208,6 +210,21 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		return events ^ BLE_NEXT_STEP;
 	}
 
+	if (events & DETECT_CHARGING) {
+		static int was_charging = 0;
+		int is_charging = charging_status();
+
+		if (is_charging && !was_charging) {
+			mode = BOOT;
+			disp_charging();
+			mode_setup_normal();
+		}
+
+		was_charging = is_charging;
+
+		return events ^ DETECT_CHARGING;
+	}
+
 	return 0;
 }
 
@@ -236,6 +253,7 @@ static void spawn_tasks()
 	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
 	tmos_start_reload_task(common_taskid, SCAN_BOOTLD_BTN,
 				SCAN_BOOTLD_BTN_SPEED_T / 625);
+	tmos_start_reload_task(common_taskid, DETECT_CHARGING, 500000 / 625);
 	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
 }
 
