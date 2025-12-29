@@ -61,14 +61,32 @@ static void change_brightness()
 static void mode_setup_download();
 static void mode_setup_normal();
 
+/*
+ * Mode state machine (KEY1 button press handler)
+ *
+ * Standard cycle: NORMAL(1) -> DOWNLOAD(2) -> POWER_OFF(3) -> NORMAL(1) -> ...
+ *
+ * Special case: BOOT(0)
+ *   - BOOT is the initial mode on power-on, shows charging status during startup
+ *   - Also entered automatically when USB charging detected (see DETECT_CHARGING event)
+ *   - Not part of standard mode cycle (user cannot cycle INTO boot via button)
+ *   - When user presses button in BOOT: transition directly to NORMAL
+ *   - Rationale: Allows user to exit charging display and prevents accidental
+ *     power-off during charging (since BOOT is outside the normal cycle)
+ *
+ * Implementation note: This special case should be preserved when adding new modes.
+ * BOOT should always transition directly to NORMAL on button press.
+ */
 __HIGH_CODE
 static void change_mode()
 {
+	// Special case: BOOT mode exits directly to NORMAL (not part of cycle)
 	if (mode == BOOT) {
 		mode = NORMAL;
 		return;
 	}
 
+	// Standard mode cycling
 	NEXT_STATE(mode, 0, MODES_COUNT);
 	const static void (*modes[])(void) = {
 		NULL,

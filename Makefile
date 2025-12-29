@@ -9,8 +9,13 @@ TARGET = badgemagic-ch582
 ######################################
 # Uncomment below line to enable debugging
 # DEBUG = 1
-# Comment below to build for micro USB version
+
+# Hardware version selection:
+# - Set USBC_VERSION = 1 for USB-C hardware (uses GPIO B6 for LED pin T)
+# - Comment out or set to 0 for micro-USB hardware (uses GPIO B23 for LED pin T)
+# Default: USB-C version
 USBC_VERSION = 1
+
 # optimization for size
 OPT = -Os
 
