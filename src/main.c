@@ -64,6 +64,11 @@ static void mode_setup_normal();
 __HIGH_CODE
 static void change_mode()
 {
+	if (mode == BOOT) {
+		mode = NORMAL;
+		return;
+	}
+
 	NEXT_STATE(mode, 0, MODES_COUNT);
 	const static void (*modes[])(void) = {
 		NULL,
