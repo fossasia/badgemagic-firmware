@@ -37,6 +37,7 @@ enum MODES {
 #define ANI_MARQUE_SPEED_T    (100000) // uS
 #define ANI_FLASH_SPEED_T     (500000) // uS
 #define SCAN_BOOTLD_BTN_SPEED_T         (200000) // uS
+#define DETECT_CHARGING_SPEED_T         (500000) // uS
 #define ANI_SPEED_STRATEGY(speed_level) \
 				(ANI_BASE_SPEED_T - ((speed_level) \
 				* ANI_BASE_SPEED_T / 8))
@@ -253,7 +254,7 @@ static void spawn_tasks()
 	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
 	tmos_start_reload_task(common_taskid, SCAN_BOOTLD_BTN,
 				SCAN_BOOTLD_BTN_SPEED_T / 625);
-	tmos_start_reload_task(common_taskid, DETECT_CHARGING, 500000 / 625);
+	tmos_start_reload_task(common_taskid, DETECT_CHARGING, DETECT_CHARGING_SPEED_T / 625);
 	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
 }
 
