@@ -102,7 +102,7 @@ static const pindesc_t led_pins[LED_PINCOUNT] = {
 	PINDESC(B, 9),  // H
 	PINDESC(B, 8),  // I
 	PINDESC(B, 17), // J
-	PINDESC(B, 14), // K
+	PINDESC(B, 16), // K
 	PINDESC(B, 13), // L
 	PINDESC(B, 12), // M
 	PINDESC(B, 5),  // N
