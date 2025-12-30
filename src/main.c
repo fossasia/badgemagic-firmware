@@ -29,9 +29,9 @@
 enum MODES {
 	BOOT = 0,
 	NORMAL,
+	AUDIO,
 	DOWNLOAD,
 	POWER_OFF,
-	AUDIO,
 	MODES_COUNT,
 };
 
@@ -48,6 +48,7 @@ enum MODES {
 #define ANI_FLASH           (1 << 2)
 #define SCAN_BOOTLD_BTN     (1 << 3)
 #define BLE_NEXT_STEP       (1 << 4)
+#define AUDIO_STEP      	(1 << 5)
 
 static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
@@ -71,8 +72,8 @@ static void change_mode()
 	const static void (*modes[])(void) = {
 		NULL,
 		mode_setup_normal,
-		mode_setup_download,
 		mode_setup_audio_visualize,
+		mode_setup_download,
 		poweroff
 	};
 
@@ -120,6 +121,26 @@ void load_bmlist()
 	bmlist_gonext();
 
 	bmlist_drop(curr_bm);
+}
+
+static void audio_visualize_poll()
+{
+	static uint8_t current = 0;
+	static int16_t values[64];
+	int16_t mic = abs(mic_adc());
+	int16_t max = 0;	
+	values[current++] = mic;
+	if (current >= sizeof(values)/sizeof(values[0])) current=0;
+	for (int i=0; i<sizeof(values)/sizeof(values[0]); i++) {
+		if (values[i] > max) max = values[i];
+	}
+
+	mic = mic * 7 / max;
+	if (mic > 7) mic = 7;
+
+	for (int i=0; i<LED_COLS; i++) {
+		fb[i] = amp_wav_lut[mic];
+	}
 }
 
 static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
@@ -210,6 +231,12 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		ani_xbm_next_frame(&bluetooth, fb, 10, 0);
 
 		return events ^ BLE_NEXT_STEP;
+	}
+
+	if (events & AUDIO_STEP) {
+		audio_visualize_poll();
+
+		return events ^ AUDIO_STEP;
 	}
 
 	return 0;
@@ -402,27 +429,15 @@ static void mode_setup_normal()
 	start_normal_animation();
 }
 
-static void audio_visualize_poll()
-{
-	while (1) {
-		for (int i=0; i<LED_COLS; i++) {
-			// FIXME: how to adjust this 300 dynamically
-			fb[i] = amp_wav_lut[(abs(mic_adc()) / 300)];
-		}
-		if (mode =! AUDIO) {
-			break;
-		}
-	}
-}
-
 static void mode_setup_audio_visualize()
 {
 	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
 	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	memset(fb, 0, sizeof(fb));
 
-	audio_visualize_poll();
+	tmos_start_reload_task(common_taskid, AUDIO_STEP, 500000 / (625*10));
 }
 
 void handle_after_rx()
