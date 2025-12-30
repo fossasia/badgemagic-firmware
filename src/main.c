@@ -74,7 +74,7 @@ static void change_mode()
 		mode_setup_normal,
 		mode_setup_audio_visualize,
 		mode_setup_download,
-		poweroff
+		poweroff		// TODO: When device gets powered off, it can not be woken up from sleep again using button
 	};
 
 	if (modes[mode])
@@ -96,6 +96,7 @@ static void bm_transition()
 		return;
 	}
 }
+
 void play_splash(xbm_t *xbm, int col, int row, int spT)
 {
 	while (ani_xbm_scrollup_pad(xbm, 11, 11, 11, fb, 0, 0) != 0) {
@@ -275,6 +276,7 @@ static void start_ble_animation()
 	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
+	tmos_stop_task(common_taskid, AUDIO_STEP);
 	memset(fb, 0, sizeof(fb));
 
 	tmos_start_reload_task(common_taskid, BLE_NEXT_STEP, 500000 / 625);
@@ -286,6 +288,7 @@ static void start_normal_animation()
 	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
 	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
 	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	tmos_stop_task(common_taskid, AUDIO_STEP);
 }
 
 static void resume_from_streaming()
@@ -303,6 +306,7 @@ static void stop_all_animation()
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
 	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	tmos_stop_task(common_taskid, AUDIO_STEP);
 	memset(fb, 0, sizeof(fb));
 }
 
