@@ -126,18 +126,18 @@ void load_bmlist()
 
 static void audio_visualize_poll()
 {
-	static uint8_t current = 0;
-	static int16_t values[64];
-	int16_t mic = abs(mic_adc());
-	int16_t max = 0;	
-	values[current++] = mic;
-	if (current >= sizeof(values)/sizeof(values[0])) current=0;
-	for (int i=0; i<sizeof(values)/sizeof(values[0]); i++) {
-		if (values[i] > max) max = values[i];
-	}
+	static float max = 0.0f;
 
-	mic = mic * 7 / max;
-	if (mic > 7) mic = 7;
+	int16_t mic = abs(mic_adc());
+	max = max - max/64.0;			// Reduce max value exponentially
+	if (mic > max) max = mic;		// Bump it back up if needed
+
+	if (max>0) {
+		mic = mic * 7 / max;
+	} else {
+		mic = 0;
+	}
+	if (mic > 7) mic = 7;			// Scale mic value to lookup table size
 
 	for (int i=0; i<LED_COLS; i++) {
 		fb[i] = amp_wav_lut[mic];
