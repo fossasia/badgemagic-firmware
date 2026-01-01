@@ -2,6 +2,7 @@
 #include "CH58x_sys.h"
 #include "CH58xBLE_LIB.h"
 
+#include "audio.h"
 #include "leddrv.h"
 #include "button.h"
 #include "bmlist.h"
@@ -28,6 +29,7 @@
 enum MODES {
 	BOOT = 0,
 	NORMAL,
+	AUDIO,
 	DOWNLOAD,
 	POWER_OFF,
 	MODES_COUNT,
@@ -46,6 +48,7 @@ enum MODES {
 #define ANI_FLASH           (1 << 2)
 #define SCAN_BOOTLD_BTN     (1 << 3)
 #define BLE_NEXT_STEP       (1 << 4)
+#define AUDIO_STEP      	(1 << 5)
 
 static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
@@ -60,6 +63,7 @@ static void change_brightness()
 
 static void mode_setup_download();
 static void mode_setup_normal();
+static void mode_setup_audio_visualize();
 
 __HIGH_CODE
 static void change_mode()
@@ -68,8 +72,9 @@ static void change_mode()
 	const static void (*modes[])(void) = {
 		NULL,
 		mode_setup_normal,
+		mode_setup_audio_visualize,
 		mode_setup_download,
-		poweroff
+		poweroff		// TODO: When device gets powered off, it can not be woken up from sleep again using button
 	};
 
 	if (modes[mode])
@@ -91,6 +96,7 @@ static void bm_transition()
 		return;
 	}
 }
+
 void play_splash(xbm_t *xbm, int col, int row, int spT)
 {
 	while (ani_xbm_scrollup_pad(xbm, 11, 11, 11, fb, 0, 0) != 0) {
@@ -116,6 +122,26 @@ void load_bmlist()
 	bmlist_gonext();
 
 	bmlist_drop(curr_bm);
+}
+
+static void audio_visualize_poll()
+{
+	static uint8_t current = 0;
+	static int16_t values[64];
+	int16_t mic = abs(mic_adc());
+	int16_t max = 0;	
+	values[current++] = mic;
+	if (current >= sizeof(values)/sizeof(values[0])) current=0;
+	for (int i=0; i<sizeof(values)/sizeof(values[0]); i++) {
+		if (values[i] > max) max = values[i];
+	}
+
+	mic = mic * 7 / max;
+	if (mic > 7) mic = 7;
+
+	for (int i=0; i<LED_COLS; i++) {
+		fb[i] = amp_wav_lut[mic];
+	}
 }
 
 static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
@@ -208,6 +234,12 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		return events ^ BLE_NEXT_STEP;
 	}
 
+	if (events & AUDIO_STEP) {
+		audio_visualize_poll();
+
+		return events ^ AUDIO_STEP;
+	}
+
 	return 0;
 }
 
@@ -244,6 +276,7 @@ static void start_ble_animation()
 	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
+	tmos_stop_task(common_taskid, AUDIO_STEP);
 	memset(fb, 0, sizeof(fb));
 
 	tmos_start_reload_task(common_taskid, BLE_NEXT_STEP, 500000 / 625);
@@ -255,6 +288,7 @@ static void start_normal_animation()
 	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
 	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
 	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	tmos_stop_task(common_taskid, AUDIO_STEP);
 }
 
 static void resume_from_streaming()
@@ -272,6 +306,7 @@ static void stop_all_animation()
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
 	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	tmos_stop_task(common_taskid, AUDIO_STEP);
 	memset(fb, 0, sizeof(fb));
 }
 
@@ -398,6 +433,17 @@ static void mode_setup_normal()
 	start_normal_animation();
 }
 
+static void mode_setup_audio_visualize()
+{
+	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
+	tmos_stop_task(common_taskid, ANI_MARQUE);
+	tmos_stop_task(common_taskid, ANI_FLASH);
+	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	memset(fb, 0, sizeof(fb));
+
+	tmos_start_reload_task(common_taskid, AUDIO_STEP, 500000 / (625*10));
+}
+
 void handle_after_rx()
 {
 	if (badge_cfg.reset_rx) {
@@ -431,7 +477,7 @@ int main()
 	btn_onLongPress(KEY1, change_brightness);
 
 	power_init();
-	disp_charging();
+	// disp_charging();
 	cfg_init();
 	xbm_t spl = {
 		.bits = &(badge_cfg.splash_bm_bits),
@@ -446,6 +492,8 @@ int main()
 	ble_setup();
 
 	spawn_tasks();
+	
+	mic_init();
 
 	mode = NORMAL;
 	while (1) {
