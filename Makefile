@@ -11,6 +11,9 @@ TARGET = badgemagic-ch582
 # DEBUG = 1
 # Uncomment below to build for USB-C version
 # USBC_VERSION = 1
+
+LED_REFRESH_RATE = 2000 # Hz
+
 # optimization for size
 OPT = -Os
 
@@ -142,6 +145,7 @@ CFLAGS += -DUSBC_VERSION=$(USBC_VERSION)
 endif
 
 CFLAGS += -DVERSION='"$(VERSION)"' -DVERSION_ABBR='"$(VERSION_ABBR)"'
+CFLAGS += -DLED_REFRESH_RATE='$(LED_REFRESH_RATE)'
 
 # Generate dependency information
 CFLAGS += -MMD -MP
