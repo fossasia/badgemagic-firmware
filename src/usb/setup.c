@@ -123,7 +123,7 @@ void usb_start() {
 
 	/* This should be placed first, the python script always looks
 	for the first interface (not the interface number) */
-	hiddev_init();
+	// hiddev_init();
 
 	cdc_acm_init();
 

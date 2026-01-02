@@ -32,4 +32,12 @@ int _write(int fd, char *buf, int size)
     return size;
 }
 
+void dump_mem(void *ptr, int len)
+{
+	for (int i = 0; i < len; i++) {
+		PRINT(" %02x", ((uint8_t*)ptr)[i]);
+	}
+	PRINT("\n");
+}
+
 #endif
