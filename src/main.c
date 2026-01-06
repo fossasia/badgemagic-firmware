@@ -2,6 +2,7 @@
 #include "CH58x_sys.h"
 #include "CH58xBLE_LIB.h"
 
+#include "audio.h"
 #include "leddrv.h"
 #include "button.h"
 #include "bmlist.h"
@@ -30,6 +31,7 @@ enum MODES {
 	NORMAL,
 	DOWNLOAD,
 	POWER_OFF,
+	AUDIO,
 	MODES_COUNT,
 };
 
@@ -60,6 +62,7 @@ static void change_brightness()
 
 static void mode_setup_download();
 static void mode_setup_normal();
+static void mode_setup_audio_visualize();
 
 __HIGH_CODE
 static void change_mode()
@@ -69,6 +72,7 @@ static void change_mode()
 		NULL,
 		mode_setup_normal,
 		mode_setup_download,
+		mode_setup_audio_visualize,
 		poweroff
 	};
 
@@ -398,6 +402,29 @@ static void mode_setup_normal()
 	start_normal_animation();
 }
 
+static void audio_visualize_poll()
+{
+	while (1) {
+		for (int i=0; i<LED_COLS; i++) {
+			// FIXME: how to adjust this 300 dynamically
+			fb[i] = amp_wav_lut[(abs(mic_adc()) / 300)];
+		}
+		if (mode =! AUDIO) {
+			break;
+		}
+	}
+}
+
+static void mode_setup_audio_visualize()
+{
+	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
+	tmos_stop_task(common_taskid, ANI_MARQUE);
+	tmos_stop_task(common_taskid, ANI_FLASH);
+	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+
+	audio_visualize_poll();
+}
+
 void handle_after_rx()
 {
 	if (badge_cfg.reset_rx) {
@@ -431,7 +458,7 @@ int main()
 	btn_onLongPress(KEY1, change_brightness);
 
 	power_init();
-	disp_charging();
+	// disp_charging();
 	cfg_init();
 	xbm_t spl = {
 		.bits = &(badge_cfg.splash_bm_bits),
@@ -446,6 +473,8 @@ int main()
 	ble_setup();
 
 	spawn_tasks();
+	
+	mic_init();
 
 	mode = NORMAL;
 	while (1) {
