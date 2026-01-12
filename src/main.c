@@ -35,6 +35,12 @@ enum MODES {
 	MODES_COUNT,
 };
 
+enum AUDIO_MODES {
+	AMPLITUDE = 0,
+	WAVEFORM,
+	AUDIO_MODES_COUNT,
+};
+
 #define ANI_BASE_SPEED_T      (200000) // uS
 #define ANI_MARQUE_SPEED_T    (100000) // uS
 #define ANI_FLASH_SPEED_T     (500000) // uS
@@ -54,6 +60,7 @@ static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
 volatile uint16_t fb[LED_COLS] = {0};
 volatile int mode, is_play_sequentially = 1;
+volatile int audio_mode = AMPLITUDE;
 
 __HIGH_CODE
 static void change_brightness()
@@ -95,6 +102,12 @@ static void bm_transition()
 		is_play_sequentially = 1;
 		return;
 	}
+}
+
+static void audio_transition()
+{
+	NEXT_STATE(audio_mode, 0, AUDIO_MODES_COUNT);
+	memset(fb, 0, sizeof(fb));
 }
 
 void play_splash(xbm_t *xbm, int col, int row, int spT)
@@ -139,8 +152,19 @@ static void audio_visualize_poll()
 	}
 	if (mic > 7) mic = 7;			// Scale mic value to lookup table size
 
-	for (int i=0; i<LED_COLS; i++) {
-		fb[i] = amp_wav_lut[mic];
+	switch (audio_mode) {
+		default:
+		case AMPLITUDE:
+			for (int i=0; i<LED_COLS; i++) {
+				fb[i] = amp_wav_lut[mic];
+			}
+		break;
+		case WAVEFORM:
+			for (int i=0; i<LED_COLS-1; i++) {
+				fb[i] = fb[i+1];
+			}
+			fb[LED_COLS-1] = amp_wav_lut_w1[mic];
+		break;
 	}
 }
 
@@ -435,6 +459,8 @@ static void mode_setup_normal()
 
 static void mode_setup_audio_visualize()
 {
+	btn_onOnePress(KEY2, audio_transition);
+
 	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
