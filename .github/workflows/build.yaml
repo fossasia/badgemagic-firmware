@@ -17,6 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          submodules: 'true'
           fetch-depth: 0 # fetch tags for versioning
 
       - name: Cache toolchain
@@ -31,6 +32,13 @@ jobs:
         run: |
           wget https://github.com/ch32-riscv-ug/MounRiver_Studio_Community_miror/releases/download/1.92-toolchain/${{ env.MRS_TOOLCHAIN }}.tar.xz
           tar -xvf ${{ env.MRS_TOOLCHAIN }}.tar.xz
+
+      - name: Install dependencies for MCUboot imgtool
+        run: |
+          pip3 install -e external/mcuboot/scripts/
+
+      - name: Install srec_cat
+        run: sudo apt-get update && sudo apt-get install -y srecord
 
       - name: Build firmware
         run: |
