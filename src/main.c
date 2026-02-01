@@ -344,6 +344,7 @@ static void disp_charging()
 {
 	int blink = 0;
 	while (mode == BOOT) {
+		btn_tick();
 		int percent = batt_raw2percent(batt_raw());
 
 		if (charging_status()) {
@@ -446,6 +447,7 @@ int main()
 	ble_setup();
 
 	spawn_tasks();
+	btn_init_task();
 
 	mode = NORMAL;
 	while (1) {
