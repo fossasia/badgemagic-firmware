@@ -420,7 +420,7 @@ int main()
 	usb_start();
 
 	led_init();
-	TMR0_TimerInit((FREQ_SYS / 2000) / 2);
+	TMR0_TimerInit((FREQ_SYS / LED_REFRESH_RATE) / 2);
 	TMR0_ITCfg(ENABLE, TMR0_3_IT_CYC_END);
 	PFIC_EnableIRQ(TMR0_IRQn);
 
