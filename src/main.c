@@ -408,6 +408,59 @@ void handle_after_rx()
 	}
 }
 
+#define PADDLESZ 5 // pixels
+
+struct paddle_st {
+	uint8_t size;
+	uint8_t pos_x; // the origin of the paddle is its most left point
+};
+
+struct ball_st {
+	// position vector
+	uint8_t px;
+	uint8_t py;
+
+	// verilocity vector
+	uint8_t vx;
+	uint8_t vy;
+};
+
+struct paddle_st paddle;
+struct ball_st ball;
+
+static void pong_update(int dt)
+{
+
+}
+
+static void pong_render()
+{
+	int paddle_l = paddle.pos_x;
+	int paddle_r = paddle.pos_x + paddle.size;
+
+	// clear the screen
+	memset(fb, 0, sizeof(fb));
+
+	// render the paddle
+	for (int i = paddle_l; i <= paddle_r; i++) {
+		fb[i] |= 1 << (LED_ROWS - 1);
+	}
+
+	// render the ball
+	fb[ball.px] |= (1 << ball.py);
+}
+
+static void pong_init()
+{
+	paddle.size = PADDLESZ;
+	paddle.pos_x = (LED_COLS - PADDLESZ) / 2;
+
+	ball.px = LED_COLS / 2;
+	ball.py = LED_ROWS / 2;
+	ball.vx = 1; // right
+	ball.vy = 1; // down
+}
+
 int main()
 {
 	SetSysClock(CLK_SOURCE_PLL_60MHz);
@@ -448,6 +501,15 @@ int main()
 
 	spawn_tasks();
 	btn_init_task();
+
+	pong_init();
+	while (1) {
+		pong_update(1);
+		pong_render();
+		if (mode =! NORMAL) 
+			break;
+		DelayMs(100);
+	}
 
 	mode = NORMAL;
 	while (1) {
