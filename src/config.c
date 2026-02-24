@@ -30,6 +30,7 @@ void cfg_fallback()
 	badge_cfg.splash_speedT = 30; // ms
 
 	int splash_size = ALIGN_1BYTE(splash.w) * splash.h;
+	memset(badge_cfg.splash_bm_bits, 0, sizeof(badge_cfg.splash_bm_bits));
 	memcpy(badge_cfg.splash_bm_bits, splash.bits, splash_size);
 	badge_cfg.splash_bm_w = splash.w;
 	badge_cfg.splash_bm_h = splash.h;
