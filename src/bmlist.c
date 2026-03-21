@@ -75,22 +75,23 @@ bm_t *bmlist_drop(bm_t *bm)
 
 bm_t *bm_new(uint16_t width)
 {
-    bm_t *bm = calloc(1, sizeof(bm_t));
-    if (!bm)
-        return NULL;
+	if (width == 0)
+		return NULL;
 
-    bm->width = width;
+	bm_t *bm = calloc(1, sizeof(bm_t));
+	if (!bm)
+		return NULL;
 
-    bm->buf = calloc(width, sizeof(uint16_t));
-    if (!bm->buf) {
-        free(bm);
-        return NULL;
-    }
+	bm->width = width;
+	bm->buf = calloc(width, sizeof(uint16_t));
+	if (!bm->buf) {
+		free(bm);
+		return NULL;
+	}
 
-    bm->next = bm;
-    bm->prev = bm;
-
-    return bm;
+	bm->next = bm;
+	bm->prev = bm;
+	return bm;
 }
 
 void bmlist_init(uint16_t first_bm_width)
