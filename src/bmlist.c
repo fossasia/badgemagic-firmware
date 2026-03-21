@@ -63,24 +63,20 @@ static void list_del(bm_t *prev, bm_t *next)
 
 bm_t *bmlist_drop(bm_t *bm)
 {
-	if (bm->next == bm) {
-		free(bm);
-		head = NULL;
-		tail = NULL;
-		current = NULL;
-		return NULL;
-	}
-
 	bm_t *next = bm->next;
-	list_del(bm->prev, bm->next);
+	bm_t *prev = bm->prev;
+
+	list_del(prev, next);
+
 	if (bm == head)
-		head = next;
+		head = (next == bm) ? NULL : next;
 	if (bm == tail)
-		tail = bm->prev;
+		tail = (prev == bm) ? NULL : prev;
 	if (bm == current)
-		current = next;
+		current = (next == bm) ? NULL : next;
+
 	free(bm);
-	return next;
+	return (next == bm) ? NULL : next;
 }
 
 bm_t *bm_new(uint16_t width)
