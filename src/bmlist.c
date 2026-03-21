@@ -63,28 +63,34 @@ static void list_del(bm_t *prev, bm_t *next)
 
 bm_t *bmlist_drop(bm_t *bm)
 {
+	bm_t *next = bm->next;
 	list_del(bm->prev, bm->next);
 	if (bm == head)
-		head = bm->next;
+		head = next;
 	if (bm == tail)
 		tail = bm->prev;
 	free(bm);
-	return bm->next;
+	return next;
 }
 
 bm_t *bm_new(uint16_t width)
 {
-	bm_t *bm = malloc(sizeof(bm_t));
-	memset(bm, 0, sizeof(bm_t));
+    bm_t *bm = calloc(1, sizeof(bm_t));
+    if (!bm)
+        return NULL;
 
-	bm->width = width;
-	bm->buf = malloc(width * sizeof(uint16_t));
-	memset(bm->buf, 0, width * sizeof(uint16_t));
+    bm->width = width;
 
-	bm->next = bm;
-	bm->prev = bm;
+    bm->buf = calloc(width, sizeof(uint16_t));
+    if (!bm->buf) {
+        free(bm);
+        return NULL;
+    }
 
-	return bm;
+    bm->next = bm;
+    bm->prev = bm;
+
+    return bm;
 }
 
 void bmlist_init(uint16_t first_bm_width)
