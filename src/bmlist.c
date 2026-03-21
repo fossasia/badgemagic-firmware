@@ -78,12 +78,12 @@ bm_t *bm_new(uint16_t width)
 	if (width == 0)
 		return NULL;
 
-	bm_t *bm = calloc(1, sizeof(bm_t));
+	bm_t *bm = calloc(1, sizeof(*bm));
 	if (!bm)
 		return NULL;
 
 	bm->width = width;
-	bm->buf = calloc(width, sizeof(uint16_t));
+	bm->buf = calloc(width, sizeof(*bm->buf));
 	if (!bm->buf) {
 		free(bm);
 		return NULL;
