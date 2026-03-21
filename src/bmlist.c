@@ -63,12 +63,22 @@ static void list_del(bm_t *prev, bm_t *next)
 
 bm_t *bmlist_drop(bm_t *bm)
 {
+	if (bm->next == bm) {
+		free(bm);
+		head = NULL;
+		tail = NULL;
+		current = NULL;
+		return NULL;
+	}
+
 	bm_t *next = bm->next;
 	list_del(bm->prev, bm->next);
 	if (bm == head)
 		head = next;
 	if (bm == tail)
 		tail = bm->prev;
+	if (bm == current)
+		current = next;
 	free(bm);
 	return next;
 }
