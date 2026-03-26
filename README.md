@@ -14,15 +14,11 @@ the boot pin is pulled down in one of two ways:
 - Disconnect the battery, press and hold KEY2 (the button near the USB port)
   while plugging in the USB to enter the bootloader.
 - Alternatively, connect the USB, press and hold KEY2, then short and release
-  the C3 capacitor using metal tweezers or a wire.
-
-See CH582.md for a technical explanation on why both the above methods work.
+  the C3 capacitor.
 
 If the badge has successfully entered ISP mode, a single pixel roughly in the middle of the display will be lit. The badge will stay in ISP mode for approximately ten seconds before rebooting into normal mode.
 
 On Linux, you can also check `dmesg` if the chip has entered the ISP mode with idVendor=4348 and idProduct=55e0.
-
-Note: The photos shown below for option 2 show two different hardware revisions (Micro-USB and USB-C). C3 is in a different position on each board - Identify your revision before proceeding.
 
 ![c3](assets/burn-badge.svg)
 
