@@ -57,6 +57,9 @@ uint8_t power_setting(uint8_t *val, uint16_t len)
 
 static void cfg_ble_devname(uint8_t *name, uint16_t len)
 {
+	if (len > sizeof(badge_cfg.ble_devname))
+		len = sizeof(badge_cfg.ble_devname);
+	tmos_memset(badge_cfg.ble_devname, 0, sizeof(badge_cfg.ble_devname));
 	tmos_memcpy(badge_cfg.ble_devname, name, len);
 }
 
@@ -106,6 +109,7 @@ uint8_t flash_splash_screen(uint8_t *val, uint16_t len)
 	if (len < 3)
 		return -4;
 
+	tmos_memset(badge_cfg.splash_bm_bits, 0, sizeof(badge_cfg.splash_bm_bits));
 	tmos_memcpy(badge_cfg.splash_bm_bits, &val[3], sz);
 	badge_cfg.splash_bm_w = w;
 	badge_cfg.splash_bm_h = h;
