@@ -2,6 +2,34 @@
 
 Hardware details and information to build an open firmware for Bluetooth LED badges, compatible with [Badge Magic app](https://github.com/fossasia/badgemagic-app)
 
+## Supported Hardware
+
+> **Warning: Flashing this firmware on an unsupported badge can brick it permanently.**
+> The OEM firmware is read-protected and cannot be dumped, so there is no recovery path once overwritten.
+> See [#59](https://github.com/fossasia/badgemagic-firmware/issues/59) for a real example of this happening.
+
+This firmware targets **one specific badge variant**:
+
+- **Chipset:** WCH CH582M (RISC-V)
+- **Display:** 11×44 LED matrix
+- **BLE name:** `LSLED`
+
+### Am I using the right badge?
+
+Many LED badges look identical on the outside and advertise the same BLE name (`LSLED`), but differ internally in chipset or LED grid size (e.g. 11×44 vs 11×55). **Identical appearance and BLE name do not guarantee compatibility.**
+
+To verify your badge before flashing:
+
+1. Open the badge and locate the chip marking on the PCB — it should read **CH582M**
+2. Count the LED columns — there should be **44** (not 48, 55 or any other number)
+3. If you are unsure, do **not** flash this firmware
+
+For hardware photos and further identification help, see [CH582.md](./CH582.md).
+
+> **Note:** Compatibility with other badge variants (e.g. LeSun B1144 or other
+> Alibaba sourced clones) is not established. Pinout reverse engineering for those
+> boards is still in progress.
+
 ## Installation
 
 Install [wchisp](https://github.com/ch32-rs/wchisp?tab=readme-ov-file#installing).
