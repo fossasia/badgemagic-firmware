@@ -77,3 +77,11 @@ int batt_raw2percent(int r)
 	}
 	return 100;
 }
+
+__INTERRUPT
+__HIGH_CODE
+void GPIOA_IRQHandler(void)
+{
+	// Just clear the interrupt flag - LowPower_Shutdown handles reset after __WFI
+	GPIOA_ClearITFlagBit(KEY1_PIN | CHARGE_STT_PIN);
+}

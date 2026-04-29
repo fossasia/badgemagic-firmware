@@ -51,6 +51,7 @@ static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
 volatile uint16_t fb[LED_COLS] = {0};
 volatile int mode, is_play_sequentially = 1;
+volatile int pending_poweroff = 0;  // Flag for deferred power-off
 
 __HIGH_CODE
 static void change_brightness()
@@ -65,11 +66,19 @@ __HIGH_CODE
 static void change_mode()
 {
 	NEXT_STATE(mode, 0, MODES_COUNT);
+
+	// CRITICAL: Don't call poweroff() from ISR context!
+	// Set flag and let main loop handle it
+	if (mode == POWER_OFF) {
+		pending_poweroff = 1;
+		return;
+	}
+
 	const static void (*modes[])(void) = {
 		NULL,
 		mode_setup_normal,
 		mode_setup_download,
-		poweroff
+		NULL  // poweroff handled via pending_poweroff flag
 	};
 
 	if (modes[mode])
@@ -451,6 +460,11 @@ int main()
 
 	mode = NORMAL;
 	while (1) {
+		// Handle deferred power-off from main context (NOT ISR!)
+		if (pending_poweroff) {
+			pending_poweroff = 0;
+			poweroff();  // Safe: called from main loop, not ISR
+		}
 		TMOS_SystemProcess();
 	}
 }
