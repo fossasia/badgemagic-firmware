@@ -8,6 +8,7 @@
 #include "resource.h"
 #include "animation.h"
 #include "font.h"
+#include "auxbtn.h"
 
 #include "power.h"
 #include "data.h"
@@ -431,6 +432,10 @@ int main()
 	btn_onOnePress(KEY2, bm_transition);
 	btn_onLongPress(KEY1, change_brightness);
 
+	auxbtn_init();
+	auxbtn_onOnePress(KEY3, change_mode);
+	auxbtn_onOnePress(KEY4, bm_transition);
+
 	power_init();
 	disp_charging();
 	cfg_init();
@@ -448,7 +453,7 @@ int main()
 
 	spawn_tasks();
 	btn_init_task();
-
+	auxbtn_init_task();
 	mode = NORMAL;
 	while (1) {
 		TMOS_SystemProcess();
