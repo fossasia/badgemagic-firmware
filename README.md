@@ -116,7 +116,7 @@ version repeatedly.
 Set the toolchain location, e.g.:
 
 ```sh
-export PREFIX=../MRS_Toolchain_Linux_x64_V1.91/RISC-V_Embedded_GCC/bin/riscv-none-embed-
+export PREFIX=../MRS_Toolchain_Linux_x64_V1.92/RISC-V_Embedded_GCC/bin/riscv-none-embed-
 ```
 
 Simply run `make` to build the firmware for the Micro USB version, with the output directed to the `build/` directory. To build for the USB-C version of the badge and specify a custom output directory:
