@@ -1,6 +1,7 @@
 #include "xbm.h"
 #include <stdlib.h>
 #include <memory.h>
+#include "debug.h"
 
 /**
  * Draw bitmap file to fb at (col, row)
@@ -9,9 +10,11 @@
 void xbm2fb(xbm_t *xbm, uint16_t *fb, int col, int row)
 {
 	int W = ALIGN_8BIT(xbm->w);
-	uint16_t *tmpfb = malloc(W * sizeof(uint16_t));
-	memset(tmpfb, 0, W * sizeof(uint16_t));
-
+	uint16_t *tmpfb = calloc(W, sizeof(*tmpfb));
+	if (!tmpfb) {
+		printf("xbm2fb: out of memory\n");
+		return;
+	}
 	if ((xbm->h + row) >= 0 && col >= 0) {
 
 		for (int h = 0; h < xbm->h; h++) {
