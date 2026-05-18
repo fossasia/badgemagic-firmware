@@ -9,10 +9,10 @@
 #define BATT_ADC_CHANNEL        (1)
 #define ADC_SAMPLE_COUNT        (20)
 
-#define NO_PRESS_LOW            (3000)
+#define NO_PRESS_LOW            (3601)
 #define KEY3_HIGH               (500)
-#define KEY4_LOW                (501)
-#define KEY4_HIGH               (2999)
+#define KEY4_LOW                (3300)
+#define KEY4_HIGH               (3600)
 #define DEBOUNCE_THRES          (5)
 
 enum aux_state {
