@@ -10,8 +10,8 @@
 
 #define NO_PRESS_LOW            (3000)
 #define KEY3_HIGH               (500)
-#define KEY4_LOW                (1500)
-#define KEY4_HIGH               (2500)
+#define KEY4_LOW                (501)
+#define KEY4_HIGH               (2999)
 #define DEBOUNCE_THRES          (5)
 
 enum aux_state {
