@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "auxbtn.h"
 #include "debug.h"
+#include "usb/usb.h"
 
 #define AUX_ADC_CHANNEL         (3)
 #define BATT_ADC_CHANNEL        (1)
@@ -38,7 +39,13 @@ static int aux_adc_read()
     }
 
     ADC_ChannelCfg(BATT_ADC_CHANNEL);
-    return ret / ADC_SAMPLE_COUNT;
+    ret = ret / ADC_SAMPLE_COUNT;
+
+    char buf[32];
+    int len = snprintf(buf, sizeof(buf), "ADC: %d\n", ret);
+    cdc_tx_poll((uint8_t *)buf, len, 10);
+
+    return ret;
 }
 
 static enum aux_state classify(int raw)
