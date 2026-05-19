@@ -83,6 +83,7 @@ src/resource.c \
 src/animation.c \
 src/font.c \
 src/power.c \
+src/auxbtn.c \
 
 
 # ASM sources
