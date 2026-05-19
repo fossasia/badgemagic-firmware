@@ -3,6 +3,7 @@
 #include "leddrv.h"
 #include "debug.h"
 #include "legacyctrl.h"
+#include "CH58x_common.h"
 
 int legacy_ble_rx(uint8_t *val, uint16_t len)
 {
@@ -62,6 +63,8 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 
 	if (c > 2 && ((c+1) * LEGACY_TRANSFER_WIDTH) >= data_len) {
 		PRINT("All bitmaps data received successfully\nWriting to flash.. ");
+		data_legacy_t *d = (data_legacy_t *)data;
+		RTC_InitTime(2000 + ((d->timestamp[0] - 208 + 256) % 256), d->timestamp[1], d->timestamp[2], d->timestamp[3], d->timestamp[4], d->timestamp[5]);
 		data_flatSave(data, data_len);
 		free(data);
 		data = NULL;
