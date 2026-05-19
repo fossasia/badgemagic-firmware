@@ -8,6 +8,7 @@
 #include "resource.h"
 #include "animation.h"
 #include "font.h"
+#include "auxbtn.h"
 
 #include "power.h"
 #include "data.h"
@@ -62,6 +63,7 @@ static void change_brightness()
 
 static void mode_setup_download();
 static void mode_setup_normal();
+static void disp_clock();
 
 __HIGH_CODE
 static void change_mode()
@@ -349,8 +351,7 @@ static void fb_puts(char *s, int len, int col, int row)
 
 static void disp_clock()
 {
-    uint16_t year;
-    uint8_t month, day, hour, minute, second;
+    uint16_t year, month, day, hour, minute, second;
     RTC_GetTime(&year, &month, &day, &hour, &minute, &second);
     memset(fb, 0, sizeof(fb));
 
