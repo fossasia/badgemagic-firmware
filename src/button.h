@@ -19,5 +19,7 @@ enum keys {
 void btn_onOnePress(int key, void (*handler)(void));
 void btn_onLongPress(int key, void (*handler)(void));
 void btn_init();
+void btn_init_task(void);
+void btn_tick(void);
 
 #endif /* __BUTTON_H__ */
