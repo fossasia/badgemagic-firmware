@@ -4,7 +4,6 @@ Hardware details and information to build an open firmware for Bluetooth LED bad
 
 ## Installation
 
-### Unix
 Install [wchisp](https://github.com/ch32-rs/wchisp?tab=readme-ov-file#installing).
 
 Download prebuilt binaries from [release](https://github.com/fossasia/badgemagic-firmware/releases) or [the latest development builds](https://github.com/fossasia/badgemagic-firmware/tree/bin).
@@ -17,20 +16,22 @@ the boot pin is pulled down in one of two ways:
 - Alternatively, connect the USB, press and hold KEY2, then short and release
   the C3 capacitor.
 
-Then check `dmesg` if the chip has entered the ISP mode with idVendor=4348 and
-idProduct=55e0.
+If the badge has successfully entered ISP mode, a single pixel roughly in the middle of the display will be lit. The badge will stay in ISP mode for approximately ten seconds before rebooting into normal mode.
+
+On Linux, you can also check `dmesg` if the chip has entered the ISP mode with idVendor=4348 and idProduct=55e0.
 
 ![c3](assets/burn-badge.svg)
 
-Then run:
+With the badge in ISP mode, run:
 
 ```sh
+wchisp config reset
 wchisp flash badgemagic-ch582.bin
 ```
 
 ### Windows
-Install and run [wchisp studio](https://www.wch-ic.com/downloads/WCHISPTool_Setup_exe.html)
-Connect the badge via USB and enter bootloader mode.
+On Windows, you have the option to install and run [wchisp studio](https://www.wch-ic.com/downloads/WCHISPTool_Setup_exe.html) instead of the wchisp CLI tool.
+Connect the badge via USB and enter bootloader mode, per the instructions above.
 
 The device will automatically appear in the UI.
 
@@ -39,6 +40,14 @@ Select the `badgemagic-ch582.bin` file and click 'Download'.
 Where badgemagic-ch582.bin is the binary downloaded above, the .elf file also
 works.
 
+### Updating
+
+Once the open source firmware is installed, there is no further need to remove the battery or short-circuit C3 to enter ISP mode. Simply long-press KEY2 to enter ISP mode. Then, flash updated firmware with
+
+```sh
+wchisp config reset
+wchisp flash badgemagic-ch582.bin
+```
 
 ## Usage
 
@@ -97,7 +106,9 @@ version repeatedly.
 ### Tools
 
 - [GNU make](https://www.gnu.org/software/make/)
-- [MounRiver Toolchain](http://file-oss.mounriver.com/tools/MRS_Toolchain_Linux_x64_V1.91.tar.xz)
+- ~[MounRiver Toolchain (removed)](http://file-oss.mounriver.com/tools/MRS_Toolchain_Linux_x64_V1.91.tar.xz)~ 
+- [MounRiver Toolchain (community mirror)](https://github.com/ch32-riscv-ug/MounRiver_Studio_Community_miror/releases), specifically:
+  - [MRS_Toolchain_Linux_x64_V1.92.tar.xz](https://github.com/ch32-riscv-ug/MounRiver_Studio_Community_miror/releases/download/1.92-toolchain/MRS_Toolchain_Linux_x64_V1.92.tar.xz)
 - [wchisp](https://github.com/ch32-rs/wchisp)
 
 ### Build
@@ -105,7 +116,7 @@ version repeatedly.
 Set the toolchain location, e.g.:
 
 ```sh
-export PREFIX=../MRS_Toolchain_Linux_x64_V1.91/RISC-V_Embedded_GCC/bin/riscv-none-embed-
+export PREFIX=../MRS_Toolchain_Linux_x64_V1.92/RISC-V_Embedded_GCC/bin/riscv-none-embed-
 ```
 
 Simply run `make` to build the firmware for the Micro USB version, with the output directed to the `build/` directory. To build for the USB-C version of the badge and specify a custom output directory:
@@ -133,8 +144,8 @@ BUILD_DIR=custom-dir-if-needed make isp
 
 #### Logging over UART
 
-Currently, only the UART1 with baudrate=921600 is used for debuging. To
-enable the log from UART, set the DEUBG=1 when build the project.
+Currently, only the UART1 with baudrate=921600 is used for debugging. To
+enable the log from UART, set the DEBUG=1 when building the project.
 
 Any USB to UART dongle will work. Use your favorite terminal emulator to see the
 log, e.g.:
