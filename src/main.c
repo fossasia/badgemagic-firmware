@@ -351,8 +351,7 @@ static void fb_puts(char *s, int len, int col, int row)
 
 static void disp_clock()
 {
-    uint16_t year;
-    uint8_t month, day, hour, minute, second;
+    uint16_t year, month, day, hour, minute, second;
     RTC_GetTime(&year, &month, &day, &hour, &minute, &second);
     memset(fb, 0, sizeof(fb));
 
