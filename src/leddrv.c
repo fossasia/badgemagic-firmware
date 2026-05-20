@@ -141,25 +141,49 @@ void leds_releaseall() {
 
 static void led_write2dcol_raw(int dcol, uint32_t val)
 {
-	int on_count;
-	int pin_value;
+    int on_count;
+    uint32_t out_A = 0, dir_A = 0;
+    uint32_t out_B = 0, dir_B = 0;
 
-	gpio_pin_set(led_pins + dcol, HIGH);
-	on_count = 0;
-	for (int i=0; i<LED_PINCOUNT; i++) {
-		if (i == dcol) continue;
-		pin_value = FLOATING;
-		if (val & 0x01) {
-			on_count++;
-			pin_value = LOW; // pin LOW => LED on
-		}
-		gpio_pin_set(led_pins + i, pin_value);
-		val >>= 1;
-	}
-	g_pindrive_strong = 0x00000000;
-	if (on_count > 5)
-		g_pindrive_strong = 0xFFFFFFFF;
-	GPIO_APPLY_ALL();
+    if (led_pins[dcol].bank == &g_PinBanks.A) {
+        dir_A |= led_pins[dcol].pin_mask;
+        out_A |= led_pins[dcol].pin_mask;
+    } else {
+        dir_B |= led_pins[dcol].pin_mask;
+        out_B |= led_pins[dcol].pin_mask;
+    }
+
+    on_count = 0;
+    for (int i=0; i<LED_PINCOUNT; i++) {
+        if (i == dcol) continue;
+        if (val & 0x01) {
+            on_count++;
+            if (led_pins[i].bank == &g_PinBanks.A) {
+                dir_A |= led_pins[i].pin_mask;
+            } else {
+                dir_B |= led_pins[i].pin_mask;
+            }
+        }
+        val >>= 1;
+    }
+
+    g_pindrive_strong = 0x00000000;
+    if (on_count > 5)
+        g_pindrive_strong = 0xFFFFFFFF;
+
+    gpio_bank_tristate(&g_PinBanks.A);
+    gpio_bank_tristate(&g_PinBanks.B);
+
+    g_PinBanks.A.out_val = (g_PinBanks.A.out_val & ~g_PinBanks.A.bankpins_mask) | out_A;
+    g_PinBanks.A.dir_val = (g_PinBanks.A.dir_val & ~g_PinBanks.A.bankpins_mask) | dir_A;
+    g_PinBanks.A.drv_val = (g_PinBanks.A.drv_val & ~g_PinBanks.A.bankpins_mask) | (g_pindrive_strong & dir_A);
+
+    g_PinBanks.B.out_val = (g_PinBanks.B.out_val & ~g_PinBanks.B.bankpins_mask) | out_B;
+    g_PinBanks.B.dir_val = (g_PinBanks.B.dir_val & ~g_PinBanks.B.bankpins_mask) | dir_B;
+    g_PinBanks.B.drv_val = (g_PinBanks.B.drv_val & ~g_PinBanks.B.bankpins_mask) | (g_pindrive_strong & dir_B);
+
+    gpio_bank_apply(&g_PinBanks.A);
+    gpio_bank_apply(&g_PinBanks.B);
 }
 
 static uint32_t combine_cols(uint16_t col1_val, uint16_t col2_val)
@@ -192,24 +216,49 @@ void led_write2dcol(int dcol, uint16_t col1_val, uint16_t col2_val)
 
 void led_write2row_raw(int row, int which_half, uint32_t val)
 {
-	int on_count;
-	int pin_value;
+    int on_count;
+    uint32_t out_A = 0, dir_A = 0;
+    uint32_t out_B = 0, dir_B = 0;
 
-	row = row*2 + (which_half != 0);
-	gpio_pin_set(led_pins + row, LOW);
-	on_count = 0;
-	for (int i=0; i<LED_PINCOUNT; i++) {
-		if (i == row) continue;
-		pin_value = FLOATING;
-		if (val & 0x01) {
-			on_count++;
-			pin_value = HIGH;
-		}
-		gpio_pin_set(led_pins + i, pin_value);
-		val >>= 1;
-	}
-	g_pindrive_strong = 0x00000000;
-	if (on_count > 5)
-		g_pindrive_strong = 0xFFFFFFFF;
-	GPIO_APPLY_ALL();
+    row = row*2 + (which_half != 0);
+
+    if (led_pins[row].bank == &g_PinBanks.A) {
+        dir_A |= led_pins[row].pin_mask;
+    } else {
+        dir_B |= led_pins[row].pin_mask;
+    }
+
+    on_count = 0;
+    for (int i=0; i<LED_PINCOUNT; i++) {
+        if (i == row) continue;
+        if (val & 0x01) {
+            on_count++;
+            if (led_pins[i].bank == &g_PinBanks.A) {
+                dir_A |= led_pins[i].pin_mask;
+                out_A |= led_pins[i].pin_mask;
+            } else {
+                dir_B |= led_pins[i].pin_mask;
+                out_B |= led_pins[i].pin_mask;
+            }
+        }
+        val >>= 1;
+    }
+
+    g_pindrive_strong = 0x00000000;
+    if (on_count > 5)
+        g_pindrive_strong = 0xFFFFFFFF;
+
+    gpio_bank_tristate(&g_PinBanks.A);
+    gpio_bank_tristate(&g_PinBanks.B);
+
+    g_PinBanks.A.out_val = (g_PinBanks.A.out_val & ~g_PinBanks.A.bankpins_mask) | out_A;
+    g_PinBanks.A.dir_val = (g_PinBanks.A.dir_val & ~g_PinBanks.A.bankpins_mask) | dir_A;
+    g_PinBanks.A.drv_val = (g_PinBanks.A.drv_val & ~g_PinBanks.A.bankpins_mask) | (g_pindrive_strong & dir_A);
+
+    g_PinBanks.B.out_val = (g_PinBanks.B.out_val & ~g_PinBanks.B.bankpins_mask) | out_B;
+    g_PinBanks.B.dir_val = (g_PinBanks.B.dir_val & ~g_PinBanks.B.bankpins_mask) | dir_B;
+    g_PinBanks.B.drv_val = (g_PinBanks.B.drv_val & ~g_PinBanks.B.bankpins_mask) | (g_pindrive_strong & dir_B);
+
+    gpio_bank_apply(&g_PinBanks.A);
+    gpio_bank_apply(&g_PinBanks.B);
 }
