@@ -12,11 +12,13 @@ This firmware targets **one specific badge variant**:
 
 - **Chipset:** WCH CH582M (RISC-V)
 - **Display:** 11×44 LED matrix
-- **BLE name:** `LSLED`
+- **OEM BLE name often:** `LSLED`
+
+After flashing this firmware, the default BLE device name is **`LED Badge Magic`**.
 
 ### Am I using the right badge?
 
-Many LED badges look identical on the outside and advertise the same BLE name (`LSLED`), but differ internally in chipset or LED grid size (e.g. 11×44 vs 11×55). **Identical appearance and BLE name do not guarantee compatibility.**
+Many LED badges look identical on the outside and often ship with OEM firmware advertising the same BLE name (`LSLED`), but differ internally in chipset or LED grid size (e.g. 11×44 vs 11×55). **Identical appearance and OEM BLE name do not guarantee compatibility.**
 
 To verify your badge before flashing:
 
