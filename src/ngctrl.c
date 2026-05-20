@@ -41,6 +41,7 @@ uint8_t power_setting(uint8_t *val, uint16_t len)
 	PRINT(__func__);
 	PRINT("\n");
 
+	if (len < 1) return -2;
 	const void (*ble_lut[])(uint8_t *, uint16_t) = {
 		__poweroff,
 		cfg_reset_rx,
@@ -73,6 +74,7 @@ uint8_t ble_setting(uint8_t *val, uint16_t len)
 	PRINT(__func__);
 	PRINT("\n");
 
+	if (len < 1) return -2;
 	const void (*ble_lut[])(uint8_t *, uint16_t) = {
 		cfg_ble_alwayon,
 		cfg_ble_devname
@@ -92,6 +94,7 @@ uint8_t flash_splash_screen(uint8_t *val, uint16_t len)
 	PRINT(__func__);
 	PRINT("\n");
 	
+	if (len < 3) return -4;
 	uint8_t w = val[0];
 	uint8_t h = val[1];
 	uint8_t fh = val[2];
@@ -103,8 +106,6 @@ uint8_t flash_splash_screen(uint8_t *val, uint16_t len)
 		return -2;
 	if (sz > SPLASH_MAX_SIZE)
 		return -3;
-	if (len < 3)
-		return -4;
 
 	tmos_memcpy(badge_cfg.splash_bm_bits, &val[3], sz);
 	badge_cfg.splash_bm_w = w;
@@ -134,9 +135,10 @@ static uint8_t cfg_splash_speed(uint8_t *val, uint16_t len)
 	PRINT(__func__);
 	PRINT("\n");
 
+	if (len < 2) return -2;
 	uint16_t ms = *((uint16_t *)val);
 	if (ms < SPLASH_MIN_SPEED_T)
-		return -2;
+		return -1;
 
 	badge_cfg.splash_speedT = ms;
 	return 0;
@@ -159,7 +161,8 @@ uint8_t misc(uint8_t *val, uint16_t len)
 {
 	PRINT(__func__);
 	PRINT("\n");
-
+	
+	if (len < 1) return -2;
 	const uint8_t (*misc_cmd[])(uint8_t *, uint16_t) = {
 		cfg_splash_speed,
 		cfg_led_brightness,
@@ -189,6 +192,7 @@ const uint8_t (*cmd_lut[])(uint8_t *val, uint16_t len) = {
 
 uint8_t ng_parse(uint8_t *val, uint16_t len)
 {
+	if (len < 1) return bleInvalidRange;
 	uint8_t cmd = val[0];
 	PRINT("LUT_LEN: %02x \n", CMD_LUT_LEN);
 	if (cmd >= CMD_LUT_LEN) {
