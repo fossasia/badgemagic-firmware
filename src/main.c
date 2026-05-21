@@ -443,7 +443,11 @@ void handle_after_rx()
 	if (badge_cfg.reset_rx) {
 		SYS_ResetExecute();
 	} else {
-		mode_setup_normal();
+		if (clock_active) {
+            clock_active = 0;
+            tmos_stop_task(common_taskid, CLOCK_TICK);
+        }
+        mode_setup_normal();
 	}
 }
 
@@ -491,6 +495,7 @@ int main()
 
 	spawn_tasks();
 	btn_init_task();
+	auxbtn_init_task();
 
 	mode = NORMAL;
 	while (1) {
