@@ -139,6 +139,24 @@ void leds_releaseall() {
 	GPIO_APPLY_ALL();
 }
 
+//applies the calculated output and direction states to both banks
+static inline void led_apply_bank_states(uint32_t out_A, uint32_t dir_A, uint32_t out_B, uint32_t dir_B)
+{
+	gpio_bank_tristate(&g_PinBanks.A);
+	gpio_bank_tristate(&g_PinBanks.B);
+
+	g_PinBanks.A.out_val = (g_PinBanks.A.out_val & ~g_PinBanks.A.bankpins_mask) | out_A;
+	g_PinBanks.A.dir_val = (g_PinBanks.A.dir_val & ~g_PinBanks.A.bankpins_mask) | dir_A;
+	g_PinBanks.A.drv_val = (g_PinBanks.A.drv_val & ~g_PinBanks.A.bankpins_mask) | (g_pindrive_strong & dir_A);
+
+	g_PinBanks.B.out_val = (g_PinBanks.B.out_val & ~g_PinBanks.B.bankpins_mask) | out_B;
+	g_PinBanks.B.dir_val = (g_PinBanks.B.dir_val & ~g_PinBanks.B.bankpins_mask) | dir_B;
+	g_PinBanks.B.drv_val = (g_PinBanks.B.drv_val & ~g_PinBanks.B.bankpins_mask) | (g_pindrive_strong & dir_B);
+
+	gpio_bank_apply(&g_PinBanks.A);
+	gpio_bank_apply(&g_PinBanks.B);
+}
+
 static void led_write2dcol_raw(int dcol, uint32_t val)
 {
 	int on_count;
@@ -171,19 +189,7 @@ static void led_write2dcol_raw(int dcol, uint32_t val)
 	if (on_count > 5)
 		g_pindrive_strong = 0xFFFFFFFF;
 
-	gpio_bank_tristate(&g_PinBanks.A);
-	gpio_bank_tristate(&g_PinBanks.B);
-
-	g_PinBanks.A.out_val = (g_PinBanks.A.out_val & ~g_PinBanks.A.bankpins_mask) | out_A;
-	g_PinBanks.A.dir_val = (g_PinBanks.A.dir_val & ~g_PinBanks.A.bankpins_mask) | dir_A;
-	g_PinBanks.A.drv_val = (g_PinBanks.A.drv_val & ~g_PinBanks.A.bankpins_mask) | (g_pindrive_strong & dir_A);
-
-	g_PinBanks.B.out_val = (g_PinBanks.B.out_val & ~g_PinBanks.B.bankpins_mask) | out_B;
-	g_PinBanks.B.dir_val = (g_PinBanks.B.dir_val & ~g_PinBanks.B.bankpins_mask) | dir_B;
-	g_PinBanks.B.drv_val = (g_PinBanks.B.drv_val & ~g_PinBanks.B.bankpins_mask) | (g_pindrive_strong & dir_B);
-
-	gpio_bank_apply(&g_PinBanks.A);
-	gpio_bank_apply(&g_PinBanks.B);
+	led_apply_bank_states(out_A, dir_A, out_B, dir_B);
 }
 
 static uint32_t combine_cols(uint16_t col1_val, uint16_t col2_val)
@@ -248,17 +254,5 @@ void led_write2row_raw(int row, int which_half, uint32_t val)
 	if (on_count > 5)
 		g_pindrive_strong = 0xFFFFFFFF;
 
-	gpio_bank_tristate(&g_PinBanks.A);
-	gpio_bank_tristate(&g_PinBanks.B);
-
-	g_PinBanks.A.out_val = (g_PinBanks.A.out_val & ~g_PinBanks.A.bankpins_mask) | out_A;
-	g_PinBanks.A.dir_val = (g_PinBanks.A.dir_val & ~g_PinBanks.A.bankpins_mask) | dir_A;
-	g_PinBanks.A.drv_val = (g_PinBanks.A.drv_val & ~g_PinBanks.A.bankpins_mask) | (g_pindrive_strong & dir_A);
-
-	g_PinBanks.B.out_val = (g_PinBanks.B.out_val & ~g_PinBanks.B.bankpins_mask) | out_B;
-	g_PinBanks.B.dir_val = (g_PinBanks.B.dir_val & ~g_PinBanks.B.bankpins_mask) | dir_B;
-	g_PinBanks.B.drv_val = (g_PinBanks.B.drv_val & ~g_PinBanks.B.bankpins_mask) | (g_pindrive_strong & dir_B);
-
-	gpio_bank_apply(&g_PinBanks.A);
-	gpio_bank_apply(&g_PinBanks.B);
+	led_apply_bank_states(out_A, dir_A, out_B, dir_B);
 }
