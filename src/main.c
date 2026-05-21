@@ -454,7 +454,8 @@ void handle_after_rx()
 int main()
 {
 	SetSysClock(CLK_SOURCE_PLL_60MHz);
-
+	Calibration_LSI(Level_128);
+	
 	debug_init();
 	PRINT("\nDebug console is on UART%d\n", DEBUG);
 
