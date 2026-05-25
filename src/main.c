@@ -39,7 +39,7 @@ static int menu_cursor=0;
 #define MENU_ITEMS_COUNT 4
 static const char *menu_labels[] = {
 	"ANIM",
-	"BT PAIR",
+	"PAIR",
 	"CLOCK",
 	"OFF"
 };
@@ -397,6 +397,48 @@ static void menu_down(){
 	disp_menu();
 }
 
+static void menu_select(){
+    switch (menu_cursor) {
+        case 0:
+            mode = NORMAL;
+            btn_onOnePress(KEY1, NULL);
+            btn_onOnePress(KEY2, bm_transition);
+            mode_setup_normal();
+            break;
+        case 1:
+            mode = DOWNLOAD;
+            btn_onOnePress(KEY1, NULL);
+            btn_onOnePress(KEY2, NULL);
+            ble_enable_advertise();
+            start_ble_animation();
+            break;
+        case 2:
+            mode = CLOCK;
+            btn_onOnePress(KEY1, NULL);
+            btn_onOnePress(KEY2, NULL);
+            stop_all_animation();
+            tmos_start_reload_task(common_taskid, CLOCK_TICK, 1000000 / 625);
+            break;
+        case 3:
+            mode = POWER_OFF;
+            poweroff();
+            break;
+    }
+}
+
+static void return_to_menu()
+{
+    stop_all_animation();
+    tmos_stop_task(common_taskid, CLOCK_TICK);
+    clock_active = 0;
+
+    mode = MENU;
+    btn_onOnePress(KEY1, menu_up);
+    btn_onOnePress(KEY2, menu_down);
+    auxbtn_onOnePress(KEY3, menu_select);
+    disp_menu();
+}
+
 static void disp_charging()
 {
 	int blink = 0;
@@ -510,8 +552,8 @@ int main()
 	auxbtn_init();
 	//auxbtn_onOnePress(KEY3, toggle_clock);
 	//auxbtn_onOnePress(KEY4, bm_transition);
-	auxbtn_onOnePress(KEY3, NULL);
-	auxbtn_onOnePress(KEY4, NULL);
+	auxbtn_onOnePress(KEY3, menu_select);
+	auxbtn_onOnePress(KEY4, return_to_menu);
 
 	power_init();
 	disp_charging();
