@@ -27,11 +27,21 @@
 					(v) = (min)
 
 enum MODES {
-	BOOT = 0,
-	NORMAL,
-	DOWNLOAD,
+	MENU = 0,
+    ANIMATION,
+    DOWNLOAD,
+    CLOCK,
 	POWER_OFF,
-	MODES_COUNT,
+    MODES_COUNT,
+};
+
+static int menu_cursor=0;
+#define MENU_ITEMS_COUNT 4
+static const char *menu_labels[] = {
+	"ANIM",
+	"BT PAIR",
+	"CLOCK",
+	"OFF"
 };
 
 #define ANI_BASE_SPEED_T      (200000) // uS
@@ -64,9 +74,12 @@ static void change_brightness()
 static void mode_setup_download();
 static void mode_setup_normal();
 static void disp_clock();
+static void disp_menu();
+static void menu_up();
+static void menu_down();
 
 __HIGH_CODE
-static void change_mode()
+/*static void change_mode()
 {
 	NEXT_STATE(mode, 0, MODES_COUNT);
 	const static void (*modes[])(void) = {
@@ -78,7 +91,7 @@ static void change_mode()
 
 	if (modes[mode])
 		modes[mode]();
-}
+}*/
 
 __HIGH_CODE
 static void bm_transition()
@@ -366,10 +379,28 @@ static void disp_clock()
     fb_puts(buf, 5, 2, 2);
 }
 
+static void disp_menu(){
+	memset(fb, 0, sizeof(fb));
+	fb_putchar('>', 0, 2);
+	fb_puts((char *)menu_labels[menu_cursor], strlen(menu_labels[menu_cursor]), 7, 2);
+}
+
+static void menu_up(){
+	menu_cursor--;
+    if (menu_cursor < 0) menu_cursor = MENU_ITEMS_COUNT - 1;
+    disp_menu();
+}
+
+static void menu_down(){
+	menu_cursor++;
+	if(menu_cursor > MENU_ITEMS_COUNT - 1) menu_cursor = 0;
+	disp_menu();
+}
+
 static void disp_charging()
 {
 	int blink = 0;
-	while (mode == BOOT) {
+	while (1) {
 		btn_tick();
 		int percent = batt_raw2percent(batt_raw());
 
@@ -470,13 +501,17 @@ int main()
 	bmlist_init(LED_COLS * 4);
 
 	btn_init();
-	btn_onOnePress(KEY1, change_mode);
-	btn_onOnePress(KEY2, bm_transition);
+	//btn_onOnePress(KEY1, change_mode);
+	//btn_onOnePress(KEY2, bm_transition);
+	btn_onOnePress(KEY1, menu_up);
+	btn_onOnePress(KEY2, menu_down);
 	btn_onLongPress(KEY1, change_brightness);
 
 	auxbtn_init();
-	auxbtn_onOnePress(KEY3, toggle_clock);
-	auxbtn_onOnePress(KEY4, bm_transition);
+	//auxbtn_onOnePress(KEY3, toggle_clock);
+	//auxbtn_onOnePress(KEY4, bm_transition);
+	auxbtn_onOnePress(KEY3, NULL);
+	auxbtn_onOnePress(KEY4, NULL);
 
 	power_init();
 	disp_charging();
@@ -497,7 +532,8 @@ int main()
 	btn_init_task();
 	auxbtn_init_task();
 
-	mode = NORMAL;
+	mode = MENU;
+	disp_menu();
 	while (1) {
 		TMOS_SystemProcess();
 	}
