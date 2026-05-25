@@ -28,7 +28,7 @@
 
 enum MODES {
 	MENU = 0,
-    ANIMATION,
+    NORMAL,
     DOWNLOAD,
     CLOCK,
 	POWER_OFF,
@@ -423,9 +423,9 @@ static void disp_charging()
 static void mode_setup_download()
 {
 	// If always-on BLE is enabled, then skip this mode, jump to next mode
-	if (badge_cfg.ble_always_on) {
+	/*if (badge_cfg.ble_always_on) {
 		change_mode();
-	}
+	}*/
 
 	// Disable bitmap transition while in download mode
 	btn_onOnePress(KEY2, NULL);
