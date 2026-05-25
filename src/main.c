@@ -531,6 +531,7 @@ int main()
 	spawn_tasks();
 	btn_init_task();
 	auxbtn_init_task();
+	stop_all_animation();
 
 	mode = MENU;
 	disp_menu();
