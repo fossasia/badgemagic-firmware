@@ -8,6 +8,7 @@
 #include "resource.h"
 #include "animation.h"
 #include "font.h"
+#include "font3x5.h"
 #include "auxbtn.h"
 
 #include "power.h"
@@ -362,6 +363,23 @@ static void fb_puts(char *s, int len, int col, int row)
 	}
 }
 
+static void fb_putchar_small(char c, int col, int row)
+{
+    for (int i = 0; i < 4; i++) {
+        if (col + i >= LED_COLS) break;
+        fb[col + i] = (fb[col + i] & ~(0x1f << row)) | (font3x5[c - ' '][i] << row);
+    }
+}
+
+static void fb_puts_small(char *s, int len, int col, int row)
+{
+    while (*s && len--) {
+        fb_putchar_small(*s, col, row);
+        col += 4;
+        s++;
+    }
+}
+
 static void disp_clock()
 {
     uint16_t year, month, day, hour, minute, second;
@@ -379,10 +397,27 @@ static void disp_clock()
     fb_puts(buf, 5, 2, 2);
 }
 
-static void disp_menu(){
-	memset(fb, 0, sizeof(fb));
-	fb_putchar('>', 0, 2);
-	fb_puts((char *)menu_labels[menu_cursor], strlen(menu_labels[menu_cursor]), 7, 2);
+static void disp_menu()
+{
+    memset(fb, 0, sizeof(fb));
+
+    int page = menu_cursor / 2;
+    int item0 = page * 2;
+    int item1 = page * 2 + 1;
+
+    // top item
+    if (menu_cursor == item0)
+        fb_putchar_small('>', 0, 0);
+    fb_puts_small((char *)menu_labels[item0],
+                  strlen(menu_labels[item0]), 4, 0);
+
+    // bottom item
+    if (item1 < MENU_ITEMS_COUNT) {
+        if (menu_cursor == item1)
+            fb_putchar_small('>', 0, 6);
+        fb_puts_small((char *)menu_labels[item1],
+                      strlen(menu_labels[item1]), 4, 6);
+    }
 }
 
 static void menu_up(){

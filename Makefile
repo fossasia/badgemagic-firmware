@@ -82,6 +82,7 @@ src/xbm.c \
 src/resource.c \
 src/animation.c \
 src/font.c \
+src/font3x5.c \
 src/power.c \
 src/auxbtn.c \
 
