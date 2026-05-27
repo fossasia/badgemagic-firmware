@@ -407,9 +407,9 @@ static void disp_menu()
 
     // top item
     if (menu_cursor == item0)
-        fb_putchar_small('>', 0, 1);
+        fb_putchar_small('>', 0, 0);
     fb_puts_small((char *)menu_labels[item0],
-                  strlen(menu_labels[item0]), 4, 1);
+                  strlen(menu_labels[item0]), 4, 0);
 
     // bottom item
     if (item1 < MENU_ITEMS_COUNT) {
