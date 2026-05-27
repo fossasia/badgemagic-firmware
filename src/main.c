@@ -39,9 +39,9 @@ enum MODES {
 static int menu_cursor=0;
 #define MENU_ITEMS_COUNT 4
 static const char *menu_labels[] = {
-	"ANIM",
-	"PAIR",
-	"CLOCK",
+	"ANIMATION",
+	"BT PAIRING",
+	"CLOCK MODE",
 	"OFF"
 };
 
@@ -407,9 +407,9 @@ static void disp_menu()
 
     // top item
     if (menu_cursor == item0)
-        fb_putchar_small('>', 0, 0);
+        fb_putchar_small('>', 0, 1);
     fb_puts_small((char *)menu_labels[item0],
-                  strlen(menu_labels[item0]), 4, 0);
+                  strlen(menu_labels[item0]), 4, 1);
 
     // bottom item
     if (item1 < MENU_ITEMS_COUNT) {
