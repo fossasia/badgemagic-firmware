@@ -1,5 +1,5 @@
 #include "CH58x_common.h"
-
+#include "usb/usb.h"
 #include "leddrv.h"
 #include "audio.h"
 
@@ -25,7 +25,7 @@ const uint16_t amp_wav_lut_w1[8] = {
 	0b11111111111,
 };
 
-static int16_t mic_baseline = 2048; // calibrated at init
+static int16_t mic_baseline = 2048;
 
 int16_t mic_adc()
 {
@@ -36,6 +36,11 @@ int16_t mic_adc()
         int16_t abssample = sample < 0 ? -sample : sample;
         if (abssample > peak) peak = abssample;
     }
+
+    char buf[32];
+    int len = snprintf(buf, sizeof(buf), "mic=%d\n", peak);
+    cdc_tx_poll((uint8_t *)buf, len, 10);
+
     return peak;
 }
 
@@ -45,7 +50,13 @@ void mic_init()
     ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
     ADC_ChannelCfg(11);
 
+    DelayMs(10);
+
     uint64_t sum = 0;
     for (int i = 0; i < 64; i++) sum += ADC_ExcutSingleConver();
     mic_baseline = (int16_t)(sum / 64);
+
+    char buf[32];
+    int len = snprintf(buf, sizeof(buf), "baseline=%d\n", mic_baseline);
+    cdc_tx_poll((uint8_t *)buf, len, 10);
 }
