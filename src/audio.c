@@ -33,15 +33,17 @@ int16_t mic_adc()
     ADC_ChannelCfg(11);
     int16_t peak = 0;
     for (int i = 0; i < 64; i++) {
-        int16_t sample = (int16_t)ADC_ExcutSingleConver() - mic_baseline;
+        uint16_t raw = ADC_ExcutSingleConver();
+        int16_t sample = (int16_t)raw - mic_baseline;
         int16_t abssample = sample < 0 ? -sample : sample;
         if (abssample > peak) peak = abssample;
+
+        if (i == 0) {
+            char buf[64];
+            int len = snprintf(buf, sizeof(buf), "raw=%d base=%d\r\n", raw, mic_baseline);
+            cdc_tx_poll((uint8_t *)buf, len, 10);
+        }
     }
-
-    char buf[32];
-    int len = snprintf(buf, sizeof(buf), "mic=%d\n", peak);
-    cdc_tx_poll((uint8_t *)buf, len, 10);
-
     return peak;
 }
 
@@ -57,7 +59,7 @@ void mic_init()
     for (int i = 0; i < 64; i++) sum += ADC_ExcutSingleConver();
     mic_baseline = (int16_t)(sum / 64);
 
-    char buf[32];
-    int len = snprintf(buf, sizeof(buf), "baseline=%d\n", mic_baseline);
+    char buf[64];
+    int len = snprintf(buf, sizeof(buf), "\r\nbaseline=%d\r\n", mic_baseline);
     cdc_tx_poll((uint8_t *)buf, len, 10);
 }
