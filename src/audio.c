@@ -31,19 +31,18 @@ static int16_t mic_baseline = 2048;
 int16_t mic_adc()
 {
     ADC_ChannelCfg(11);
-    int16_t peak = 0;
+    int32_t sum = 0;
     for (int i = 0; i < 64; i++) {
-        uint16_t raw = ADC_ExcutSingleConver();
-        int16_t sample = (int16_t)raw - mic_baseline;
-        int16_t abssample = sample < 0 ? -sample : sample;
-        if (abssample > peak) peak = abssample;
+        sum += (int16_t)ADC_ExcutSingleConver() - mic_baseline;
     }
+    int16_t avg = sum / 64;
+    if (avg < 0) avg = -avg;
 
     char buf[64];
-    int len = snprintf(buf, sizeof(buf), "base=%d peak=%d\r\n", mic_baseline, peak);
+    int len = snprintf(buf, sizeof(buf), "avg=%d\r\n", avg);
     cdc_tx_poll((uint8_t *)buf, len, 10);
 
-    return peak;
+    return avg;
 }
 
 void mic_init()

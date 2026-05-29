@@ -140,19 +140,17 @@ void load_bmlist()
 static void audio_visualize_poll()
 {
 	static float max = 0.0f;
-	#define NOISE_GATE 400
-    int16_t mic = mic_adc();
-    if (mic < NOISE_GATE) mic = 0;
 
-	max = max - max/64.0;			// Reduce max value exponentially
-	if (mic > max) max = mic;		// Bump it back up if needed
+	int16_t mic = abs(mic_adc());
+	max = max - max/64.0;
+	if (mic > max) max = mic;
 
 	if (max>0) {
 		mic = mic * 7 / max;
 	} else {
 		mic = 0;
 	}
-	if (mic > 7) mic = 7;			// Scale mic value to lookup table size
+	if (mic > 7) mic = 7;
 
 	switch (audio_mode) {
 		default:
