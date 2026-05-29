@@ -37,20 +37,19 @@ int16_t mic_adc()
         int16_t sample = (int16_t)raw - mic_baseline;
         int16_t abssample = sample < 0 ? -sample : sample;
         if (abssample > peak) peak = abssample;
-
-        if (i == 0) {
-            char buf[64];
-            int len = snprintf(buf, sizeof(buf), "raw=%d base=%d\r\n", raw, mic_baseline);
-            cdc_tx_poll((uint8_t *)buf, len, 10);
-        }
     }
+
+    char buf[64];
+    int len = snprintf(buf, sizeof(buf), "base=%d peak=%d\r\n", mic_baseline, peak);
+    cdc_tx_poll((uint8_t *)buf, len, 10);
+
     return peak;
 }
 
 void mic_init()
 {
     GPIOA_ModeCfg(GPIO_Pin_7, GPIO_ModeIN_Floating);
-    ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
+    ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_2);
     ADC_ChannelCfg(11);
 
     DelayMs(200);
