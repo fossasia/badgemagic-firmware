@@ -20,6 +20,8 @@
 #include "usb/usb.h"
 #include "legacyctrl.h"
 
+#include <bootutil/bootutil.h>
+
 #define NEXT_STATE(v, min, max) \
 				(v)++; \
 				if ((v) >= (max)) \
@@ -408,12 +410,29 @@ void handle_after_rx()
 	}
 }
 
+__INTERRUPT
+__HIGH_CODE
+void HardFault_Handler(void)
+{
+	PRINT("HardFault happen\n");
+	while(1);
+}
+
+__INTERRUPT
+__HIGH_CODE
+void Break_Point_Handler(void)
+{
+	PRINT("Break point handler happen\n");
+	// while(1);
+}
+
 int main()
 {
 	SetSysClock(CLK_SOURCE_PLL_60MHz);
 
 	debug_init();
 	PRINT("\nDebug console is on UART%d\n", DEBUG);
+	// abort();
 
 	cdc_onWrite(legacy_usb_rx);
 	hiddev_onWrite(legacy_usb_rx);

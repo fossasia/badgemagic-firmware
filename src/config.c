@@ -6,7 +6,7 @@
 #include "resource.h"
 #include "res/foss-asia-2.xbm"
 #include "debug.h"
-#include "util/crc.h"
+#include <crc/crc8.h>
 
 #include "ISP583.h"
 #include <stdlib.h>

@@ -8,11 +8,13 @@ TARGET = badgemagic-ch582
 # building variables
 ######################################
 # Uncomment below line to enable debugging
-# DEBUG = 1
+DEBUG = 1
 # Uncomment below to build for USB-C version
-# USBC_VERSION = 1
+USBC_VERSION = 1
 # optimization for size
 OPT = -Os
+
+OPENOCD ?= ../MRS_Toolchain_Linux_x64_V1.92/OpenOCD/bin/openocd
 
 
 #######################################
@@ -55,7 +57,6 @@ CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_uart1.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_usb2dev.c \
 CH5xx_ble_firmware_library/StdPeriphDriver/CH58x_spi1.c \
 CH5xx_ble_firmware_library/RVMSIS/core_riscv.c \
-src/main.c \
 src/debug.c \
 src/leddrv.c \
 src/button.c \
@@ -67,6 +68,7 @@ src/ble/profile/ng.c \
 src/config.c \
 src/legacyctrl.c \
 src/util/crc.c \
+src/util/base64.c \
 src/ngctrl.c \
 src/ble/setup.c \
 src/ble/peripheral.c \
@@ -83,11 +85,69 @@ src/resource.c \
 src/animation.c \
 src/font.c \
 src/power.c \
+src/mcuboot.c \
 
+MCUBOOT_DIR := external/mcuboot
+IMGTOOL_PY := $(MCUBOOT_DIR)/scripts/imgtool.py
+MCUBOOT_SRC_DIR := $(MCUBOOT_DIR)/boot/bootutil/src
+MCUBOOT_INC_DIR := $(MCUBOOT_DIR)/boot/bootutil/include
+MCUBOOT_SERIAL_SRC_DIR := $(MCUBOOT_DIR)/boot/boot_serial/src
+MCUBOOT_SERIAL_INC_DIR := $(MCUBOOT_DIR)/boot/boot_serial/include
+MCUBOOT_ZCBOR_SRC_DIR := $(MCUBOOT_DIR)/boot/zcbor/src
+MCUBOOT_ZCBOR_INC_DIR := $(MCUBOOT_DIR)/boot/zcbor/include
 
-# ASM sources
-ASM_SOURCES =  \
-CH5xx_ble_firmware_library/Startup/startup_CH583.S
+MCUBOOT_SRC_FILES += \
+$(MCUBOOT_SRC_DIR)/boot_record.c \
+$(MCUBOOT_SRC_DIR)/bootutil_misc.c \
+$(MCUBOOT_SRC_DIR)/bootutil_public.c \
+$(MCUBOOT_SRC_DIR)/caps.c \
+$(MCUBOOT_SRC_DIR)/encrypted.c \
+$(MCUBOOT_SRC_DIR)/fault_injection_hardening.c \
+$(MCUBOOT_SRC_DIR)/fault_injection_hardening_delay_rng_mbedtls.c \
+$(MCUBOOT_SRC_DIR)/image_ecdsa.c \
+$(MCUBOOT_SRC_DIR)/image_ed25519.c \
+$(MCUBOOT_SRC_DIR)/image_rsa.c \
+$(MCUBOOT_SRC_DIR)/image_validate.c \
+$(MCUBOOT_SRC_DIR)/loader.c \
+$(MCUBOOT_SRC_DIR)/swap_misc.c \
+$(MCUBOOT_SRC_DIR)/swap_move.c \
+$(MCUBOOT_SRC_DIR)/swap_scratch.c \
+$(MCUBOOT_SRC_DIR)/tlv.c \
+$(MCUBOOT_SERIAL_SRC_DIR)/boot_serial.c \
+$(MCUBOOT_SERIAL_SRC_DIR)/boot_serial_encryption.c \
+$(MCUBOOT_SERIAL_SRC_DIR)/zcbor_bulk.c \
+$(MCUBOOT_ZCBOR_SRC_DIR)/zcbor_common.c \
+$(MCUBOOT_ZCBOR_SRC_DIR)/zcbor_decode.c \
+$(MCUBOOT_ZCBOR_SRC_DIR)/zcbor_encode.c \
+
+TINYCRYPT_DIR := external/tinycrypt/lib
+TINYCRYPT_SRC_DIR := $(TINYCRYPT_DIR)/source
+TINYCRYPT_INC_DIR := $(TINYCRYPT_DIR)/include
+
+TINYCRYPT_SRC_FILES += \
+$(TINYCRYPT_SRC_DIR)/aes_decrypt.c \
+$(TINYCRYPT_SRC_DIR)/aes_encrypt.c \
+$(TINYCRYPT_SRC_DIR)/cbc_mode.c \
+$(TINYCRYPT_SRC_DIR)/ccm_mode.c \
+$(TINYCRYPT_SRC_DIR)/cmac_mode.c \
+$(TINYCRYPT_SRC_DIR)/ctr_mode.c \
+$(TINYCRYPT_SRC_DIR)/ctr_prng.c \
+$(TINYCRYPT_SRC_DIR)/hmac.c \
+$(TINYCRYPT_SRC_DIR)/hmac_prng.c \
+$(TINYCRYPT_SRC_DIR)/sha256.c \
+$(TINYCRYPT_SRC_DIR)/utils.c
+
+LWRB_DIR := external/lwrb/lwrb
+LWRB_SRC_DIR := $(LWRB_DIR)/src
+LWRB_INC_DIR := $(LWRB_DIR)/src/include
+
+LWRB_SRC_FILES += \
+$(LWRB_SRC_DIR)/lwrb/lwrb.c \
+$(LWRB_SRC_DIR)/lwrb/lwrb_ex.c \
+
+C_SOURCES += $(TINYCRYPT_SRC_FILES)
+C_SOURCES += $(MCUBOOT_SRC_FILES)
+C_SOURCES += $(LWRB_SRC_FILES)
 
 #######################################
 # binaries
@@ -121,11 +181,17 @@ MCU = $(CPU) $(FPU) $(FLOAT-ABI)
 AS_INCLUDES = 
 
 # C includes
-C_INCLUDES =  \
+C_INCLUDES +=  \
 -ICH5xx_ble_firmware_library/StdPeriphDriver/inc \
 -ICH5xx_ble_firmware_library/RVMSIS \
 -ICH5xx_ble_firmware_library/Core \
 -ICH5xx_ble_firmware_library/BLE \
+-Iinc \
+-Iexternal/tinycrypt/lib/include \
+-I$(MCUBOOT_INC_DIR) \
+-I$(MCUBOOT_SERIAL_INC_DIR) \
+-I$(MCUBOOT_ZCBOR_INC_DIR) \
+-I$(LWRB_INC_DIR) \
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
@@ -151,7 +217,7 @@ CFLAGS += -MMD -MP
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = CH5xx_ble_firmware_library/Ld/Link.ld 
+# LDSCRIPT = CH5xx_ble_firmware_library/Ld/Link.ld 
 
 # libraries
 LIBS = -lc -lm -lnosys \
@@ -159,11 +225,18 @@ LIBS = -lc -lm -lnosys \
 	./CH5xx_ble_firmware_library/BLE/LIBCH58xBLE.a \
 
 LIBDIR = 
-LDFLAGS = $(MCU) -mno-save-restore -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wunused -Wuninitialized -T $(LDSCRIPT) -nostartfiles -Xlinker --gc-sections -Wl,-Map=$(BUILD_DIR)/$(TARGET).map --specs=nano.specs $(LIBS)
+LDFLAGS = $(MCU) -mno-save-restore -fmessage-length=0 -fsigned-char \
+	-ffunction-sections -fdata-sections -Wunused -Wuninitialized -nostartfiles \
+	-Xlinker --gc-sections -Wl,-Map=$(BUILD_DIR)/$(TARGET).map \
+	--specs=nano.specs $(LIBS) \
 
 # default action: build all
-all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
-
+all: $(BUILD_DIR)/$(TARGET).elf \
+$(BUILD_DIR)/$(TARGET).hex \
+$(BUILD_DIR)/$(TARGET).bin \
+$(BUILD_DIR)/$(TARGET).signed.bin \
+$(BUILD_DIR)/mcuboot.bin \
+$(BUILD_DIR)/combined.bin \
 
 #######################################
 # build the application
@@ -182,9 +255,14 @@ $(BUILD_DIR)/%.o: %.S Makefile
 	@mkdir -pv $(dir $@)
 	$(AS) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) $(BUILD_DIR)/src/main.o $(BUILD_DIR)/app.startup.o Makefile app.ld
 	@mkdir -pv $(dir $@)
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	$(CC) $(OBJECTS) $(BUILD_DIR)/src/main.o $(BUILD_DIR)/app.startup.o -T app.ld $(LDFLAGS) -o $@
+	$(SZ) $@
+
+$(BUILD_DIR)/mcuboot.elf: $(OBJECTS) $(BUILD_DIR)/src/boot-entry.o $(BUILD_DIR)/bootloader.startup.o Makefile bootloader.ld
+	@mkdir -pv $(dir $@)
+	$(CC) $(OBJECTS) $(BUILD_DIR)/src/boot-entry.o $(BUILD_DIR)/bootloader.startup.o $(LDFLAGS) -T bootloader.ld -o $@
 	$(SZ) $@
 
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf
@@ -193,16 +271,42 @@ $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf
 	
 $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf
 	@mkdir -pv $(dir $@)
-	$(BIN) $< $@	
+	$(BIN) $< $@
+
+$(BUILD_DIR)/combined.bin: $(BUILD_DIR)/mcuboot.bin $(BUILD_DIR)/$(TARGET).signed.bin
+	srec_cat $(BUILD_DIR)/mcuboot.bin -Binary -offset 0 \
+		-fill 0xff 0 0x0010000 \
+		$(BUILD_DIR)/$(TARGET).signed.bin -Binary -offset 0x00010000 \
+		-o $@ -Binary \
 
 #######################################
 # Program
 #######################################
-program: $(BUILD_DIR)/$(TARGET).elf
-	sudo wch-openocd -f /usr/share/wch-openocd/openocd/scripts/interface/wch-riscv.cfg -c 'init; halt; program $(BUILD_DIR)/$(TARGET).elf; reset; wlink_reset_resume; exit;'
+program: $(BUILD_DIR)/combined.bin
+	$(OPENOCD) -f interface/wch-riscv.cfg -c 'init; halt; program $(BUILD_DIR)/combined.bin ; reset; wlink_reset_resume; exit;'
 
-isp: $(BUILD_DIR)/$(TARGET).bin
-	wchisp flash $(BUILD_DIR)/$(TARGET).bin
+debug:
+	wlink reset
+	wlink halt
+	$(OPENOCD) -f openocd.cfg
+
+$(BUILD_DIR)/$(TARGET).signed.bin: $(BUILD_DIR)/$(TARGET).bin
+	python $(IMGTOOL_PY) sign \
+		--header-size 0x200 \
+		--align 4 \
+		-S 204800 \
+		-v 1.0.0 \
+		--pad-header \
+		$< $@
+
+wlink-combine:
+	wlink flash build/combined.bin
+
+isp: $(BUILD_DIR)/$(TARGET).elf
+	wchisp flash $(BUILD_DIR)/$(TARGET).elf
+
+isp-bootld: $(BUILD_DIR)/mcuboot.elf
+	wchisp flash $(BUILD_DIR)/mcuboot.elf -E
 
 #######################################
 # clean up

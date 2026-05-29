@@ -1,5 +1,7 @@
 #include "debug.h"
 
+#ifdef USB_DEBUG_ENABLED
+
 void print_setuppk(USB_SETUP_REQ *request)
 {
 	PRINT("Setup request:\n");
@@ -80,3 +82,5 @@ void print_intflag_reg()
 				suspend ? "Suspend" : "0",
 				xfer_complete ? "Xfer completed" : "0");
 }
+
+#endif /* USB_DEBUG_ENABLED */
