@@ -1,4 +1,5 @@
 #include "CH58x_common.h"
+#include <stdio.h>
 #include "usb/usb.h"
 #include "leddrv.h"
 #include "audio.h"
