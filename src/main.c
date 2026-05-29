@@ -140,10 +140,10 @@ void load_bmlist()
 static void audio_visualize_poll()
 {
 	static float max = 0.0f;
-	#define NOISE_GATE 250
+	#define NOISE_GATE 400
     int16_t mic = mic_adc();
     if (mic < NOISE_GATE) mic = 0;
-	
+
 	max = max - max/64.0;			// Reduce max value exponentially
 	if (mic > max) max = mic;		// Bump it back up if needed
 

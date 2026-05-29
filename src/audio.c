@@ -52,7 +52,7 @@ void mic_init()
     ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_2);
     ADC_ChannelCfg(11);
 
-    DelayMs(200);
+    DelayMs(500);
 
     uint64_t sum = 0;
     for (int i = 0; i < 64; i++) sum += ADC_ExcutSingleConver();
