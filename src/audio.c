@@ -50,10 +50,10 @@ int16_t mic_adc()
 void mic_init()
 {
     GPIOA_ModeCfg(GPIO_Pin_7, GPIO_ModeIN_Floating);
-    ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_2);
+    ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
     ADC_ChannelCfg(11);
 
-    DelayMs(10);
+    DelayMs(200);
 
     uint64_t sum = 0;
     for (int i = 0; i < 64; i++) sum += ADC_ExcutSingleConver();
