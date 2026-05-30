@@ -532,7 +532,7 @@ static void disp_clock_submenu()
         fb_putchar_small('>', 0, 6);
 
     fb_puts_small("TIME", 4, 4, 0);
-    fb_puts_small("STOPWATCH", 2, 4, 6);
+    fb_puts_small("STOPWATCH", 9, 4, 6);
 }
 
 static void clock_submenu_nav()
