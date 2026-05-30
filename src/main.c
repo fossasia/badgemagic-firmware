@@ -40,7 +40,7 @@ static int menu_cursor=0;
 #define MENU_ITEMS_COUNT 4
 static const char *menu_labels[] = {
 	"ANIMATION",
-	"BT PAIRING",
+	"BT-PAIRING",
 	"CLOCK MODE",
 	"OFF"
 };
@@ -532,7 +532,7 @@ static void disp_clock_submenu()
         fb_putchar_small('>', 0, 6);
 
     fb_puts_small("TIME", 4, 4, 0);
-    fb_puts_small("SW", 2, 4, 6);
+    fb_puts_small("STOPWATCH", 2, 4, 6);
 }
 
 static void clock_submenu_nav()
