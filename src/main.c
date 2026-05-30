@@ -89,6 +89,7 @@ static void menu_up();
 static void menu_down();
 static void enter_clock_submenu();
 static void disp_stopwatch();
+static void return_to_menu();
 
 __HIGH_CODE
 /*static void change_mode()
