@@ -589,6 +589,8 @@ int main()
 	//auxbtn_onOnePress(KEY4, bm_transition);
 	auxbtn_onOnePress(KEY3, menu_select);
 	auxbtn_onOnePress(KEY4, return_to_menu);
+	auxbtn_onOnePress(KEY3, toggle_clock);
+	auxbtn_onOnePress(KEY4, bm_transition);
 
 	power_init();
 	disp_charging();
