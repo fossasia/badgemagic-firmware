@@ -666,6 +666,19 @@ static void toggle_clock()
 }
 */
 
+static void toggle_clock()
+{
+    if (!clock_active) {
+        clock_active = 1;
+        stop_all_animation();
+        tmos_start_reload_task(common_taskid, CLOCK_TICK, 1000000 / 625);
+    } else {
+        clock_active = 0;
+        tmos_stop_task(common_taskid, CLOCK_TICK);
+        mode_setup_normal();
+    }
+}
+
 void handle_after_rx()
 {
     if (badge_cfg.reset_rx) {
@@ -677,6 +690,15 @@ void handle_after_rx()
         clock_active = 0;
         mode_setup_normal();
     }
+	if (badge_cfg.reset_rx) {
+		SYS_ResetExecute();
+	} else {
+		if (clock_active) {
+            clock_active = 0;
+            tmos_stop_task(common_taskid, CLOCK_TICK);
+        }
+        mode_setup_normal();
+	}
 }
 
 int main()
@@ -709,6 +731,8 @@ int main()
 	//auxbtn_onOnePress(KEY4, bm_transition);
 	auxbtn_onOnePress(KEY3, menu_select);
 	auxbtn_onOnePress(KEY4, return_to_menu);
+	auxbtn_onOnePress(KEY3, toggle_clock);
+	auxbtn_onOnePress(KEY4, bm_transition);
 
 	power_init();
 	disp_charging();
