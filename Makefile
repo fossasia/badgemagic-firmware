@@ -9,9 +9,10 @@ TARGET = badgemagic-ch582
 ######################################
 # Uncomment below line to enable debugging
 # DEBUG = 1
-# Uncomment below to build for USB-C version
-# USBC_VERSION = 1
-# optimization for size
+# There are 3 differnt hardware varianets supported at the moment.
+# HARDWARE_REV1 = 1
+# HARDWARE_REV2 = 1 # (default)
+# HARDWARE_REV3 = 1
 OPT = -Os
 
 
@@ -138,8 +139,11 @@ ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2 -DDEBUG=$(DEBUG)
 endif
 
-ifeq ($(USBC_VERSION), 1)
-CFLAGS += -DUSBC_VERSION=$(USBC_VERSION)
+ifeq ($(HARDWARE_REV1), 1)
+CFLAGS += -DHARDWARE_REV1=$(HARDWARE_REV1)
+endif
+ifeq ($(HARDWARE_REV3), 1)
+CFLAGS += -DHARDWARE_REV3=$(HARDWARE_REV3)
 endif
 
 CFLAGS += -DVERSION='"$(VERSION)"' -DVERSION_ABBR='"$(VERSION_ABBR)"'

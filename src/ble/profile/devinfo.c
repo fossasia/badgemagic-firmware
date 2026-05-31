@@ -5,7 +5,8 @@
 static const uint8_t    systemId_val[] = {0, 0, 0, 0, 0, 0, 0, 0};
 static const uint16_t   systemId_UUID = SYSTEM_ID_UUID;
 
-#ifdef USBC_VERSION
+// TODO: Check if the open hardware version (REV3) is corerctly covered by this.
+#ifndef HARDWARE_REV1
 #define USBC_VER_PREFIX "(C) "
 #define USBC_VER_SUFIX "-C"
 #else
