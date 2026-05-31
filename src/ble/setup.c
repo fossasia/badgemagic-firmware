@@ -71,7 +71,7 @@ void ble_hardwareInit(void)
 	cfg.TxPower = (uint32_t)BLE_TX_POWER;
 	cfg.ConnectNumber = (PERIPHERAL_MAX_CONNECTION & 3) | (CENTRAL_MAX_CONNECTION << 2);
 
-	cfg.SelRTCClock = 1 << 7;
+	cfg.SelRTCClock = (1 << 7) | 0x02;
 
 	cfg.rcCB = lsi_calib;
 

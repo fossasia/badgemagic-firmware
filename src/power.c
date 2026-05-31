@@ -24,6 +24,7 @@ void poweroff()
 
 void power_init()
 {
+	Calibration_LSI(Level_128);
 	GPIOA_ModeCfg(GPIO_Pin_5, GPIO_ModeIN_Floating);
 	ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
 

@@ -83,6 +83,7 @@ src/resource.c \
 src/animation.c \
 src/font.c \
 src/power.c \
+src/auxbtn.c \
 
 
 # ASM sources
@@ -142,6 +143,7 @@ CFLAGS += -DUSBC_VERSION=$(USBC_VERSION)
 endif
 
 CFLAGS += -DVERSION='"$(VERSION)"' -DVERSION_ABBR='"$(VERSION_ABBR)"'
+CFLAGS += -DCLK_OSC32K=2
 
 # Generate dependency information
 CFLAGS += -MMD -MP
