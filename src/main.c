@@ -47,11 +47,13 @@ enum MODES {
 #define ANI_FLASH           (1 << 2)
 #define SCAN_BOOTLD_BTN     (1 << 3)
 #define BLE_NEXT_STEP       (1 << 4)
+#define CLOCK_TICK          (1 << 5)
 
 static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
 volatile uint16_t fb[LED_COLS] = {0};
 volatile int mode, is_play_sequentially = 1;
+static int clock_active = 0;
 
 __HIGH_CODE
 static void change_brightness()
@@ -61,6 +63,7 @@ static void change_brightness()
 
 static void mode_setup_download();
 static void mode_setup_normal();
+static void disp_clock();
 
 __HIGH_CODE
 static void change_mode()
@@ -208,6 +211,11 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 
 		return events ^ BLE_NEXT_STEP;
 	}
+	
+	if (events & CLOCK_TICK) {
+		disp_clock();
+		return events ^ CLOCK_TICK;
+	}
 
 	return 0;
 }
@@ -341,6 +349,23 @@ static void fb_puts(char *s, int len, int col, int row)
 	}
 }
 
+static void disp_clock()
+{
+    uint16_t year, month, day, hour, minute, second;
+    RTC_GetTime(&year, &month, &day, &hour, &minute, &second);
+    memset(fb, 0, sizeof(fb));
+
+    char buf[6];
+    buf[0] = '0' + hour / 10;
+    buf[1] = '0' + hour % 10;
+    buf[2] = ':';
+    buf[3] = '0' + minute / 10;
+    buf[4] = '0' + minute % 10;
+    buf[5] = '\0';
+
+    fb_puts(buf, 5, 2, 2);
+}
+
 static void disp_charging()
 {
 	int blink = 0;
@@ -400,19 +425,36 @@ static void mode_setup_normal()
 	start_normal_animation();
 }
 
+static void toggle_clock()
+{
+    if (!clock_active) {
+        clock_active = 1;
+        stop_all_animation();
+        tmos_start_reload_task(common_taskid, CLOCK_TICK, 1000000 / 625);
+    } else {
+        clock_active = 0;
+        tmos_stop_task(common_taskid, CLOCK_TICK);
+        mode_setup_normal();
+    }
+}
+
 void handle_after_rx()
 {
 	if (badge_cfg.reset_rx) {
 		SYS_ResetExecute();
 	} else {
-		mode_setup_normal();
+		if (clock_active) {
+            clock_active = 0;
+            tmos_stop_task(common_taskid, CLOCK_TICK);
+        }
+        mode_setup_normal();
 	}
 }
 
 int main()
 {
 	SetSysClock(CLK_SOURCE_PLL_60MHz);
-
+	
 	debug_init();
 	PRINT("\nDebug console is on UART%d\n", DEBUG);
 
@@ -433,7 +475,7 @@ int main()
 	btn_onLongPress(KEY1, change_brightness);
 
 	auxbtn_init();
-	auxbtn_onOnePress(KEY3, change_mode);
+	auxbtn_onOnePress(KEY3, toggle_clock);
 	auxbtn_onOnePress(KEY4, bm_transition);
 
 	power_init();
@@ -454,6 +496,7 @@ int main()
 	spawn_tasks();
 	btn_init_task();
 	auxbtn_init_task();
+
 	mode = NORMAL;
 	while (1) {
 		TMOS_SystemProcess();

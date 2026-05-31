@@ -2,6 +2,36 @@
 
 Hardware details and information to build an open firmware for Bluetooth LED badges, compatible with [Badge Magic app](https://github.com/fossasia/badgemagic-app)
 
+## Supported Hardware
+
+> **Warning: Flashing this firmware on an unsupported badge can brick it permanently.**
+> The OEM firmware is read-protected and cannot be dumped, so there is no recovery path once overwritten.
+> See [#59](https://github.com/fossasia/badgemagic-firmware/issues/59) for a real example of this happening.
+
+This firmware targets **one specific badge variant**:
+
+- **Chipset:** WCH CH582M (RISC-V)
+- **Display:** 11×44 LED matrix
+- **OEM BLE name often:** `LSLED`
+
+After flashing this firmware, the default BLE device name is **`LED Badge Magic`**.
+
+### Am I using the right badge?
+
+Many LED badges look identical on the outside and often ship with OEM firmware advertising the same BLE name (`LSLED`), but differ internally in chipset or LED grid size (e.g. 11×44 vs 11×55). **Identical appearance and OEM BLE name do not guarantee compatibility.**
+
+To verify your badge before flashing:
+
+1. Open the badge and locate the chip marking on the PCB — it should read **CH582M**
+2. Count the LED columns — there should be **44** (not 48, 55 or any other number)
+3. If you are unsure, do **not** flash this firmware
+
+For hardware photos and further identification help, see [CH582.md](./CH582.md).
+
+> **Note:** Compatibility with other badge variants (e.g. LeSun B1144 or other
+> Alibaba sourced clones) is not established. Pinout reverse engineering for those
+> boards is still in progress.
+
 ## Installation
 
 Install [wchisp](https://github.com/ch32-rs/wchisp?tab=readme-ov-file#installing).
@@ -14,11 +44,15 @@ the boot pin is pulled down in one of two ways:
 - Disconnect the battery, press and hold KEY2 (the button near the USB port)
   while plugging in the USB to enter the bootloader.
 - Alternatively, connect the USB, press and hold KEY2, then short and release
-  the C3 capacitor.
+  the C3 capacitor using metal tweezers or a wire.
+
+See [CH582.md](CH582.md) for a technical explanation on why both the above methods work.
 
 If the badge has successfully entered ISP mode, a single pixel roughly in the middle of the display will be lit. The badge will stay in ISP mode for approximately ten seconds before rebooting into normal mode.
 
 On Linux, you can also check `dmesg` if the chip has entered the ISP mode with idVendor=4348 and idProduct=55e0.
+
+Note: The photos shown below for option 2 show two different hardware revisions (Micro-USB and USB-C). C3 is in a different position on each board - Identify your revision before proceeding.
 
 ![c3](assets/burn-badge.svg)
 
