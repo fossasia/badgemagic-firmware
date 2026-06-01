@@ -56,7 +56,7 @@ enum AUDIO_MODES {
 #define SCAN_BOOTLD_BTN     (1 << 3)
 #define BLE_NEXT_STEP       (1 << 4)
 #define AUDIO_STEP      	(1 << 5)
-#define CLOCK_TICK          (1 << 5)
+#define CLOCK_TICK          (1 << 6)
 
 static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
@@ -493,8 +493,9 @@ static void mode_setup_audio_visualize()
 	tmos_stop_task(common_taskid, ANI_FLASH);
 	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
 	memset(fb, 0, sizeof(fb));
-
 	tmos_start_reload_task(common_taskid, AUDIO_STEP, 500000 / (625*10));
+}
+
 static void toggle_clock()
 {
     if (!clock_active) {
