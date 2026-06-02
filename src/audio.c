@@ -26,23 +26,25 @@ const uint16_t amp_wav_lut_w1[8] = {
 	0b11111111111,
 };
 
-static int16_t mic_baseline = 2048;
-
 int16_t mic_adc()
 {
     ADC_ChannelCfg(11);
-    int32_t sum = 0;
+    uint16_t sig_max = 0;
+    uint16_t sig_min = 4095;
+
     for (int i = 0; i < 64; i++) {
-        sum += (int16_t)ADC_ExcutSingleConver() - mic_baseline;
+        uint16_t sample = ADC_ExcutSingleConver();
+        if (sample > sig_max) sig_max = sample;
+        if (sample < sig_min) sig_min = sample;
     }
-    int16_t avg = sum / 64;
-    if (avg < 0) avg = -avg;
+
+    int16_t amplitude = sig_max - sig_min;
 
     char buf[64];
-    int len = snprintf(buf, sizeof(buf), "avg=%d\r\n", avg);
+    int len = snprintf(buf, sizeof(buf), "amp=%d\r\n", amplitude);
     cdc_tx_poll((uint8_t *)buf, len, 10);
 
-    return avg;
+    return amplitude;
 }
 
 void mic_init()

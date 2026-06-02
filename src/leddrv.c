@@ -101,8 +101,13 @@ static const pindesc_t led_pins[LED_PINCOUNT] = {
 	PINDESC(A, 11), // G
 	PINDESC(B, 9),  // H
 	PINDESC(B, 8),  // I
+	#ifdef USBC_VERSION
+	PINDESC(B, 17), // J
+	PINDESC(B, 16), // K
+	#else
 	PINDESC(B, 15), // J
 	PINDESC(B, 14), // K
+	#endif
 	PINDESC(B, 13), // L
 	PINDESC(B, 12), // M
 	PINDESC(B, 5),  // N
