@@ -1,7 +1,9 @@
 #ifndef __GAME_H__
 #define __GAME_H__
 
-void run_game(uint16_t *fb);
-void init_game(uint16_t *fb);
+#include <stdint.h>
+
+void game_init(void);
+void game_start(uint16_t *fb);
 
 #endif /* __GAME_H__ */
