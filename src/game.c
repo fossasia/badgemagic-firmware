@@ -1,35 +1,81 @@
 #include "leddrv.h"
-#include "util.h"
 #include <stdint.h>
 #include <stdlib.h>
+#include "CH58xBLE_LIB.h"  // for TMOS
+#include "font.h"           // for font5x7
+#include <string.h>         // for memset
+#include "button.h"
+#include "auxbtn.h"
+#include "CH58x_common.h"
 
-// Defines the Speed of the Game. Lower Number equals faster movement of the snake
-#define REFRESH_DELAY 25
+#define SNAKE_MAX_LEN       100
+#define SPEED_INITIAL_MS    300
+#define SPEED_MIN_MS        100
+#define SPEED_STEP_MS       20
+#define MS_TO_TMOS(ms)      ((uint32_t)(ms) * 1000 / 625)
+#define GAME_TICK           (1 << 0)
 
+typedef enum { 
+    DIR_UP=0, DIR_RIGHT, DIR_DOWN, DIR_LEFT 
+} Direction;
+
+static tmosTaskID  game_taskid = INVALID_TASK_ID;
+static uint16_t   *game_fb;
+static Direction   cur_dir, next_dir;
+static uint16_t    score;
+static int         speed_ms;
+
+extern void return_to_menu(void);
 typedef struct {
     int x;
     int y;
 } Position;
 
+static void game_exit(void);
 static Position snake[100];
 static int snake_length;
 static Position food;
 
-static void draw_pixel(int x, int y, int state, uint16_t *fb) {
+static void draw_pixel(int x, int y, int state) {
     if (x < 0 || x >= LED_COLS || y < 0 || y >= LED_ROWS) return;
     if (state) {
-        fb[x] |= (1 << y);
+        game_fb[x] |= (1 << y);
+    }
+    else game_fb[x]&= ~(1 << y);
+}
+
+static void on_turn_left(void)  { next_dir = (cur_dir + 3) % 4; }
+static void on_turn_right(void) { next_dir = (cur_dir + 1) % 4; }
+
+static void game_putchar(char c, int col, int row)
+{
+    for (int i = 0; i < 6; i++) {
+        if (col + i >= LED_COLS) break;
+        game_fb[col + i] = (game_fb[col + i] & ~(0x7f << row))
+                         | (font5x7[c - ' '][i] << row);
     }
 }
 
-static void display_game_over(uint16_t *fb) {
-    // Clear Screen and Display "Game Over"
-    clear_screen(fb);
-    fb_displays("Game", sizeof("Game"), 10, 2, fb);
-    DelayMs(500);
-    fb_displays("Over", sizeof("Over"), 10, 2, fb);
-    DelayMs(500);
-    return;
+static void game_puts(const char *s, int col, int row)
+{
+    while (*s) {
+        game_putchar(*s++, col, row);
+        col += 6;
+    }
+}
+
+static void show_score(void)
+{
+    memset(game_fb, 0, LED_COLS * sizeof(uint16_t));
+
+    char buf[6];
+    buf[0] = 'S'; buf[1] = 'C'; buf[2] = ':';
+    buf[3] = '0' + (score / 10);
+    buf[4] = '0' + (score % 10);
+    buf[5] = '\0';
+    game_puts(buf, 2, 2);  // vertically centred on 11-row display
+
+    DelayMs(2000);
 }
 
 static int check_collision(Position pos) {
@@ -60,13 +106,11 @@ static int is_free_space_available() {
     return 0;
 }
 
-static void generate_food(uint16_t *fb) {
+static void generate_food(void) {
     // Check if there is any free space available
     if (!is_free_space_available()) {
-        // Display "You Won" message 2 Times
-        for (int i = 0; i < 2; i++) {
-            display_text(fb, "You", "Won");
-        }
+        show_score();
+        game_exit();
         return;
     }
 
@@ -80,101 +124,93 @@ static void generate_food(uint16_t *fb) {
     }
 }
 
-static int move_snake(uint16_t *fb) {
+static int move_snake(void)
+{
+    // commit turn unless it's a 180 reversal
+    if (next_dir != (cur_dir + 2) % 4) cur_dir = next_dir;
+
     Position new_head = snake[0];
-    Position possible_positions[4];
-    int num_possible_positions = 0;
+    if(cur_dir == DIR_UP) new_head.y--;
+    else if(cur_dir == DIR_DOWN) new_head.y++;
+    else if(cur_dir == DIR_LEFT) new_head.x--;
+    else new_head.x++;
 
-    // Check all four possible directions
-    Position up = {new_head.x, new_head.y - 1};
-    Position down = {new_head.x, new_head.y + 1};
-    Position left = {new_head.x - 1, new_head.y};
-    Position right = {new_head.x + 1, new_head.y};
+    if (check_collision(new_head)) return 0;
 
-    if (!check_collision(up)) possible_positions[num_possible_positions++] = up;
-    if (!check_collision(down)) possible_positions[num_possible_positions++] = down;
-    if (!check_collision(left)) possible_positions[num_possible_positions++] = left;
-    if (!check_collision(right)) possible_positions[num_possible_positions++] = right;
+    int ate = (new_head.x == food.x && new_head.y == food.y);
 
-    // Check if no possible positions are available
-    if (num_possible_positions == 0) {
-        // Display "Game Over" message 2 Times
-        for (int i = 0; i < 2; i++) {
-            display_text(fb, "Game", "Over");
-        }
-        return 0;
-    }
+    // erase tail before shift, skip only when eating (snake grows)
+    if (!ate)
+        draw_pixel(snake[snake_length - 1].x, snake[snake_length - 1].y, 0);
 
-    // Choose the best direction towards food
-    Position best_position = possible_positions[0];
-    int min_distance = abs(food.x - best_position.x) + abs(food.y - best_position.y);
-
-    for (int i = 1; i < num_possible_positions; i++) {
-        int distance = abs(food.x - possible_positions[i].x) + abs(food.y - possible_positions[i].y);
-        if (distance < min_distance) {
-            best_position = possible_positions[i];
-            min_distance = distance;
-        }
-    }
-
-    new_head = best_position;
-
-    // Check for collision
-    if (check_collision(new_head)) {
-        // Display game over message 2 Times
-        for (int i = 0; i < 2; i++) {
-            display_game_over(fb);
-        }
-        return 0;
-    }
-
-    for (int i = snake_length - 1; i > 0; i--) {
+    // shift body
+    for (int i = snake_length - 1; i > 0; i--)
         snake[i] = snake[i - 1];
-    }
     snake[0] = new_head;
-       
+    draw_pixel(new_head.x, new_head.y, 1);
 
-    // Check for collision with food
-    if (snake[0].x == food.x && snake[0].y == food.y) {
-        if (snake_length <= 100){
+    if (ate) {
+        score++;
+        if (snake_length < SNAKE_MAX_LEN)
             snake_length++;
-            snake[snake_length-1] = snake[snake_length-2];
-            generate_food(fb);
-        }
-        else {
-            // Display game over message 2 Times
-            for (int i = 0; i < 2; i++) {
-                display_text(fb, "You", "Won");
-            }
-            return 0;
-        }
-    }
-
-    // Draw the snake
-    for (int i = 0; i < snake_length; i++) {
-        draw_pixel(snake[i].x, snake[i].y, 1, fb);
+        generate_food();
+        // speed up every 5 food eaten
+        if (score % 5 == 0 && speed_ms > SPEED_MIN_MS)
+            speed_ms -= SPEED_STEP_MS;
     }
 
     return 1;
 }
 
-void init_game(uint16_t *fb){
-    // Initialize snake
+static uint16_t game_task(tmosTaskID id, uint16_t events)
+{
+    if (events & GAME_TICK) {
+        if (!move_snake()) {
+            show_score();
+            game_exit();
+        } 
+        else {
+            draw_pixel(food.x, food.y, 1);
+            tmos_start_task(game_taskid, GAME_TICK, MS_TO_TMOS(speed_ms));
+        }
+        return events ^ GAME_TICK;
+    }
+    return 0;
+}
+
+static void init_game(void) {
+    srand(RTC_GetCnt());
     snake_length = 1;
     snake[0].x = LED_COLS / 2;
     snake[0].y = LED_ROWS / 2;
-
-    generate_food(fb);
+    cur_dir = next_dir = DIR_RIGHT;
+    score = 0;
+    speed_ms = SPEED_INITIAL_MS;
+    generate_food();
 }
 
-int run_game(uint16_t *fb) {
-    clear_screen(fb);
-    // Game loop
-    draw_pixel(food.x, food.y, 1, fb);
-    int run = move_snake(fb);
-    DelayMs(REFRESH_DELAY);
-    if (run == 0){
-        // Restart Game on "Game Over"
-        init_game(fb);
-    }
+static void game_exit(void)
+{
+    tmos_stop_task(game_taskid, GAME_TICK);
+    return_to_menu();
+}
+
+void game_init(void)
+{
+    game_taskid = TMOS_ProcessEventRegister(game_task);
+}
+
+void game_start(uint16_t *fb)
+{
+    game_fb = fb;
+    memset(game_fb, 0, LED_COLS * sizeof(uint16_t));
+    init_game();
+    draw_pixel(food.x, food.y, 1);
+
+    btn_onOnePress(KEY1, NULL);
+    btn_onOnePress(KEY2, NULL);
+    auxbtn_onOnePress(KEY3, on_turn_left);
+    auxbtn_onOnePress(KEY4, on_turn_right);
+
+    tmos_start_task(game_taskid, GAME_TICK, MS_TO_TMOS(speed_ms));
 }

@@ -10,6 +10,7 @@
 #include "font.h"
 #include "font3x5.h"
 #include "auxbtn.h"
+#include "game.h"
 
 #include "power.h"
 #include "data.h"
@@ -32,16 +33,18 @@ enum MODES {
     NORMAL,
     DOWNLOAD,
     CLOCK,
+	GAME,
 	POWER_OFF,
     MODES_COUNT,
 };
 
 static int menu_cursor=0;
-#define MENU_ITEMS_COUNT 4
+#define MENU_ITEMS_COUNT 5
 static const char *menu_labels[] = {
 	"ANIMATION",
 	"BT-PAIRING",
 	"CLOCK MODE",
+	"SNAKE",
 	"OFF"
 };
 
@@ -89,7 +92,7 @@ static void menu_up();
 static void menu_down();
 static void enter_clock_submenu();
 static void disp_stopwatch();
-static void return_to_menu();
+void return_to_menu();
 
 __HIGH_CODE
 /*static void change_mode()
@@ -469,9 +472,14 @@ static void menu_select(){
             enter_clock_submenu();
             break;
         case 3:
-            mode = POWER_OFF;
-            poweroff();
+            mode = GAME;
+			stop_all_animation();
+			game_start((uint16_t *)fb);
             break;
+		case 4:
+			mode = POWER_OFF;
+			poweroff();
+			break;
     }
 }
 
@@ -728,6 +736,7 @@ int main()
 	spawn_tasks();
 	btn_init_task();
 	auxbtn_init_task();
+	game_init();
 	stop_all_animation();
 
 	mode = MENU;
