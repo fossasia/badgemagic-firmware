@@ -180,7 +180,9 @@ static uint16_t game_task(tmosTaskID id, uint16_t events)
 }
 
 static void init_game(void) {
-    srand(RTC_GetCnt());
+    uint16_t year, month, day, hour, minute, second;
+    RTC_GetTime(&year, &month, &day, &hour, &minute, &second);
+    srand(hour * 3600 + minute * 60 + second);
     snake_length = 1;
     snake[0].x = LED_COLS / 2;
     snake[0].y = LED_ROWS / 2;
