@@ -7,6 +7,7 @@
 #include "button.h"
 #include "auxbtn.h"
 #include "CH58x_common.h"
+#include "game.h"
 
 #define SNAKE_MAX_LEN       100
 #define SPEED_INITIAL_MS    300

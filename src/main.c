@@ -586,7 +586,7 @@ static void enter_clock_submenu()
     disp_clock_submenu();
 }
 
-static void return_to_menu()
+void return_to_menu()
 {
     stop_all_animation();
     tmos_stop_task(common_taskid, CLOCK_TICK);
