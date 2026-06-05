@@ -153,12 +153,15 @@ static int move_snake(void)
     if (ate) {
         score++;
 
-        if (snake_length < SNAKE_MAX_LEN) snake_length++;
+        if (snake_length < SNAKE_MAX_LEN) {
+            snake[snake_length] = snake[snake_length - 1]; // set before increment
+            snake_length++;
+        }
         draw_pixel(food.x, food.y, 0);
         generate_food();
 
         // speed up every 5 food eaten
-        if (score % 5 == 0 && speed_ms > SPEED_MIN_MS)
+        if (score % 2 == 0 && speed_ms > SPEED_MIN_MS)
             speed_ms -= SPEED_STEP_MS;
     }
 
