@@ -139,6 +139,7 @@ static int move_snake(void)
     if (check_collision(new_head)) return 0;
 
     int ate = (new_head.x == food.x && new_head.y == food.y);
+    Position old_tail = snake[snake_length - 1];
 
     // erase tail before shift, skip only when eating (snake grows)
     if (!ate)
@@ -154,7 +155,7 @@ static int move_snake(void)
         score++;
 
         if (snake_length < SNAKE_MAX_LEN) {
-            snake[snake_length] = snake[snake_length - 1]; // set before increment
+            snake[snake_length] = old_tail; // set before increment
             snake_length++;
         }
         draw_pixel(food.x, food.y, 0);
