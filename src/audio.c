@@ -37,20 +37,22 @@ static int16_t mic_baseline = 0;
 
 int16_t mic_adc()
 {
+    ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
     ADC_ChannelCfg(11);
-    uint16_t sig_max = 0;
+
     uint16_t sig_min = 4095;
 
     for (int i = 0; i < 64; i++) {
         uint16_t sample = ADC_ExcutSingleConver();
-        if (sample > sig_max) sig_max = sample;
         if (sample < sig_min) sig_min = sample;
     }
 
-    int16_t amplitude = sig_max - sig_min;
+    // How far below rail the signal swings = loudness
+    int16_t amplitude = 4095 - sig_min;
 
     char buf[64];
-    int len = snprintf(buf, sizeof(buf), "amp=%d\r\n", amplitude);
+    int len = snprintf(buf, sizeof(buf), "amp=%d min=%d\r\n",
+                       amplitude, sig_min);
     cdc_tx_poll((uint8_t *)buf, len, 10);
 
     return amplitude;
@@ -75,14 +77,14 @@ void mic_init()
 
 void beat_visualize_poll(volatile uint16_t *fb)
 {
-    int16_t mic = mic_adc();  // already positive peak-to-peak
+    int16_t mic = mic_adc();
 
     energy_avg = energy_avg * 0.9f + (float)mic * 0.1f;
 
     int is_beat = (energy_avg > 10.0f) && ((float)mic > energy_avg * BEAT_THRESHOLD);
 
     char buf[64];
-    int len = snprintf(buf, sizeof(buf), "mic=%d avg=%.1f beat=%d\r\n", mic, energy_avg, is_beat);
+    int len = snprintf(buf, sizeof(buf), "mic=%d avg=%d beat=%d\r\n", mic, (int)energy_avg, is_beat);
     cdc_tx_poll((uint8_t *)buf, len, 10);
 
     if (is_beat)
@@ -96,8 +98,9 @@ void beat_visualize_poll(volatile uint16_t *fb)
             fb[c] = (dist < lit_pairs) ? COL_FULL : 0;
         }
         beat_active--;
-    } else {
-        memset((void*)fb, 0, LED_COLS * sizeof(uint16_t));
+    } 
+    else {
+        memset(fb, 0, LED_COLS * sizeof(uint16_t));
     }
 }
 
