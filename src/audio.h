@@ -1,6 +1,5 @@
 #ifndef __AUDIO_H__
 #define __AUDIO_H__
-#define BEAT  2
 #define AUDIO_MODES_COUNT 3 
 
 #include <stdint.h>
