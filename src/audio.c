@@ -58,8 +58,8 @@ int16_t mic_adc()
 
 void mic_init()
 {
-    GPIOA_ModeCfg(GPIO_Pin_7, GPIO_ModeIN_Floating);
-    ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_2);
+    GPIOA_ModeCfg(GPIO_Pin_7, GPIO_ModeIN_PU);
+    ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
     ADC_ChannelCfg(11);
 
     DelayMs(500);
