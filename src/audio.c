@@ -29,6 +29,7 @@ const uint16_t amp_wav_lut_w1[8] = {
 // Beat detection state
 static float  energy_avg  = 0.0f;
 static int8_t beat_active = 0;
+static int16_t mic_baseline = 0;
 
 #define BEAT_DECAY_FRAMES  6
 #define BEAT_THRESHOLD 2.2f

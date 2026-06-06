@@ -7,7 +7,6 @@
 
 extern const uint16_t amp_wav_lut[8];
 extern const uint16_t amp_wav_lut_w1[8];
-extern int16_t mic_baseline;
 
 int16_t mic_adc();
 void mic_init();
