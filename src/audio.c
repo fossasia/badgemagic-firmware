@@ -26,6 +26,14 @@ const uint16_t amp_wav_lut_w1[8] = {
 	0b11111111111,
 };
 
+// Beat detection state
+static float  energy_avg  = 0.0f;
+static int8_t beat_active = 0;
+
+#define BEAT_DECAY_FRAMES  6
+#define BEAT_THRESHOLD 2.2f
+#define COL_FULL 0x7FF
+
 int16_t mic_adc()
 {
     ADC_ChannelCfg(11);
@@ -62,4 +70,29 @@ void mic_init()
     char buf[64];
     int len = snprintf(buf, sizeof(buf), "\r\nbaseline=%d\r\n", mic_baseline);
     cdc_tx_poll((uint8_t *)buf, len, 10);
+}
+
+void beat_visualize_poll(volatile uint16_t *fb)
+{
+    int16_t mic = mic_adc();  // already positive peak-to-peak
+
+    energy_avg = energy_avg * 0.9f + (float)mic * 0.1f;
+
+    int is_beat = (energy_avg > 10.0f) &&
+                  ((float)mic > energy_avg * BEAT_THRESHOLD);
+
+    if (is_beat)
+        beat_active = BEAT_DECAY_FRAMES;
+
+    if (beat_active > 0) {
+        int lit_pairs = (beat_active * 22) / BEAT_DECAY_FRAMES;
+        int center = 22;
+        for (int c = 0; c < LED_COLS; c++) {
+            int dist = (c < center) ? (center - 1 - c) : (c - center);
+            fb[c] = (dist < lit_pairs) ? COL_FULL : 0;
+        }
+        beat_active--;
+    } else {
+        memset((void*)fb, 0, LED_COLS * sizeof(uint16_t));
+    }
 }

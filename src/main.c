@@ -39,7 +39,7 @@ enum MODES {
 enum AUDIO_MODES {
 	AMPLITUDE = 0,
 	WAVEFORM,
-	AUDIO_MODES_COUNT,
+	BEAT,
 };
 
 #define ANI_BASE_SPEED_T      (200000) // uS
@@ -143,33 +143,39 @@ void load_bmlist()
 
 static void audio_visualize_poll()
 {
-	static float max = 0.0f;
+    static float max = 0.0f;
 
-	int16_t mic = abs(mic_adc());
-	max = max - max/64.0;
-	if (mic > max) max = mic;
+    switch (audio_mode) {
+        default:
+        case AMPLITUDE:
+        {
+            int16_t mic = abs(mic_adc());
+            max = max - max / 64.0f;
+            if (mic > max) max = mic;
+            int8_t level = (max > 0) ? (int8_t)(mic * 7 / max) : 0;
+            if (level > 7) level = 7;
+            for (int i = 0; i < LED_COLS; i++)
+                fb[i] = amp_wav_lut[level];
+        }
+        break;
 
-	if (max>0) {
-		mic = mic * 7 / max;
-	} else {
-		mic = 0;
-	}
-	if (mic > 7) mic = 7;
+        case WAVEFORM:
+        {
+            int16_t mic = abs(mic_adc());
+            max = max - max / 64.0f;
+            if (mic > max) max = mic;
+            int8_t level = (max > 0) ? (int8_t)(mic * 7 / max) : 0;
+            if (level > 7) level = 7;
+            for (int i = 0; i < LED_COLS - 1; i++)
+                fb[i] = fb[i + 1];
+            fb[LED_COLS - 1] = amp_wav_lut_w1[level];
+        }
+        break;
 
-	switch (audio_mode) {
-		default:
-		case AMPLITUDE:
-			for (int i=0; i<LED_COLS; i++) {
-				fb[i] = amp_wav_lut[mic];
-			}
-		break;
-		case WAVEFORM:
-			for (int i=0; i<LED_COLS-1; i++) {
-				fb[i] = fb[i+1];
-			}
-			fb[LED_COLS-1] = amp_wav_lut_w1[mic];
-		break;
-	}
+        case BEAT:
+            beat_visualize_poll(fb);
+        break;
+    }
 }
 
 static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
