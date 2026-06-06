@@ -79,8 +79,11 @@ void beat_visualize_poll(volatile uint16_t *fb)
 
     energy_avg = energy_avg * 0.9f + (float)mic * 0.1f;
 
-    int is_beat = (energy_avg > 10.0f) &&
-                  ((float)mic > energy_avg * BEAT_THRESHOLD);
+    int is_beat = (energy_avg > 10.0f) && ((float)mic > energy_avg * BEAT_THRESHOLD);
+
+    char buf[64];
+    int len = snprintf(buf, sizeof(buf), "mic=%d avg=%.1f beat=%d\r\n", mic, energy_avg, is_beat);
+    cdc_tx_poll((uint8_t *)buf, len, 10);
 
     if (is_beat)
         beat_active = BEAT_DECAY_FRAMES;
@@ -96,4 +99,9 @@ void beat_visualize_poll(volatile uint16_t *fb)
     } else {
         memset((void*)fb, 0, LED_COLS * sizeof(uint16_t));
     }
+}
+
+void audio_reset() {
+    energy_avg = 0.0f;
+    beat_active = 0;
 }

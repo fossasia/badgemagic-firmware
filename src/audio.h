@@ -11,5 +11,6 @@ extern const uint16_t amp_wav_lut_w1[8];
 int16_t mic_adc();
 void mic_init();
 void beat_visualize_poll(volatile uint16_t *fb);
+void audio_reset();
 
 #endif /* __AUDIO_H__ */

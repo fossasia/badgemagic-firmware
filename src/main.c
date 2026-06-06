@@ -112,6 +112,7 @@ static void audio_transition()
 {
 	NEXT_STATE(audio_mode, 0, AUDIO_MODES_COUNT);
 	memset(fb, 0, sizeof(fb));
+    audio_reset();
 }
 
 void play_splash(xbm_t *xbm, int col, int row, int spT)
@@ -150,7 +151,7 @@ static void audio_visualize_poll()
         case AMPLITUDE:
         {
             int16_t mic = abs(mic_adc());
-            max = max - max / 64.0f;
+            max = max * 0.85f;
             if (mic > max) max = mic;
             int8_t level = (max > 0) ? (int8_t)(mic * 7 / max) : 0;
             if (level > 7) level = 7;
@@ -162,7 +163,7 @@ static void audio_visualize_poll()
         case WAVEFORM:
         {
             int16_t mic = abs(mic_adc());
-            max = max - max / 64.0f;
+            max = max * 0.85f;
             if (mic > max) max = mic;
             int8_t level = (max > 0) ? (int8_t)(mic * 7 / max) : 0;
             if (level > 7) level = 7;
