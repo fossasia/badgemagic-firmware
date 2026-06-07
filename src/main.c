@@ -2,6 +2,7 @@
 #include "CH58x_sys.h"
 #include "CH58xBLE_LIB.h"
 
+#include "audio.h"
 #include "leddrv.h"
 #include "button.h"
 #include "bmlist.h"
@@ -29,9 +30,16 @@
 enum MODES {
 	BOOT = 0,
 	NORMAL,
+	AUDIO,
 	DOWNLOAD,
 	POWER_OFF,
 	MODES_COUNT,
+};
+
+enum AUDIO_MODES {
+	AMPLITUDE = 0,
+	WAVEFORM,
+	BEAT,
 };
 
 #define ANI_BASE_SPEED_T      (200000) // uS
@@ -47,12 +55,14 @@ enum MODES {
 #define ANI_FLASH           (1 << 2)
 #define SCAN_BOOTLD_BTN     (1 << 3)
 #define BLE_NEXT_STEP       (1 << 4)
-#define CLOCK_TICK          (1 << 5)
+#define AUDIO_STEP      	(1 << 5)
+#define CLOCK_TICK          (1 << 6)
 
 static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
 volatile uint16_t fb[LED_COLS] = {0};
 volatile int mode, is_play_sequentially = 1;
+volatile int audio_mode = AMPLITUDE;
 static int clock_active = 0;
 
 __HIGH_CODE
@@ -63,6 +73,7 @@ static void change_brightness()
 
 static void mode_setup_download();
 static void mode_setup_normal();
+static void mode_setup_audio_visualize();
 static void disp_clock();
 
 __HIGH_CODE
@@ -72,8 +83,9 @@ static void change_mode()
 	const static void (*modes[])(void) = {
 		NULL,
 		mode_setup_normal,
+		mode_setup_audio_visualize,
 		mode_setup_download,
-		poweroff
+		poweroff		// TODO: When device gets powered off, it can not be woken up from sleep again using button
 	};
 
 	if (modes[mode])
@@ -95,6 +107,14 @@ static void bm_transition()
 		return;
 	}
 }
+
+static void audio_transition()
+{
+	NEXT_STATE(audio_mode, 0, AUDIO_MODES_COUNT);
+	memset(fb, 0, sizeof(fb));
+    audio_reset();
+}
+
 void play_splash(xbm_t *xbm, int col, int row, int spT)
 {
 	while (ani_xbm_scrollup_pad(xbm, 11, 11, 11, fb, 0, 0) != 0) {
@@ -120,6 +140,43 @@ void load_bmlist()
 	bmlist_gonext();
 
 	bmlist_drop(curr_bm);
+}
+
+static void audio_visualize_poll()
+{
+    static float max = 0.0f;
+
+    switch (audio_mode) {
+        default:
+        case AMPLITUDE:
+        {
+            int16_t mic = abs(mic_adc());
+            max = max * 0.85f;
+            if (mic > max) max = mic;
+            int8_t level = (max > 0) ? (int8_t)(mic * 7 / max) : 0;
+            if (level > 7) level = 7;
+            for (int i = 0; i < LED_COLS; i++)
+                fb[i] = amp_wav_lut[level];
+        }
+        break;
+
+        case WAVEFORM:
+        {
+            int16_t mic = abs(mic_adc());
+            max = max * 0.85f;
+            if (mic > max) max = mic;
+            int8_t level = (max > 0) ? (int8_t)(mic * 7 / max) : 0;
+            if (level > 7) level = 7;
+            for (int i = 0; i < LED_COLS - 1; i++)
+                fb[i] = fb[i + 1];
+            fb[LED_COLS - 1] = amp_wav_lut_w1[level];
+        }
+        break;
+
+        case BEAT:
+            beat_visualize_poll(fb);
+        break;
+    }
 }
 
 static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
@@ -217,6 +274,12 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		return events ^ CLOCK_TICK;
 	}
 
+	if (events & AUDIO_STEP) {
+		audio_visualize_poll();
+
+		return events ^ AUDIO_STEP;
+	}
+
 	return 0;
 }
 
@@ -253,6 +316,7 @@ static void start_ble_animation()
 	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
+	tmos_stop_task(common_taskid, AUDIO_STEP);
 	memset(fb, 0, sizeof(fb));
 
 	tmos_start_reload_task(common_taskid, BLE_NEXT_STEP, 500000 / 625);
@@ -264,6 +328,7 @@ static void start_normal_animation()
 	tmos_start_reload_task(common_taskid, ANI_FLASH, ANI_FLASH_SPEED_T / 625);
 	tmos_start_task(common_taskid, ANI_NEXT_STEP, 500000 / 625);
 	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	tmos_stop_task(common_taskid, AUDIO_STEP);
 }
 
 static void resume_from_streaming()
@@ -281,6 +346,7 @@ static void stop_all_animation()
 	tmos_stop_task(common_taskid, ANI_MARQUE);
 	tmos_stop_task(common_taskid, ANI_FLASH);
 	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	tmos_stop_task(common_taskid, AUDIO_STEP);
 	memset(fb, 0, sizeof(fb));
 }
 
@@ -425,6 +491,18 @@ static void mode_setup_normal()
 	start_normal_animation();
 }
 
+static void mode_setup_audio_visualize()
+{
+	btn_onOnePress(KEY2, audio_transition);
+
+	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
+	tmos_stop_task(common_taskid, ANI_MARQUE);
+	tmos_stop_task(common_taskid, ANI_FLASH);
+	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
+	memset(fb, 0, sizeof(fb));
+	tmos_start_reload_task(common_taskid, AUDIO_STEP, 500000 / (625*10));
+}
+
 static void toggle_clock()
 {
     if (!clock_active) {
@@ -479,7 +557,7 @@ int main()
 	auxbtn_onOnePress(KEY4, bm_transition);
 
 	power_init();
-	disp_charging();
+	// disp_charging();
 	cfg_init();
 	xbm_t spl = {
 		.bits = &(badge_cfg.splash_bm_bits),
@@ -495,6 +573,8 @@ int main()
 
 	spawn_tasks();
 	btn_init_task();
+	
+	mic_init();
 	auxbtn_init_task();
 
 	mode = NORMAL;
