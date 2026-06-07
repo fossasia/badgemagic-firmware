@@ -2,12 +2,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "CH58xBLE_LIB.h"  // for TMOS
-#include "font.h"           // for font5x7
+#include "font3x5.h"           // for font3x5
 #include <string.h>         // for memset
 #include "button.h"
 #include "auxbtn.h"
 #include "CH58x_common.h"
 #include "game.h"
+#include "data.h"
+
 
 #define SNAKE_MAX_LEN       100
 #define SPEED_INITIAL_MS    300
@@ -50,10 +52,10 @@ static void on_turn_right(void) { next_dir = (cur_dir + 1) % 4; }
 
 static void game_putchar(char c, int col, int row)
 {
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 4; i++) {
         if (col + i >= LED_COLS) break;
-        game_fb[col + i] = (game_fb[col + i] & ~(0x7f << row))
-                         | (font5x7[c - ' '][i] << row);
+        game_fb[col + i] = (game_fb[col + i] & ~(0x1f << row))
+                         | (font3x5[c - ' '][i] << row);
     }
 }
 
@@ -61,22 +63,36 @@ static void game_puts(const char *s, int col, int row)
 {
     while (*s) {
         game_putchar(*s++, col, row);
-        col += 6;
+        col += 4;
     }
 }
 
-static void show_score(void)
-{
+static void show_score(void){
+    uint16_t hs = data_read_highscore();
+    if (score > hs) {
+        hs = score;
+        data_write_highscore(hs);
+    }
+
     memset(game_fb, 0, LED_COLS * sizeof(uint16_t));
 
-    char buf[6];
-    buf[0] = 'S'; buf[1] = 'C'; buf[2] = ':';
-    buf[3] = '0' + (score / 10);
-    buf[4] = '0' + (score % 10);
-    buf[5] = '\0';
-    game_puts(buf, 2, 2);  // vertically centred on 11-row display
+    char buf[10];
 
-    DelayMs(2000);
+    // Top line: "SCORE:XX" at row 0, occupies rows 0-4
+    buf[0]='S'; buf[1]='C'; buf[2]='O'; buf[3]='R'; buf[4]='E'; buf[5]=':';
+    buf[6] = '0' + (score / 10);
+    buf[7] = '0' + (score % 10);
+    buf[8] = '\0';
+    game_puts(buf, 2, 0);
+
+    // Bottom line: "BEST:XX" at row 6, occupies rows 6-10
+    buf[0]='B'; buf[1]='E'; buf[2]='S'; buf[3]='T'; buf[4]=':';
+    buf[5] = '0' + (hs / 10);
+    buf[6] = '0' + (hs % 10);
+    buf[7] = '\0';
+    game_puts(buf, 2, 6);
+
+    DelayMs(3000);
 }
 
 static int check_collision(Position pos) {
