@@ -8,6 +8,7 @@
 #include "resource.h"
 #include "animation.h"
 #include "font.h"
+#include "font3x5.h"
 #include "auxbtn.h"
 
 #include "power.h"
@@ -27,11 +28,21 @@
 					(v) = (min)
 
 enum MODES {
-	BOOT = 0,
-	NORMAL,
-	DOWNLOAD,
+	MENU = 0,
+    NORMAL,
+    DOWNLOAD,
+    CLOCK,
 	POWER_OFF,
-	MODES_COUNT,
+    MODES_COUNT,
+};
+
+static int menu_cursor=0;
+#define MENU_ITEMS_COUNT 4
+static const char *menu_labels[] = {
+	"ANIMATION",
+	"BT-PAIRING",
+	"CLOCK MODE",
+	"OFF"
 };
 
 #define ANI_BASE_SPEED_T      (200000) // uS
@@ -48,6 +59,15 @@ enum MODES {
 #define SCAN_BOOTLD_BTN     (1 << 3)
 #define BLE_NEXT_STEP       (1 << 4)
 #define CLOCK_TICK          (1 << 5)
+#define STOPWATCH_TICK  (1 << 6)
+
+typedef enum {
+    SW_STOPPED,
+    SW_RUNNING,
+} sw_state_t;
+
+static sw_state_t sw_state = SW_STOPPED;
+static uint32_t sw_centiseconds = 0;
 
 static tmosTaskID common_taskid = INVALID_TASK_ID ;
 
@@ -64,9 +84,15 @@ static void change_brightness()
 static void mode_setup_download();
 static void mode_setup_normal();
 static void disp_clock();
+static void disp_menu();
+static void menu_up();
+static void menu_down();
+static void enter_clock_submenu();
+static void disp_stopwatch();
+static void return_to_menu();
 
 __HIGH_CODE
-static void change_mode()
+/*static void change_mode()
 {
 	NEXT_STATE(mode, 0, MODES_COUNT);
 	const static void (*modes[])(void) = {
@@ -78,7 +104,7 @@ static void change_mode()
 
 	if (modes[mode])
 		modes[mode]();
-}
+}*/
 
 __HIGH_CODE
 static void bm_transition()
@@ -217,6 +243,12 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		return events ^ CLOCK_TICK;
 	}
 
+	if (events & STOPWATCH_TICK) {
+		sw_centiseconds++;
+		disp_stopwatch();
+		return events ^ STOPWATCH_TICK;
+	}
+
 	return 0;
 }
 
@@ -349,6 +381,23 @@ static void fb_puts(char *s, int len, int col, int row)
 	}
 }
 
+static void fb_putchar_small(char c, int col, int row)
+{
+    for (int i = 0; i < 4; i++) {
+        if (col + i >= LED_COLS) break;
+        fb[col + i] = (fb[col + i] & ~(0x1f << row)) | (font3x5[c - ' '][i] << row);
+    }
+}
+
+static void fb_puts_small(char *s, int len, int col, int row)
+{
+    while (*s && len--) {
+        fb_putchar_small(*s, col, row);
+        col += 4;
+        s++;
+    }
+}
+
 static void disp_clock()
 {
     uint16_t year, month, day, hour, minute, second;
@@ -366,10 +415,188 @@ static void disp_clock()
     fb_puts(buf, 5, 2, 2);
 }
 
+static void disp_menu()
+{
+    memset(fb, 0, sizeof(fb));
+
+    int page = menu_cursor / 2;
+    int item0 = page * 2;
+    int item1 = page * 2 + 1;
+
+    // top item
+    if (menu_cursor == item0)
+        fb_putchar_small('>', 0, 0);
+    fb_puts_small((char *)menu_labels[item0],
+                  strlen(menu_labels[item0]), 4, 0);
+
+    // bottom item
+    if (item1 < MENU_ITEMS_COUNT) {
+        if (menu_cursor == item1)
+            fb_putchar_small('>', 0, 6);
+        fb_puts_small((char *)menu_labels[item1],
+                      strlen(menu_labels[item1]), 4, 6);
+    }
+}
+
+static void menu_up(){
+	menu_cursor--;
+    if (menu_cursor < 0) menu_cursor = MENU_ITEMS_COUNT - 1;
+    disp_menu();
+}
+
+static void menu_down(){
+	menu_cursor++;
+	if(menu_cursor > MENU_ITEMS_COUNT - 1) menu_cursor = 0;
+	disp_menu();
+}
+
+static void menu_select(){
+    switch (menu_cursor) {
+        case 0:
+            mode = NORMAL;
+            btn_onOnePress(KEY1, NULL);
+            btn_onOnePress(KEY2, bm_transition);
+            mode_setup_normal();
+            break;
+        case 1:
+            mode = DOWNLOAD;
+            btn_onOnePress(KEY1, NULL);
+            btn_onOnePress(KEY2, NULL);
+            ble_enable_advertise();
+            start_ble_animation();
+            break;
+        case 2:
+            enter_clock_submenu();
+            break;
+        case 3:
+            mode = POWER_OFF;
+            poweroff();
+            break;
+    }
+}
+
+static void disp_stopwatch()
+{
+    uint32_t cs = sw_centiseconds;
+    uint32_t minutes = cs / 6000;
+    uint32_t seconds = (cs % 6000) / 100;
+    uint32_t centis  = cs % 100;
+
+    char buf[8];
+    buf[0] = '0' + minutes % 10;  // M:SS:cs - to be able to fit it on the badge at the usual font size 5x7
+    buf[1] = ':';
+    buf[2] = '0' + seconds / 10;
+    buf[3] = '0' + seconds % 10;
+    buf[4] = ':';
+    buf[5] = '0' + centis / 10;
+    buf[6] = '0' + centis % 10;
+    buf[7] = '\0';
+
+    memset(fb, 0, sizeof(fb));
+    fb_puts(buf, 7, 2, 2);  
+}
+
+static void sw_startstop()
+{
+    if (sw_state == SW_STOPPED) {
+        sw_state = SW_RUNNING;
+        tmos_start_reload_task(common_taskid, STOPWATCH_TICK, 10000 / 625);
+    } else {
+        sw_state = SW_STOPPED;
+        tmos_stop_task(common_taskid, STOPWATCH_TICK);
+    }
+}
+
+static void sw_reset()
+{
+    sw_centiseconds = 0;
+    disp_stopwatch();
+}
+
+static void sw_back()
+{
+    sw_state = SW_STOPPED;
+    tmos_stop_task(common_taskid, STOPWATCH_TICK);
+    enter_clock_submenu();
+}
+
+// Clock submenu: 0 = Time, 1 = Stopwatch
+static int clock_submenu_sel = 0;
+
+static void disp_clock_submenu()
+{
+    memset(fb, 0, sizeof(fb));
+    if (clock_submenu_sel == 0)
+        fb_putchar_small('>', 0, 0);
+    else
+        fb_putchar_small('>', 0, 6);
+
+    fb_puts_small("TIME", 4, 4, 0);
+    fb_puts_small("STOPWATCH", 9, 4, 6);
+}
+
+static void clock_submenu_nav()
+{
+    clock_submenu_sel ^= 1;
+    disp_clock_submenu();
+}
+
+static void clock_submenu_select()
+{
+    if (clock_submenu_sel == 0) {
+        // Enter Time mode
+        clock_active = 1;
+        tmos_start_reload_task(common_taskid, CLOCK_TICK, 1000000 / 625);
+        btn_onOnePress(KEY1, NULL);
+        btn_onOnePress(KEY2, NULL);
+        auxbtn_onOnePress(KEY3, NULL);
+        auxbtn_onOnePress(KEY4, enter_clock_submenu);
+    } else {
+        // Enter Stopwatch mode
+        sw_state = SW_STOPPED;
+        sw_centiseconds = 0;
+        disp_stopwatch();
+        btn_onOnePress(KEY1, sw_startstop);
+        btn_onOnePress(KEY2, sw_reset);
+        auxbtn_onOnePress(KEY3, NULL);
+        auxbtn_onOnePress(KEY4, sw_back);
+    }
+}
+
+static void enter_clock_submenu()
+{
+    clock_active = 0;
+    tmos_stop_task(common_taskid, CLOCK_TICK);
+    stop_all_animation();
+    clock_submenu_sel = 0;
+
+    btn_onOnePress(KEY1, clock_submenu_nav);
+    btn_onOnePress(KEY2, clock_submenu_nav);
+    auxbtn_onOnePress(KEY3, clock_submenu_select);
+    auxbtn_onOnePress(KEY4, return_to_menu);
+
+    disp_clock_submenu();
+}
+
+static void return_to_menu()
+{
+    stop_all_animation();
+    tmos_stop_task(common_taskid, CLOCK_TICK);
+	tmos_stop_task(common_taskid, STOPWATCH_TICK);
+	sw_state=SW_STOPPED;
+    clock_active = 0;
+
+    mode = MENU;
+    btn_onOnePress(KEY1, menu_up);
+    btn_onOnePress(KEY2, menu_down);
+    auxbtn_onOnePress(KEY3, menu_select);
+    disp_menu();
+}
+
 static void disp_charging()
 {
 	int blink = 0;
-	while (mode == BOOT) {
+	while (1) {
 		btn_tick();
 		int percent = batt_raw2percent(batt_raw());
 
@@ -392,9 +619,9 @@ static void disp_charging()
 static void mode_setup_download()
 {
 	// If always-on BLE is enabled, then skip this mode, jump to next mode
-	if (badge_cfg.ble_always_on) {
+	/*if (badge_cfg.ble_always_on) {
 		change_mode();
-	}
+	}*/
 
 	// Disable bitmap transition while in download mode
 	btn_onOnePress(KEY2, NULL);
@@ -424,6 +651,20 @@ static void mode_setup_normal()
 	reload_bmlist();
 	start_normal_animation();
 }
+/*
+static void toggle_clock()
+{
+    if (!clock_active) {
+        clock_active = 1;
+        stop_all_animation();
+        tmos_start_reload_task(common_taskid, CLOCK_TICK, 1000000 / 625);
+    } else {
+        clock_active = 0;
+        tmos_stop_task(common_taskid, CLOCK_TICK);
+        mode_setup_normal();
+    }
+}
+*/
 
 static void toggle_clock()
 {
@@ -440,6 +681,15 @@ static void toggle_clock()
 
 void handle_after_rx()
 {
+    if (badge_cfg.reset_rx) {
+        SYS_ResetExecute();
+    } else {
+        tmos_stop_task(common_taskid, CLOCK_TICK);
+        tmos_stop_task(common_taskid, STOPWATCH_TICK);
+        sw_state = SW_STOPPED;
+        clock_active = 0;
+        mode_setup_normal();
+    }
 	if (badge_cfg.reset_rx) {
 		SYS_ResetExecute();
 	} else {
@@ -470,11 +720,17 @@ int main()
 	bmlist_init(LED_COLS * 4);
 
 	btn_init();
-	btn_onOnePress(KEY1, change_mode);
-	btn_onOnePress(KEY2, bm_transition);
+	//btn_onOnePress(KEY1, change_mode);
+	//btn_onOnePress(KEY2, bm_transition);
+	btn_onOnePress(KEY1, menu_up);
+	btn_onOnePress(KEY2, menu_down);
 	btn_onLongPress(KEY1, change_brightness);
 
 	auxbtn_init();
+	//auxbtn_onOnePress(KEY3, toggle_clock);
+	//auxbtn_onOnePress(KEY4, bm_transition);
+	auxbtn_onOnePress(KEY3, menu_select);
+	auxbtn_onOnePress(KEY4, return_to_menu);
 	auxbtn_onOnePress(KEY3, toggle_clock);
 	auxbtn_onOnePress(KEY4, bm_transition);
 
@@ -496,8 +752,10 @@ int main()
 	spawn_tasks();
 	btn_init_task();
 	auxbtn_init_task();
+	stop_all_animation();
 
-	mode = NORMAL;
+	mode = MENU;
+	disp_menu();
 	while (1) {
 		TMOS_SystemProcess();
 	}
