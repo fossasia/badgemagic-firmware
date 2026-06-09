@@ -54,7 +54,7 @@ static uint16_t product_info[] = {
 };
 
 static uint16_t serial_number[] = {
-#ifdef USBC_VERSION
+#ifndef HARDWARE_REV1
 	4 +
 #endif
 	(12 + sizeof(VERSION_ABBR) - 1) * 2 | /* bLength */
@@ -62,7 +62,7 @@ static uint16_t serial_number[] = {
 
 	/* bString */
 	'B', 'M', '1', '1', '4', '4', 
-#ifdef USBC_VERSION
+#ifndef HARDWARE_REV1
 	'-', 'C',
 #endif
 	' ',
