@@ -15,7 +15,7 @@
  */
 #include "CH58xBLE_LIB.h"
 #include "OTAprofile.h"
-#include "ota.h"
+#include "../ota.h"
 
 /*********************************************************************
  * MACROS
