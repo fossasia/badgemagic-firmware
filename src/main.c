@@ -19,9 +19,26 @@
 
 #include "ble/setup.h"
 #include "ble/profile.h"
+#include "ble/ota.h"
 
 #include "usb/usb.h"
 #include "legacyctrl.h"
+
+// Image validity marker — IAP checks this to confirm valid firmware 
+const uint32_t Address = 0xFFFFFFFF;
+__attribute__((aligned(4))) uint32_t Image_Flag __attribute__((section(".ImageFlag"))) = (uint32_t)&Address;
+
+// Current image slot tracker 
+unsigned char CurrImageFlag = 0xff;
+
+static void ReadImageFlag(void)
+{
+    OTADataFlashInfo_t p_image_flash;
+    EEPROM_READ(OTA_DATAFLASH_ADD, &p_image_flash, 4);
+    CurrImageFlag = p_image_flash.ImageFlag;
+    if((CurrImageFlag != IMAGE_A_FLAG) && (CurrImageFlag != IMAGE_B_FLAG))
+        CurrImageFlag = IMAGE_A_FLAG;
+}
 
 #define NEXT_STATE(v, min, max) \
 				(v)++; \
@@ -689,6 +706,7 @@ void handle_after_rx()
 
 int main()
 {
+	ReadImageFlag();
 	SetSysClock(CLK_SOURCE_PLL_60MHz);
 	
 	debug_init();
