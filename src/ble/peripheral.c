@@ -3,8 +3,14 @@
 #include "../config.h"
 #include "ota.h"
 #include "profile/OTAprofile.h"
+#include "profile.h"
 
 #define ADV_UUID    (0xFEE0)
+
+void OTA_IAPReadDataComplete(unsigned char index);
+void OTA_IAPWriteData(unsigned char index, unsigned char *p_data, unsigned char w_len);
+void OTA_IAP_SendCMDDealSta(uint8_t deal_status);
+void Rec_OTA_IAP_DataDeal(void);
 
 static uint8 taskid = INVALID_TASK_ID;
 
@@ -401,8 +407,8 @@ void Rec_OTA_IAP_DataDeal(void)
             send_buf[4] = (uint8_t)((IMAGE_SIZE >> 24) & 0xff);
             send_buf[5] = (uint8_t)(FLASH_BLOCK_SIZE & 0xff);
             send_buf[6] = (uint8_t)((FLASH_BLOCK_SIZE >> 8) & 0xff);
-            send_buf[7] = CHIP_ID & 0xFF;
-            send_buf[8] = (CHIP_ID >> 8) & 0xFF;
+            send_buf[7] = R8_CHIP_ID & 0xFF;
+			send_buf[8] = 0;
             OTA_IAP_SendData(send_buf, 20);
             break;
         }
