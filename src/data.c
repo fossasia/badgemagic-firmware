@@ -49,23 +49,26 @@ uint16_t data_flash2newmem(uint8_t **chunk, uint32_t n)
 	return size;
 }
 
-static void __chunk2buffer(uint16_t *bm, uint8_t *chunk, int col) 
+static void __chunk2buffer(uint16_t *bm, uint8_t *chunk, int col, int max_col) 
 {
-	uint16_t tmpbm[8] = {0};
-	for (int i=0; i<8; i++) {
-		for (int j=0; j<11; j++) {
-			tmpbm[i] |= ((chunk[j] >> (7-i)) & 0x01) << j;
-		}
-	}
-	for (int i=0; i<8; i++) {
-		bm[col+i] = tmpbm[i];
-	}
+    uint16_t tmpbm[8] = {0};
+    for (int i=0; i<8; i++) {
+        for (int j=0; j<11; j++) {
+            tmpbm[i] |= ((chunk[j] >> (7-i)) & 0x01) << j;
+        }
+    }
+    for (int i=0; i<8 && (col+i) < max_col; i++) {
+        bm[col+i] = tmpbm[i];
+    }
 }
 
 void chunk2buffer(uint8_t *chunk, uint16_t size, uint16_t *buf)
 {
-	for (int i=0; i<size/11; i++) {
-		__chunk2buffer(buf, &chunk[i*11], 8 * i);
+	int num_chunks = size / 11;
+	for (int i = 0; i < num_chunks; i++) {
+		int frame = i / 6;
+		int col_in_frame = (i % 6) * 8;
+		__chunk2buffer(buf, &chunk[i*11], frame * LED_COLS + col_in_frame, (frame+1) * LED_COLS);
 	}
 }
 
@@ -76,7 +79,10 @@ void chunk2bm(uint8_t *chunk, uint16_t size, bm_t *bm)
 
 bm_t *chunk2newbm(uint8_t *chunk, uint16_t size)
 {
-	bm_t *bm = bm_new((size*8)/11);
+	int num_chunks = size / 11;
+	int frames = (num_chunks + 5) / 6;
+
+	bm_t *bm = bm_new(frames * LED_COLS);
 	chunk2bm(chunk, size, bm);
 	return bm;
 }
