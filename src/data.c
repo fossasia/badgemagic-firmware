@@ -66,8 +66,8 @@ void chunk2buffer(uint8_t *chunk, uint16_t size, uint16_t *buf)
 {
 	int num_chunks = size / 11;
 	for (int i = 0; i < num_chunks; i++) {
-		int frame = i / CHUNKS_PER_ROW;
-		int col_in_frame = (i % CHUNKS_PER_ROW) * 8;
+		int frame = i / 6;
+		int col_in_frame = (i % 6) * 8;
 		__chunk2buffer(buf, &chunk[i*11], frame * LED_COLS + col_in_frame, (frame+1) * LED_COLS);
 	}
 }
