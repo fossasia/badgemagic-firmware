@@ -64,14 +64,12 @@ static void __chunk2buffer(uint16_t *bm, uint8_t *chunk, int col, int max_col)
 
 void chunk2buffer(uint8_t *chunk, uint16_t size, uint16_t *buf)
 {
-    int chunks_per_row = 6; 
-    for (int i = 0; i < size/11; i++) {
-        int frame = i / chunks_per_row;
-        int col_in_frame = (i % chunks_per_row) * 8;
-        __chunk2buffer(buf, &chunk[i*11],
-                       frame * LED_COLS + col_in_frame,
-                       (frame+1) * LED_COLS);
-    }
+	int num_chunks = size / 11;
+	for (int i = 0; i < num_chunks; i++) {
+		int frame = i / CHUNKS_PER_ROW;
+		int col_in_frame = (i % CHUNKS_PER_ROW) * 8;
+		__chunk2buffer(buf, &chunk[i*11], frame * LED_COLS + col_in_frame, (frame+1) * LED_COLS);
+	}
 }
 
 void chunk2bm(uint8_t *chunk, uint16_t size, bm_t *bm)
@@ -81,7 +79,10 @@ void chunk2bm(uint8_t *chunk, uint16_t size, bm_t *bm)
 
 bm_t *chunk2newbm(uint8_t *chunk, uint16_t size)
 {
-	bm_t *bm = bm_new((size*8)/11);
+	int num_chunks = size / 11;
+	int frames = (num_chunks + 5) / 6;
+
+	bm_t *bm = bm_new(frames * LED_COLS);
 	chunk2bm(chunk, size, bm);
 	return bm;
 }
