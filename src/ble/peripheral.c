@@ -1,8 +1,18 @@
 #include "CH58xBLE_LIB.h"
 #include "setup.h"
 #include "../config.h"
+#include "ota.h"
+#include "profile/OTAprofile.h"
+#include "profile.h"
+#include <stdio.h>
+#include "../usb/usb.h"
 
 #define ADV_UUID    (0xFEE0)
+
+void OTA_IAPReadDataComplete(unsigned char index);
+void OTA_IAPWriteData(unsigned char index, unsigned char *p_data, unsigned char w_len);
+void OTA_IAP_SendCMDDealSta(uint8_t deal_status);
+void Rec_OTA_IAP_DataDeal(void);
 
 static uint8 taskid = INVALID_TASK_ID;
 
@@ -41,6 +51,18 @@ static uint8 advertData[] = {
 
 // Connection item list
 static peripheralConnItem_t conn_list;
+
+// OTA IAP VARIABLES
+OTA_IAP_CMD_t iap_rec_data;
+uint32_t OpParaDataLen = 0;
+uint32_t OpAdd = 0;
+__attribute__((aligned(8))) uint8_t block_buf[16];
+typedef int (*pImageTaskFn)(void);
+pImageTaskFn user_image_tasks;
+uint32_t EraseAdd = 0;
+uint32_t EraseBlockNum = 0;
+uint32_t EraseBlockCnt = 0;
+uint8_t VerifyStatus = 0;
 
 static void initConn(peripheralConnItem_t *conn)
 {
@@ -158,6 +180,10 @@ static gapBondCBs_t bond_managers = {
 	NULL
 };
 
+static OTAProfileCBs_t Peripheral_OTA_IAPProfileCBs = {
+    OTA_IAPReadDataComplete,
+    OTA_IAPWriteData
+};
 
 static uint16 peripheral_task(uint8 task_id, uint16 events)
 {
@@ -169,6 +195,21 @@ static uint16 peripheral_task(uint8 task_id, uint16 events)
 		}
 		return (events ^ SYS_EVENT_MSG);
 	}
+
+	if(events & OTA_FLASH_ERASE_EVT) {
+    uint8_t status;
+    status = FLASH_ROM_ERASE(EraseAdd + EraseBlockCnt * FLASH_BLOCK_SIZE, FLASH_BLOCK_SIZE);
+    if(status != SUCCESS) {
+        OTA_IAP_SendCMDDealSta(status);
+        return (events ^ OTA_FLASH_ERASE_EVT);
+    }
+    EraseBlockCnt++;
+    if(EraseBlockCnt >= EraseBlockNum) {
+        OTA_IAP_SendCMDDealSta(status);
+        return (events ^ OTA_FLASH_ERASE_EVT);
+    }
+    return (events);
+}
 
 	return 0;
 }
@@ -241,7 +282,7 @@ static void gap_init()
 	GAP_SetParamValue(TGAP_DISC_ADV_INT_MAX, MAX_ADV_INTERVAL);
 
 	static uint32 passkey = 0; // passkey "000000"
-	static uint8  pairMode = GAPBOND_PAIRING_MODE_NO_PAIRING;
+	static uint8  pairMode = GAPBOND_PAIRING_MODE_WAIT_FOR_REQ;
 	static uint8  mitm = FALSE;
 	static uint8  bonding = FALSE;
 	static uint8  ioCap = GAPBOND_IO_CAP_DISPLAY_ONLY;
@@ -255,6 +296,8 @@ static void gap_init()
 
 	GGS_AddService(GATT_ALL_SERVICES);
 	GATTServApp_AddService(GATT_ALL_SERVICES);
+	OTAProfile_AddService(GATT_ALL_SERVICES);
+	OTAProfile_RegisterAppCBs(&Peripheral_OTA_IAPProfileCBs);
 }
 
 void peripheral_init()
@@ -265,4 +308,143 @@ void peripheral_init()
 	gap_init();
 
 	GAPRole_PeripheralStartDevice(taskid, &bond_managers, &gap_handlers);
+}
+
+void OTA_IAP_SendData(uint8_t *p_send_data, uint8_t send_len)
+{
+    OTAProfile_SendData(OTAPROFILE_CHAR, p_send_data, send_len);
+}
+
+void OTA_IAP_SendCMDDealSta(uint8_t deal_status)
+{
+    uint8_t send_buf[2];
+    send_buf[0] = deal_status;
+    send_buf[1] = 0;
+    OTA_IAP_SendData(send_buf, 2);
+}
+
+void OTA_IAP_CMDErrDeal(void)
+{
+    OTA_IAP_SendCMDDealSta(0xfe);
+}
+
+void SwitchImageFlag(uint8_t new_flag)
+{
+    EEPROM_READ(OTA_DATAFLASH_ADD, (uint32_t *)&block_buf[0], 4);
+    EEPROM_ERASE(OTA_DATAFLASH_ADD, EEPROM_PAGE_SIZE);
+    block_buf[0] = new_flag;
+    EEPROM_WRITE(OTA_DATAFLASH_ADD, (uint32_t *)&block_buf[0], 4);
+}
+
+void DisableAllIRQ(void)
+{
+    SYS_DisableAllIrq(NULL);
+}
+
+void Rec_OTA_IAP_DataDeal(void)
+{
+    switch(iap_rec_data.other.buf[0])
+    {
+        case CMD_IAP_PROM:
+        {
+            uint8_t status;
+            OpParaDataLen = iap_rec_data.program.len;
+            OpAdd = (uint32_t)(iap_rec_data.program.addr[0]);
+            OpAdd |= ((uint32_t)(iap_rec_data.program.addr[1]) << 8);
+            OpAdd = OpAdd * 16;
+            OpAdd += IMAGE_A_SIZE;
+            status = FLASH_ROM_WRITE(OpAdd, iap_rec_data.program.buf, (uint16_t)OpParaDataLen);
+            OTA_IAP_SendCMDDealSta(status);
+            break;
+        }
+        case CMD_IAP_ERASE:
+        {
+            OpAdd = (uint32_t)(iap_rec_data.erase.addr[0]);
+            OpAdd |= ((uint32_t)(iap_rec_data.erase.addr[1]) << 8);
+            OpAdd = OpAdd * 16;
+            OpAdd += IMAGE_A_SIZE;
+            EraseBlockNum = (uint32_t)(iap_rec_data.erase.block_num[0]);
+            EraseBlockNum |= ((uint32_t)(iap_rec_data.erase.block_num[1]) << 8);
+            EraseAdd = OpAdd;
+            EraseBlockCnt = 0;
+            VerifyStatus = 0;
+            if(EraseAdd < IMAGE_B_START_ADD || (EraseAdd + (EraseBlockNum - 1) * FLASH_BLOCK_SIZE) > IMAGE_IAP_START_ADD)
+            {
+                OTA_IAP_SendCMDDealSta(0xFF);
+            }
+            else
+            {
+                tmos_set_event(taskid, OTA_FLASH_ERASE_EVT);
+            }
+            break;
+        }
+        case CMD_IAP_VERIFY:
+        {
+            uint8_t status = 0;
+            OpParaDataLen = iap_rec_data.verify.len;
+            OpAdd = (uint32_t)(iap_rec_data.verify.addr[0]);
+            OpAdd |= ((uint32_t)(iap_rec_data.verify.addr[1]) << 8);
+            OpAdd = OpAdd * 16;
+            OpAdd += IMAGE_A_SIZE;
+            status = FLASH_ROM_VERIFY(OpAdd, iap_rec_data.verify.buf, OpParaDataLen);
+            VerifyStatus |= status;
+            OTA_IAP_SendCMDDealSta(VerifyStatus);
+            break;
+        }
+        case CMD_IAP_END:
+        {
+            DisableAllIRQ();
+            SwitchImageFlag(IMAGE_IAP_FLAG);
+            mDelaymS(10);
+            SYS_ResetExecute();
+            break;
+        }
+        case CMD_IAP_INFO:
+        {
+            uint8_t send_buf[20];
+            send_buf[0] = IMAGE_B_FLAG;
+            send_buf[1] = (uint8_t)(IMAGE_SIZE & 0xff);
+            send_buf[2] = (uint8_t)((IMAGE_SIZE >> 8) & 0xff);
+            send_buf[3] = (uint8_t)((IMAGE_SIZE >> 16) & 0xff);
+            send_buf[4] = (uint8_t)((IMAGE_SIZE >> 24) & 0xff);
+            send_buf[5] = (uint8_t)(FLASH_BLOCK_SIZE & 0xff);
+            send_buf[6] = (uint8_t)((FLASH_BLOCK_SIZE >> 8) & 0xff);
+            send_buf[7] = R8_CHIP_ID & 0xFF;
+			send_buf[8] = 0;
+
+			char buf[64];
+			int len = snprintf(buf, sizeof(buf),
+				"ota info flag=%02x size=%08lx blk=%04x chip=%02x\r\n",
+				send_buf[0], (unsigned long)((uint32_t)send_buf[1] | (uint32_t)send_buf[2]<<8 | (uint32_t)send_buf[3]<<16 | 
+				(uint32_t)send_buf[4]<<24), (unsigned)((uint16_t)send_buf[5] | (uint16_t)send_buf[6]<<8), send_buf[7]);
+			cdc_tx_poll((uint8_t *)buf, len, 100);
+
+            OTA_IAP_SendData(send_buf, 20);
+            break;
+        }
+        default:
+        {
+			char buf[48];
+			int len = snprintf(buf, sizeof(buf), "ota cmd err op=%02x\r\n", iap_rec_data.other.buf[0]);
+			cdc_tx_poll((uint8_t *)buf, len, 100);
+
+            OTA_IAP_CMDErrDeal();
+            break;
+        }
+    }
+}
+
+void OTA_IAPReadDataComplete(unsigned char index)
+{
+    // read complete, nothing to do
+}
+
+void OTA_IAPWriteData(unsigned char index, unsigned char *p_data, unsigned char w_len)
+{	
+	char buf[64];
+    int len = snprintf(buf, sizeof(buf), "ota write op=%02x len=%d\r\n", p_data[0], w_len);
+    cdc_tx_poll((uint8_t *)buf, len, 100);
+
+    tmos_memcpy((unsigned char *)&iap_rec_data, p_data, w_len);
+    Rec_OTA_IAP_DataDeal();
 }

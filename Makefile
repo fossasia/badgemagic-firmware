@@ -87,6 +87,7 @@ src/power.c \
 src/auxbtn.c \
 src/util.c\
 src/game.c \
+src/ble/profile/OTAprofile.c \
 
 
 # ASM sources
