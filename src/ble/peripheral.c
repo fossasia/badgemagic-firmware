@@ -282,7 +282,7 @@ static void gap_init()
 	GAP_SetParamValue(TGAP_DISC_ADV_INT_MAX, MAX_ADV_INTERVAL);
 
 	static uint32 passkey = 0; // passkey "000000"
-	static uint8  pairMode = GAPBOND_PAIRING_MODE_NO_PAIRING;
+	static uint8  pairMode = GAPBOND_PAIRING_MODE_WAIT_FOR_REQ;
 	static uint8  mitm = FALSE;
 	static uint8  bonding = FALSE;
 	static uint8  ioCap = GAPBOND_IO_CAP_DISPLAY_ONLY;
