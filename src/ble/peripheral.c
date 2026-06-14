@@ -4,6 +4,8 @@
 #include "ota.h"
 #include "profile/OTAprofile.h"
 #include "profile.h"
+#include <stdio.h>
+#include "../usb/usb.h"
 
 #define ADV_UUID    (0xFEE0)
 
@@ -415,7 +417,7 @@ void Rec_OTA_IAP_DataDeal(void)
 				"ota info flag=%02x size=%08lx blk=%04x chip=%02x\r\n",
 				send_buf[0], (unsigned long)((uint32_t)send_buf[1] | (uint32_t)send_buf[2]<<8 | (uint32_t)send_buf[3]<<16 | 
 				(uint32_t)send_buf[4]<<24), (unsigned)((uint16_t)send_buf[5] | (uint16_t)send_buf[6]<<8), send_buf[7]);
-			cdc_tx_poll(buf, len);
+			cdc_tx_poll((uint8_t *)buf, len, 100);
 
             OTA_IAP_SendData(send_buf, 20);
             break;
@@ -424,7 +426,7 @@ void Rec_OTA_IAP_DataDeal(void)
         {
 			char buf[48];
 			int len = snprintf(buf, sizeof(buf), "ota cmd err op=%02x\r\n", iap_rec_data.other.buf[0]);
-			cdc_tx_poll(buf, len);
+			cdc_tx_poll((uint8_t *)buf, len, 100);
 
             OTA_IAP_CMDErrDeal();
             break;
@@ -441,7 +443,7 @@ void OTA_IAPWriteData(unsigned char index, unsigned char *p_data, unsigned char 
 {	
 	char buf[64];
     int len = snprintf(buf, sizeof(buf), "ota write op=%02x len=%d\r\n", p_data[0], w_len);
-    cdc_tx_poll(buf, len);
+    cdc_tx_poll((uint8_t *)buf, len, 100);
 
     tmos_memcpy((unsigned char *)&iap_rec_data, p_data, w_len);
     Rec_OTA_IAP_DataDeal();
