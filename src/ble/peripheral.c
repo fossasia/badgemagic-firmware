@@ -352,7 +352,7 @@ void Rec_OTA_IAP_DataDeal(void)
             OpAdd = (uint32_t)(iap_rec_data.program.addr[0]);
             OpAdd |= ((uint32_t)(iap_rec_data.program.addr[1]) << 8);
             OpAdd = OpAdd * 16;
-            OpAdd += IMAGE_A_SIZE;
+            OpAdd += IMAGE_B_START_ADD;
             status = FLASH_ROM_WRITE(OpAdd, iap_rec_data.program.buf, (uint16_t)OpParaDataLen);
             OTA_IAP_SendCMDDealSta(status);
             break;
@@ -362,7 +362,7 @@ void Rec_OTA_IAP_DataDeal(void)
             OpAdd = (uint32_t)(iap_rec_data.erase.addr[0]);
             OpAdd |= ((uint32_t)(iap_rec_data.erase.addr[1]) << 8);
             OpAdd = OpAdd * 16;
-            OpAdd += IMAGE_A_SIZE;
+            OpAdd += IMAGE_B_START_ADD;
             EraseBlockNum = (uint32_t)(iap_rec_data.erase.block_num[0]);
             EraseBlockNum |= ((uint32_t)(iap_rec_data.erase.block_num[1]) << 8);
             EraseAdd = OpAdd;
@@ -385,7 +385,7 @@ void Rec_OTA_IAP_DataDeal(void)
             OpAdd = (uint32_t)(iap_rec_data.verify.addr[0]);
             OpAdd |= ((uint32_t)(iap_rec_data.verify.addr[1]) << 8);
             OpAdd = OpAdd * 16;
-            OpAdd += IMAGE_A_SIZE;
+            OpAdd += IMAGE_B_START_ADD;
             status = FLASH_ROM_VERIFY(OpAdd, iap_rec_data.verify.buf, OpParaDataLen);
             VerifyStatus |= status;
             OTA_IAP_SendCMDDealSta(VerifyStatus);
