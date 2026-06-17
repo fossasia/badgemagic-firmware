@@ -41,10 +41,6 @@ static int aux_adc_read()
     ADC_ChannelCfg(BATT_ADC_CHANNEL);
     ret = ret / ADC_SAMPLE_COUNT;
 
-    char buf[32];
-    int len = snprintf(buf, sizeof(buf), "ADC: %d\n", ret);
-    cdc_tx_poll((uint8_t *)buf, len, 10);
-
     return ret;
 }
 /*

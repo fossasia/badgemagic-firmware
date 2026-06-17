@@ -330,10 +330,19 @@ void OTA_IAP_CMDErrDeal(void)
 
 void SwitchImageFlag(uint8_t new_flag)
 {
-    EEPROM_READ(OTA_DATAFLASH_ADD, (uint32_t *)&block_buf[0], 4);
-    EEPROM_ERASE(OTA_DATAFLASH_ADD, EEPROM_PAGE_SIZE);
+    uint8_t r_st, e_st, w_st;
+    r_st = EEPROM_READ(OTA_DATAFLASH_ADD, (uint32_t *)&block_buf[0], 4);
+    e_st = EEPROM_ERASE(OTA_DATAFLASH_ADD, EEPROM_PAGE_SIZE);
     block_buf[0] = new_flag;
-    EEPROM_WRITE(OTA_DATAFLASH_ADD, (uint32_t *)&block_buf[0], 4);
+    w_st = EEPROM_WRITE(OTA_DATAFLASH_ADD, (uint32_t *)&block_buf[0], 4);
+
+    {
+        char buf[80];
+        int len = snprintf(buf, sizeof(buf),
+            "switchflag: addr=%08lx new=%02x r=%02x e=%02x w=%02x\r\n",
+            (unsigned long)OTA_DATAFLASH_ADD, new_flag, r_st, e_st, w_st);
+        cdc_tx_poll((uint8_t *)buf, len, 100);
+    }
 }
 
 void DisableAllIRQ(void)
@@ -354,6 +363,15 @@ void Rec_OTA_IAP_DataDeal(void)
             OpAdd = OpAdd * 16;
             OpAdd += IMAGE_B_START_ADD;
             status = FLASH_ROM_WRITE(OpAdd, iap_rec_data.program.buf, (uint16_t)OpParaDataLen);
+
+            {
+                char buf[64];
+                int len = snprintf(buf, sizeof(buf),
+                    "prom add=%08lx len=%u st=%02x\r\n",
+                    (unsigned long)OpAdd, (unsigned)OpParaDataLen, status);
+                cdc_tx_poll((uint8_t *)buf, len, 100);
+            }
+
             OTA_IAP_SendCMDDealSta(status);
             break;
         }
@@ -368,6 +386,17 @@ void Rec_OTA_IAP_DataDeal(void)
             EraseAdd = OpAdd;
             EraseBlockCnt = 0;
             VerifyStatus = 0;
+
+            {
+                char buf[96];
+                int len = snprintf(buf, sizeof(buf),
+                    "erase add=%08lx num=%lu end=%08lx Bstart=%08lx IAPstart=%08lx\r\n",
+                    (unsigned long)EraseAdd, (unsigned long)EraseBlockNum,
+                    (unsigned long)(EraseAdd + (EraseBlockNum - 1) * FLASH_BLOCK_SIZE),
+                    (unsigned long)IMAGE_B_START_ADD, (unsigned long)IMAGE_IAP_START_ADD);
+                cdc_tx_poll((uint8_t *)buf, len, 100);
+            }
+
             if(EraseAdd < IMAGE_B_START_ADD || (EraseAdd + (EraseBlockNum - 1) * FLASH_BLOCK_SIZE) > IMAGE_IAP_START_ADD)
             {
                 OTA_IAP_SendCMDDealSta(0xFF);
@@ -393,9 +422,28 @@ void Rec_OTA_IAP_DataDeal(void)
         }
         case CMD_IAP_END:
         {
-            DisableAllIRQ();
+            {
+                char buf[48];
+                int len = snprintf(buf, sizeof(buf), "iap_end: switching flag\r\n");
+                cdc_tx_poll((uint8_t *)buf, len, 100);
+            }
+
             SwitchImageFlag(IMAGE_IAP_FLAG);
-            mDelaymS(10);
+
+            {
+                /* read back what we just wrote, BEFORE disabling IRQs/reset,
+                   to confirm the EEPROM write actually took */
+                uint8_t verify_buf[4];
+                EEPROM_READ(OTA_DATAFLASH_ADD, (uint32_t *)&verify_buf[0], 4);
+                char buf[64];
+                int len = snprintf(buf, sizeof(buf),
+                    "iap_end: flag readback=%02x (expect %02x)\r\n",
+                    verify_buf[0], IMAGE_IAP_FLAG);
+                cdc_tx_poll((uint8_t *)buf, len, 100);
+            }
+
+            mDelaymS(50); /* give CDC time to actually flush before we kill IRQs */
+            DisableAllIRQ();
             SYS_ResetExecute();
             break;
         }
