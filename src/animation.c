@@ -275,6 +275,26 @@ static void still(bm_t *bm, uint16_t *fb, int frame)
 	}
 }
 
+static void still_centered(bm_t *bm, uint16_t *fb, int frame)
+{
+	// How many columns does this frame actually occupy?
+	int frame_start = frame * LED_COLS;
+	int frame_width = bm->width - frame_start;
+	if (frame_width > LED_COLS)
+		frame_width = LED_COLS;
+
+	// Center that content within the LED_COLS-wide framebuffer
+	int offset = (LED_COLS - frame_width) / 2;
+
+	// Clear the whole framebuffer first
+	for (int j = 0; j < LED_COLS; j++)
+		fb[j] = 0;
+
+	// Copy content starting at the centered offset 
+	for (int j = 0; j < frame_width; j++)
+		fb[offset + j] = bm->buf[frame_start + j];
+}
+
 int ani_laser(bm_t *bm, uint16_t *fb)
 {
 	int frame_steps = LED_COLS * 3; // in-still-out
@@ -395,7 +415,7 @@ int ani_fixed(bm_t *bm, uint16_t *fb)
 	int frame = mod(bm->anim_step, total_steps)/frame_steps;
 
 	bm->anim_step++;
-	still(bm, fb, frame);
+	still_centered(bm, fb, frame);
 
 	return mod(bm->anim_step, total_steps);
 }
