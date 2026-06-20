@@ -1,5 +1,5 @@
 #include <stdlib.h>
-
+#include "../debug.h"
 #include "CH58x_common.h"
 
 #include "utils.h"
@@ -30,7 +30,12 @@ void cfg_desc_append(void *desc)
 		cfg_len = ((USB_CFG_DESCR *)cfg_desc)->wTotalLength;
 	uint8_t newlen = cfg_len + len;
 
-	cfg_desc = realloc(cfg_desc, newlen); // TODO: add a safe check here
+	uint8_t *tmp = realloc(cfg_desc, newlen);
+	if (!tmp) {
+		printf("cfg_desc_append: out of memory\n");
+		return;
+	}
+	cfg_desc = tmp;
 
 	memcpy(cfg_desc + cfg_len, desc, len);
 

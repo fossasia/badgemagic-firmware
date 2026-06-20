@@ -6,6 +6,8 @@
 enum keys {
 	KEY1 = 0,
 	KEY2,
+	KEY3,
+	KEY4,
 	KEY_INDEX,
 };
 
