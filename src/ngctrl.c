@@ -136,7 +136,7 @@ static uint8_t cfg_splash_speed(uint8_t *val, uint16_t len)
 
 	if (len < 2) return -1; // ADDED: Ensure enough bytes for uint16_t
 
-	uint16_t ms = *((uint16_t *)val);
+	uint16_t ms = ((uint16_t)val[0]) | ((uint16_t)val[1] << 8);
 	if (ms < SPLASH_MIN_SPEED_T)
 		return -2;
 
