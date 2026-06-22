@@ -401,6 +401,18 @@ static void fb_puts_small(char *s, int len, int col, int row)
     }
 }
 
+static void disp_auth_code(uint16_t code)
+{
+	memset(fb, 0, sizeof(fb));
+	char buf[5];
+	buf[0] = '0' + (code / 1000) % 10;
+	buf[1] = '0' + (code / 100)  % 10;
+	buf[2] = '0' + (code / 10)   % 10;
+	buf[3] = '0' + (code)        % 10;
+	buf[4] = '\0';
+	fb_puts(buf, 4, 8, 2);   // centered on 44-col display, row 2
+}
+
 static void disp_clock()
 {
     uint16_t year, month, day, hour, minute, second;
@@ -462,12 +474,14 @@ static void menu_select(){
             mode_setup_normal();
             break;
         case 1:
-            mode = DOWNLOAD;
-            btn_onOnePress(KEY1, NULL);
-            btn_onOnePress(KEY2, NULL);
-            ble_enable_advertise();
-            start_ble_animation();
-            break;
+			mode = DOWNLOAD;
+			btn_onOnePress(KEY1, NULL);
+			btn_onOnePress(KEY2, NULL);
+			uint16_t auth_code = tmos_rand() % 10000;  // 0000–9999
+			legacy_set_auth_code(auth_code);
+			ble_enable_advertise();
+			disp_auth_code(auth_code);                 // show code instead of BLE animation
+			break;
         case 2:
             enter_clock_submenu();
             break;
