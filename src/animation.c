@@ -275,6 +275,32 @@ static void still(bm_t *bm, uint16_t *fb, int frame)
 	}
 }
 
+static void still_centered(bm_t *bm, uint16_t *fb, int frame)
+{
+	int frame_start = frame * LED_COLS;
+
+	int content_width = 0;
+	for (int k = 0; k < LED_COLS; k++) {
+		if (frame_start + k >= bm->width) break;
+		if (bm->buf[frame_start + k] != 0)
+			content_width = k + 1;
+	}
+
+	int x_offset = (LED_COLS - content_width) / 2;
+
+	int j = 0;
+	for (; j < x_offset; j++)
+		fb[j] = 0;
+
+	int i = frame_start;
+	for (; j < LED_COLS; j++, i++) {
+		if (i >= bm->width) break;
+		fb[j] = bm->buf[i];
+	}
+	for (; j < LED_COLS; j++)
+		fb[j] = 0;
+}
+
 int ani_laser(bm_t *bm, uint16_t *fb)
 {
 	int frame_steps = LED_COLS * 3; // in-still-out
@@ -395,7 +421,7 @@ int ani_fixed(bm_t *bm, uint16_t *fb)
 	int frame = mod(bm->anim_step, total_steps)/frame_steps;
 
 	bm->anim_step++;
-	still(bm, fb, frame);
+	still_centered(bm, fb, frame);
 
 	return mod(bm->anim_step, total_steps);
 }

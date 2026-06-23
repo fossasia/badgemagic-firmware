@@ -118,6 +118,7 @@ static void bm_transition()
 		return;
 	}
 
+	bmlist_current()->anim_step = 0;
 	bmlist_gonext();
 	if (bmlist_current() == bmlist_head()) {
 		is_play_sequentially = 1;
@@ -182,9 +183,9 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		if (animations[LEGACY_GET_ANIMATION(bm->modes)])
 			if (animations[LEGACY_GET_ANIMATION(bm->modes)](bm, fb) == 0
 				&& is_play_sequentially) {
+				bm->anim_step = 0;
 				bmlist_gonext();
 			}
-
 		if (bm->is_flash) {
 			ani_flash(bm, fb, flash_step);
 		}
