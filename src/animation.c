@@ -262,21 +262,6 @@ static void laser_out(bm_t *bm, uint16_t *fb, int step, int frame)
 
 static void still(bm_t *bm, uint16_t *fb, int frame)
 {
-	int i = frame * LED_COLS;
-	int j = 0;
-	for (; j < LED_COLS; j++) {
-		if (i >= bm->width)
-			break;
-		fb[j] = bm->buf[i];
-		i++;
-	}
-	for (; j< LED_COLS; j++) {
-		fb[j] = 0;
-	}
-}
-
-static void still_centered(bm_t *bm, uint16_t *fb, int frame)
-{
 	int frame_start = frame * LED_COLS;
 
 	int content_width = 0;
@@ -421,7 +406,7 @@ int ani_fixed(bm_t *bm, uint16_t *fb)
 	int frame = mod(bm->anim_step, total_steps)/frame_steps;
 
 	bm->anim_step++;
-	still_centered(bm, fb, frame);
+	still(bm, fb, frame);
 
 	return mod(bm->anim_step, total_steps);
 }
