@@ -39,12 +39,13 @@ enum MODES {
 };
 
 static int menu_cursor=0;
-#define MENU_ITEMS_COUNT 5
+#define MENU_ITEMS_COUNT 6
 static const char *menu_labels[] = {
 	"ANIMATION",
 	"BT-PAIRING",
 	"CLOCK MODE",
 	"SNAKE",
+	"SECURITY",
 	"OFF"
 };
 
@@ -93,6 +94,7 @@ static void menu_down();
 static void enter_clock_submenu();
 static void disp_stopwatch();
 void return_to_menu();
+static void enter_security_submenu();
 
 __HIGH_CODE
 /*static void change_mode()
@@ -475,12 +477,15 @@ static void menu_select(){
             break;
         case 1:
 			mode = DOWNLOAD;
-			btn_onOnePress(KEY1, NULL);
-			btn_onOnePress(KEY2, NULL);
-			uint16_t auth_code = tmos_rand() % 10000;  // 0000–9999
-			legacy_set_auth_code(auth_code);
-			ble_enable_advertise();
-			disp_auth_code(auth_code);                 // show code instead of BLE animation
+			if (badge_cfg.ble_security) {
+				uint16_t auth_code = tmos_rand() % 10000;
+				legacy_set_auth_code(auth_code);
+				ble_enable_advertise();
+				disp_auth_code(auth_code);
+			} else {
+				ble_enable_advertise();
+				start_ble_animation();
+			}
 			break;
         case 2:
             enter_clock_submenu();
@@ -491,6 +496,9 @@ static void menu_select(){
 			game_start((uint16_t *)fb);
             break;
 		case 4:
+			enter_security_submenu();
+			break;
+		case 5:
 			mode = POWER_OFF;
 			poweroff();
 			break;
@@ -583,6 +591,35 @@ static void clock_submenu_select()
         auxbtn_onOnePress(KEY3, NULL);
         auxbtn_onOnePress(KEY4, sw_back);
     }
+}
+
+static void disp_security_submenu()
+{
+    memset(fb, 0, sizeof(fb));
+    if (badge_cfg.ble_security)
+        fb_putchar_small('>', 0, 0);
+    else
+        fb_putchar_small('>', 0, 6);
+
+    fb_puts_small("ENABLE", 6, 4, 0);
+    fb_puts_small("DISABLE", 7, 4, 6);
+}
+
+static void security_submenu_nav()
+{
+    badge_cfg.ble_security ^= 1;
+    cfg_writeflash_def(&badge_cfg);
+	return_to_menu();
+}
+
+static void enter_security_submenu()
+{
+    stop_all_animation();
+    btn_onOnePress(KEY1, security_submenu_nav);
+    btn_onOnePress(KEY2, security_submenu_nav);
+    auxbtn_onOnePress(KEY3, NULL);
+    auxbtn_onOnePress(KEY4, return_to_menu);
+    disp_security_submenu();
 }
 
 static void enter_clock_submenu()
