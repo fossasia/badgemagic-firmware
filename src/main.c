@@ -593,10 +593,12 @@ static void clock_submenu_select()
     }
 }
 
+static int security_submenu_sel = 0;  // 0 = ENABLE, 1 = DISABLE 
+
 static void disp_security_submenu()
 {
     memset(fb, 0, sizeof(fb));
-    if (badge_cfg.ble_security)
+    if (security_submenu_sel == 0)
         fb_putchar_small('>', 0, 0);
     else
         fb_putchar_small('>', 0, 6);
@@ -607,18 +609,26 @@ static void disp_security_submenu()
 
 static void security_submenu_nav()
 {
-    badge_cfg.ble_security ^= 1;
+    security_submenu_sel ^= 1;
+    disp_security_submenu();
+}
+
+static void security_submenu_select()
+{
+    badge_cfg.ble_security = (security_submenu_sel == 0) ? 1 : 0;
     cfg_writeflash_def(&badge_cfg);
-	return_to_menu();
+    return_to_menu();
 }
 
 static void enter_security_submenu()
 {
     stop_all_animation();
-    btn_onOnePress(KEY1, security_submenu_nav);
-    btn_onOnePress(KEY2, security_submenu_nav);
-    auxbtn_onOnePress(KEY3, NULL);
-    auxbtn_onOnePress(KEY4, return_to_menu);
+    // cursor starts on current state
+    security_submenu_sel = badge_cfg.ble_security ? 0 : 1;
+    btn_onOnePress(KEY1, security_submenu_nav);   // navigate up/down
+    btn_onOnePress(KEY2, security_submenu_nav);   // navigate up/down
+    auxbtn_onOnePress(KEY3, security_submenu_select);  // confirm
+    auxbtn_onOnePress(KEY4, return_to_menu);           // cancel
     disp_security_submenu();
 }
 
