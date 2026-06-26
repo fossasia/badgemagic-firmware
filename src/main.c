@@ -641,7 +641,7 @@ void return_to_menu()
     mode = MENU;
     btn_onOnePress(KEY1, menu_up);
     btn_onOnePress(KEY2, menu_down);
-	btn_onLongPress(KEY1, change_brightness);  
+	  btn_onLongPress(KEY1, change_brightness);  
     btn_onLongPress(KEY2, NULL);               
     auxbtn_onOnePress(KEY3, menu_select);
     disp_menu();
