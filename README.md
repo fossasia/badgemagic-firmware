@@ -153,13 +153,13 @@ Set the toolchain location, e.g.:
 export PREFIX=../MRS_Toolchain_Linux_x64_V1.92/RISC-V_Embedded_GCC/bin/riscv-none-embed-
 ```
 
-Simply run `make` to build the firmware for the second generation version (previously known as UBS-C version), with the output directed to the `build/` directory. To build for the Micro USB version of the badge and specify a custom output directory:
+Simply run `make` to build the firmware for the second generation version (previously known as the USB-C version), with the output directed to the `build/` directory. To build for the Micro USB version of the badge and specify a custom output directory:
 
 ```sh
 BUILD_DIR=custom-dir HARDWARE_REV1=1 make
 ```
 
-To boild for the third generation hardware, simply replace `HARDWARE_REV1=1` with `HARDWARE_REV3=1`.
+To build for the third generation hardware, simply replace `HARDWARE_REV1=1` with `HARDWARE_REV3=1`.
 
 > [!NOTE]
 >

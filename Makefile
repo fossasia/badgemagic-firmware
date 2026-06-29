@@ -9,7 +9,7 @@ TARGET = badgemagic-ch582
 ######################################
 # Uncomment below line to enable debugging
 # DEBUG = 1
-# There are 3 differnt hardware varianets supported at the moment.
+# There are 3 different hardware variants supported at the moment.
 # HARDWARE_REV1 = 1
 # HARDWARE_REV2 = 1 # (default)
 # HARDWARE_REV3 = 1
