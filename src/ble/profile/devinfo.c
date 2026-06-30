@@ -23,7 +23,7 @@ const uint16_t          firmwareRev_UUID = FIRMWARE_REV_UUID;
 static const uint8_t    firmwareRev_val[] = USBC_VER_PREFIX VERSION;
 
 const uint16_t          hardwareRev_UUID = HARDWARE_REV_UUID;
-static const uint8_t    hardwareRev_val[] = "20240908";
+static const uint8_t    hardwareRev_val[] = "REV3";
 
 const uint16_t          softwareRev_UUID = SOFTWARE_REV_UUID;
 static const uint8_t    softwareRev_val[] = "N/A";
