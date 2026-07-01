@@ -10,15 +10,15 @@
 
 #define BIRD_COL        5
 #define PIPE_WIDTH      2
-#define GAP_SIZE        3
+#define GAP_SIZE        5
 #define GAP_MIN         2
 #define GAP_MAX         (LED_ROWS - GAP_SIZE - GAP_MIN)   //6
 #define PIPE_SPACING    15
-#define GRAVITY         2      
-#define FLAP_STRENGTH   10    
-#define TICK_INIT_MS    120
-#define TICK_MIN_MS     50
-#define TICK_ACCEL_MS   5      
+#define GRAVITY         1      
+#define FLAP_STRENGTH   6    
+#define TICK_INIT_MS    200
+#define TICK_MIN_MS     80
+#define TICK_ACCEL_MS   3      
 
 #define MS_TO_TMOS(ms)  ((uint32_t)(ms) * 1000 / 625)
 #define EVT_GAME_TICK   (1 << 0)
