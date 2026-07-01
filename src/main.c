@@ -587,6 +587,7 @@ static void enter_clock_submenu()
 }
 
 // Games submenu: 0 = Snake, 1 = Flappy
+#define GAMES_COUNT 2
 static int games_submenu_sel = 0;
 
 static void disp_games_submenu(void)
