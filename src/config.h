@@ -6,6 +6,9 @@
 #include "xbm.h"
 #include "leddrv.h"
 
+//Build variant: permanent-display kiosk mode
+#define KIOSK_MODE
+
 #define SPLASH_MIN_SPEED_T (0) // ms
 
 #define SPLASH_MAX_WIDTH (48) // pixels

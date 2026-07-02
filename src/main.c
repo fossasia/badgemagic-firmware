@@ -263,9 +263,13 @@ void ble_setup()
 
 	peripheral_init();
 
-	if (! badge_cfg.ble_always_on) {
-		ble_disable_advertise();
-	}
+	#ifdef KIOSK_MODE
+		ble_enable_advertise(); // Always advertise/pair, regardless of badge_cfg 
+	#else
+		if (! badge_cfg.ble_always_on) {
+			ble_disable_advertise();
+		}
+	#endif
 
 	devInfo_registerService();
 	legacy_registerService();
@@ -707,28 +711,20 @@ int main()
 	bmlist_init(LED_COLS * 4);
 
 	btn_init();
-	//btn_onOnePress(KEY1, change_mode);
-	//btn_onOnePress(KEY2, bm_transition);
-	btn_onOnePress(KEY1, menu_up);
-	btn_onOnePress(KEY2, menu_down);
-	btn_onLongPress(KEY1, change_brightness);
-
-	auxbtn_init();
-	//auxbtn_onOnePress(KEY3, toggle_clock);
-	//auxbtn_onOnePress(KEY4, bm_transition);
-	auxbtn_onOnePress(KEY3, menu_select);
-	auxbtn_onOnePress(KEY4, return_to_menu);
+	#ifndef KIOSK_MODE
+		btn_onOnePress(KEY1, menu_up);
+		btn_onOnePress(KEY2, menu_down);
+	#endif
+		btn_onLongPress(KEY1, change_brightness);
+		auxbtn_init();
+	#ifndef KIOSK_MODE
+		auxbtn_onOnePress(KEY3, menu_select);
+		auxbtn_onOnePress(KEY4, return_to_menu);
+	#endif
 
 	power_init();
 	disp_charging();
 	cfg_init();
-	xbm_t spl = {
-		.bits = &(badge_cfg.splash_bm_bits),
-		.w = badge_cfg.splash_bm_w,
-		.h = badge_cfg.splash_bm_h,
-		.fh = badge_cfg.splash_bm_fh,
-	};
-	play_splash(&spl, 0, 0, badge_cfg.splash_speedT);
 
 	load_bmlist();
 
@@ -740,11 +736,16 @@ int main()
 	game_init();
 	stop_all_animation();
 
-	mode = MENU;
-	disp_menu();
-	while (1) {
-		TMOS_SystemProcess();
-	}
+	#ifdef KIOSK_MODE
+		mode = NORMAL;
+		mode_setup_normal();
+	#else
+		mode = MENU;
+		disp_menu();
+	#endif
+		while (1) {
+			TMOS_SystemProcess();
+		}
 }
 
 __INTERRUPT
