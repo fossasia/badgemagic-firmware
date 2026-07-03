@@ -47,6 +47,17 @@ static int aux_adc_read()
 
     return ret;
 }
+/*
+KEY3 and KEY4 share a single ADC pin (PA13) via a resistor divider (Check schematics)
+Each button pulls the pin to a different voltage level, producing distinct ADC ranges: 
+raw > NO_PRESS_LOW (3601) → no button pressed (pin floating high, ~VCC)
+raw < KEY3_HIGH (500) → KEY3 pressed (pulls pin to near GND)
+KEY4_LOW (3300) < raw < KEY4_HIGH (3600) → KEY4 pressed (mid-range pull-down)
+anything else → undefined 
+Readings are averaged over ADC_SAMPLE_COUNT (20) samples before classification to reduce noise.
+Decided these thresholds after testing it on the prototype and using USB CDC to get the adc readings 
+as KEYS 3,4 were pressed
+ */
 
 static enum aux_state classify(int raw)
 {
