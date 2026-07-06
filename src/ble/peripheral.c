@@ -421,32 +421,46 @@ void Rec_OTA_IAP_DataDeal(void)
             break;
         }
         case CMD_IAP_END:
-        {
-            {
-                char buf[48];
-                int len = snprintf(buf, sizeof(buf), "iap_end: switching flag\r\n");
-                cdc_tx_poll((uint8_t *)buf, len, 100);
-            }
+		{
+			/* Check IAP region is present before triggering copy */
+			uint32_t iap_check = 0;
+			FLASH_ROM_READ(IMAGE_IAP_START_ADD, &iap_check, 4);
 
-            SwitchImageFlag(IMAGE_IAP_FLAG);
+			char buf[80];
+			int len = snprintf(buf, sizeof(buf),
+				"iap_end: IAP first4=%08lx\r\n",
+				(unsigned long)iap_check);
+			cdc_tx_poll((uint8_t *)buf, len, 100);
 
-            {
-                /* read back what we just wrote, BEFORE disabling IRQs/reset,
-                   to confirm the EEPROM write actually took */
-                uint8_t verify_buf[4];
-                EEPROM_READ(OTA_DATAFLASH_ADD, (uint32_t *)&verify_buf[0], 4);
-                char buf[64];
-                int len = snprintf(buf, sizeof(buf),
-                    "iap_end: flag readback=%02x (expect %02x)\r\n",
-                    verify_buf[0], IMAGE_IAP_FLAG);
-                cdc_tx_poll((uint8_t *)buf, len, 100);
-            }
+			if(iap_check == 0xFFFFFFFF || iap_check == 0x00000000)
+			{
+				len = snprintf(buf, sizeof(buf), "iap_end: IAP blank! aborting\r\n");
+				cdc_tx_poll((uint8_t *)buf, len, 100);
+				OTA_IAP_SendCMDDealSta(0xFE);
+				break;
+			}
 
-            mDelaymS(50); /* give CDC time to actually flush before we kill IRQs */
-            DisableAllIRQ();
-            SYS_ResetExecute();
-            break;
-        }
+			len = snprintf(buf, sizeof(buf), "iap_end: switching flag\r\n");
+			cdc_tx_poll((uint8_t *)buf, len, 100);
+
+			//SwitchImageFlag(IMAGE_IAP_FLAG);
+
+			{
+				uint8_t verify_buf[4];
+				EEPROM_READ(OTA_DATAFLASH_ADD, (uint32_t *)&verify_buf[0], 4);
+				char buf2[64];
+				int len2 = snprintf(buf2, sizeof(buf2),
+					"iap_end: flag readback=%02x (expect %02x)\r\n",
+					verify_buf[0], IMAGE_IAP_FLAG);
+				cdc_tx_poll((uint8_t *)buf2, len2, 100);
+			}
+
+			mDelaymS(50);
+			DisableAllIRQ();
+			SYS_ResetExecute();
+			break;
+		}
+
         case CMD_IAP_INFO:
         {	
 			/* read first 4 bytes of IAP region */
@@ -481,6 +495,7 @@ void Rec_OTA_IAP_DataDeal(void)
             OTA_IAP_SendData(send_buf, 20);
             break;
         }
+
         default:
         {
 			char buf[48];
