@@ -449,15 +449,17 @@ void Rec_OTA_IAP_DataDeal(void)
         }
         case CMD_IAP_INFO:
         {	
+			/* read first 4 bytes of IAP region */
 			uint32_t iap_check = 0;
 			FLASH_ROM_READ(IMAGE_IAP_START_ADD, &iap_check, 4);
 
-			char buf[80];
-			int len = snprintf(buf, sizeof(buf),
+			char iap_buf[80];
+			int iap_len = snprintf(iap_buf, sizeof(iap_buf),
 				"iap_check: addr=%08lx first4=%08lx\r\n",
 				(unsigned long)IMAGE_IAP_START_ADD,
 				(unsigned long)iap_check);
-			cdc_tx_poll((uint8_t *)buf, len, 100);
+			cdc_tx_poll((uint8_t *)iap_buf, iap_len, 100);
+
             uint8_t send_buf[20];
             send_buf[0] = IMAGE_B_FLAG;
             send_buf[1] = (uint8_t)(IMAGE_SIZE & 0xff);
