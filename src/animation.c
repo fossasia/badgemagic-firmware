@@ -262,17 +262,28 @@ static void laser_out(bm_t *bm, uint16_t *fb, int step, int frame)
 
 static void still(bm_t *bm, uint16_t *fb, int frame)
 {
-	int i = frame * LED_COLS;
+	int frame_start = frame * LED_COLS;
+
+	int content_width = 0;
+	for (int k = 0; k < LED_COLS; k++) {
+		if (frame_start + k >= bm->width) break;
+		if (bm->buf[frame_start + k] != 0)
+			content_width = k + 1;
+	}
+
+	int x_offset = (LED_COLS - content_width) / 2;
+
 	int j = 0;
-	for (; j < LED_COLS; j++) {
-		if (i >= bm->width)
-			break;
-		fb[j] = bm->buf[i];
-		i++;
-	}
-	for (; j< LED_COLS; j++) {
+	for (; j < x_offset; j++)
 		fb[j] = 0;
+
+	int i = frame_start;
+	for (; j < LED_COLS; j++, i++) {
+		if (i >= bm->width) break;
+		fb[j] = bm->buf[i];
 	}
+	for (; j < LED_COLS; j++)
+		fb[j] = 0;
 }
 
 int ani_laser(bm_t *bm, uint16_t *fb)
