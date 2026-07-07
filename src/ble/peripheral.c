@@ -443,7 +443,7 @@ void Rec_OTA_IAP_DataDeal(void)
 			len = snprintf(buf, sizeof(buf), "iap_end: switching flag\r\n");
 			cdc_tx_poll((uint8_t *)buf, len, 100);
 
-			//SwitchImageFlag(IMAGE_IAP_FLAG);
+			SwitchImageFlag(IMAGE_IAP_FLAG);
 
 			{
 				uint8_t verify_buf[4];
