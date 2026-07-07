@@ -1,5 +1,6 @@
 #ifndef __BLE_UART_SERVICE_H__
 #define __BLE_UART_SERVICE_H__
+#define OTA_FLASH_ERASE_EVT     0x0020
 
 int legacy_registerService();
 int devInfo_registerService();
