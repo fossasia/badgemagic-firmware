@@ -20,7 +20,7 @@ When security is enabled:
 
 | Byte  | Content                                                                |
 |-------|------------------------------------------------------------------------|
-| 0–3   | PIN digits as ASCII characters (e.g. `6512` → `0x36 0x35 0x31 0x32`) |
+| 0–3   | PIN digits as ASCII characters (e.g. `6512` → `0x36 0x35 0x31 0x32`)   |
 | 4–15  | Zero padding                                                           |
 
 4. If the PIN matches, all subsequent  transfers are accepted normally
@@ -57,7 +57,7 @@ A PIN write to `0xFEE1` returns:
 | PIN matched                                    | `SUCCESS` (`0x00`)          |
 | PIN wrong                                      | `ATT_ERR_UNLIKELY` (`0x0E`) |
 | Not a valid PIN attempt                        | `ATT_ERR_UNLIKELY` (`0x0E`) |
-| `wang` sent before PIN when security enabled | `ATT_ERR_UNLIKELY` (`0x0E`) |
+| `wang` sent before PIN when security enabled   | `ATT_ERR_UNLIKELY` (`0x0E`) |
 
 #### Impact on third-party clients
 

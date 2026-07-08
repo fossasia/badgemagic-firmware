@@ -481,6 +481,7 @@ static void menu_select(){
 				uint16_t auth_code = tmos_rand() % 10000;
 				legacy_set_auth_code(auth_code);
 				ble_enable_advertise();
+				auxbtn_onOnePress(KEY4, bt_pairing_bypass);
 				disp_auth_code(auth_code);
 			} else {
 				ble_enable_advertise();
@@ -618,6 +619,12 @@ static void security_submenu_select()
     badge_cfg.ble_security = (security_submenu_sel == 0) ? 1 : 0;
     cfg_writeflash_def(&badge_cfg);
     return_to_menu();
+}
+
+static void bt_pairing_bypass()
+{
+    legacy_bypass_auth();       // skip auth for this session
+    start_ble_animation();      // drop PIN display, show BT animation
 }
 
 static void enter_security_submenu()

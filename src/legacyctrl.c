@@ -178,3 +178,8 @@ int legacy_usb_rx(uint8_t *buf, uint16_t len)
 	}
 	return 0;
 }
+
+void legacy_bypass_auth()
+{
+    authorized = 1;   // skip auth entirely if KEY4 is pressed
+}

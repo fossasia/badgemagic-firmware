@@ -36,7 +36,7 @@ void cfg_fallback()
 	badge_cfg.splash_bm_fh = splash.fh;
 
 	badge_cfg.reset_rx = FALSE;
-	badge_cfg.ble_security = 1;  // secure by default
+	badge_cfg.ble_security = 0;  // insecure by default
 }
 
 void cfg_update_crc(badge_cfg_t *cfg)
