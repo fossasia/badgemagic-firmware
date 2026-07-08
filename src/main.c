@@ -94,7 +94,7 @@ static void enter_clock_submenu();
 static void disp_stopwatch();
 void return_to_menu();
 static void enter_security_submenu();
-static void bt_pairing_
+static void bt_pairing_bypass();
 
 __HIGH_CODE
 /*static void change_mode()
