@@ -4,6 +4,9 @@
 #include "leddrv.h"
 #include "audio.h"
 
+#define SPEC_WINDOW  64
+#define NUM_BANDS    8
+
 const uint16_t amp_wav_lut[8] = {
 	0b00000000000,
 	0b00000100000,
@@ -47,7 +50,6 @@ int16_t mic_adc()
         if (sample < sig_min) sig_min = sample;
     }
 
-    // How far below rail the signal swings = loudness
     int16_t amplitude = 4095 - sig_min;
 
     char buf[64];
@@ -75,6 +77,26 @@ void mic_init()
     cdc_tx_poll((uint8_t *)buf, len, 10);
 }
 
+void mic_measure_rate()
+{
+    uint32_t t1 = SYS_GetSysTickCnt();
+
+    volatile int16_t dummy[64];
+    for (int i = 0; i < 64; i++) {
+        dummy[i] = ADC_ExcutSingleConver();
+    }
+
+    uint32_t t2 = SYS_GetSysTickCnt();
+    uint32_t elapsed_ticks = t2 - t1;
+    uint32_t elapsed_us = elapsed_ticks / (FREQ_SYS / 1000000);
+    uint32_t fs_hz = (elapsed_us > 0) ? (uint32_t)(64UL * 1000000UL / elapsed_us) : 0;
+
+    char buf[64];
+    int len = snprintf(buf, sizeof(buf), "elapsed_us=%lu fs_hz=%lu\r\n",
+                       (unsigned long)elapsed_us, (unsigned long)fs_hz);
+    cdc_tx_poll((uint8_t *)buf, len, 10);
+}
+
 void beat_visualize_poll(volatile uint16_t *fb)
 {
     int16_t mic = mic_adc();
@@ -98,13 +120,58 @@ void beat_visualize_poll(volatile uint16_t *fb)
             fb[c] = (dist < lit_pairs) ? COL_FULL : 0;
         }
         beat_active--;
-    } 
+    }
     else {
         memset(fb, 0, LED_COLS * sizeof(uint16_t));
+    }
+}
+
+static const int32_t goertzel_coeff_q14[NUM_BANDS] = {
+    16113, 15769, 15121, 13990, 12007, 8342, 1848, -8626
+};
+
+static int16_t spec_buf[SPEC_WINDOW];
+static int32_t band_max[NUM_BANDS] = {0};
+
+static void mic_capture_window(int16_t *buf, int n)
+{
+    for (int i = 0; i < n; i++) {
+        uint16_t s = ADC_ExcutSingleConver();
+        buf[i] = (int16_t)s - mic_baseline;
+    }
+}
+
+static int32_t goertzel_mag(const int16_t *buf, int n, int32_t coeff_q14)
+{
+    int32_t q0, q1 = 0, q2 = 0;
+    for (int i = 0; i < n; i++) {
+        q0 = ((coeff_q14 * q1) >> 14) - q2 + buf[i];
+        q2 = q1;
+        q1 = q0;
+    }
+    return q1*q1 + q2*q2 - (int32_t)(((int64_t)coeff_q14 * q1 * q2) >> 14);
+}
+
+void spectrum_visualize_poll(volatile uint16_t *fb)
+{
+    mic_capture_window(spec_buf, SPEC_WINDOW);
+
+    int cols_per_band = LED_COLS / NUM_BANDS;
+    for (int b = 0; b < NUM_BANDS; b++) {
+        int32_t mag = goertzel_mag(spec_buf, SPEC_WINDOW, goertzel_coeff_q14[b]);
+        band_max[b] -= band_max[b] >> 6;          // slow release, per-band
+        if (mag > band_max[b]) band_max[b] = mag;
+
+        int level = band_max[b] > 0 ? (int)(((int64_t)mag * 7) / band_max[b]) : 0;
+        if (level > 7) level = 7;
+
+        for (int c = b * cols_per_band; c < (b + 1) * cols_per_band; c++)
+            fb[c] = amp_wav_lut[level];
     }
 }
 
 void audio_reset() {
     energy_avg = 0.0f;
     beat_active = 0;
+    memset(band_max, 0, sizeof(band_max));
 }

@@ -40,6 +40,7 @@ enum AUDIO_MODES {
 	AMPLITUDE = 0,
 	WAVEFORM,
 	BEAT,
+	SPECTRUM,
 };
 
 #define ANI_BASE_SPEED_T      (200000) // uS
@@ -176,6 +177,10 @@ static void audio_visualize_poll()
         case BEAT:
             beat_visualize_poll(fb);
         break;
+
+		case SPECTRUM:
+			spectrum_visualize_poll(fb);
+			break;
     }
 }
 
@@ -575,6 +580,7 @@ int main()
 	btn_init_task();
 	
 	mic_init();
+	mic_measure_rate();
 	auxbtn_init_task();
 
 	mode = NORMAL;
