@@ -85,7 +85,6 @@ static void change_brightness()
 	NEXT_STATE(badge_cfg.led_brightness, 0, BRIGHTNESS_LEVELS);
 }
 
-static void mode_setup_download();
 static void mode_setup_normal();
 static void disp_clock();
 static void disp_menu();
@@ -95,6 +94,7 @@ static void enter_clock_submenu();
 static void disp_stopwatch();
 void return_to_menu();
 static void enter_security_submenu();
+static void bt_pairing_
 
 __HIGH_CODE
 /*static void change_mode()
@@ -690,22 +690,6 @@ static void disp_charging()
 			return;
 		}
 	}
-}
-
-static void mode_setup_download()
-{
-	// If always-on BLE is enabled, then skip this mode, jump to next mode
-	/*if (badge_cfg.ble_always_on) {
-		change_mode();
-	}*/
-
-	// Disable bitmap transition while in download mode
-	btn_onOnePress(KEY2, NULL);
-
-	// Take control of the current bitmap to display
-	// the Bluetooth animation
-	ble_enable_advertise();
-	start_ble_animation();
 }
 
 void clean_bmlist()
