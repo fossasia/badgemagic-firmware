@@ -486,6 +486,7 @@ static void menu_select(){
 			} else {
 				ble_enable_advertise();
 				start_ble_animation();
+				auxbtn_onOnePress(KEY4, return_to_menu);
 			}
 			break;
         case 2:
@@ -624,6 +625,7 @@ static void security_submenu_select()
 static void bt_pairing_bypass()
 {
     legacy_bypass_auth();       // skip auth for this session
+	auxbtn_onOnePress(KEY4, return_to_menu);  // restore KEY4 to normal
     start_ble_animation();      // drop PIN display, show BT animation
 }
 
