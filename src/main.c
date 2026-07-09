@@ -41,12 +41,13 @@ enum MODES {
 };
 
 static int menu_cursor=0;
-#define MENU_ITEMS_COUNT 5
+#define MENU_ITEMS_COUNT 6
 static const char *menu_labels[] = {
 	"ANIMATION",
 	"BT-PAIRING",
 	"CLOCK MODE",
 	"SNAKE",
+	"AUDIO VIS",
 	"OFF"
 };
 
@@ -548,6 +549,10 @@ static void menu_select(){
 			game_start((uint16_t *)fb);
             break;
 		case 4:
+			mode = AUDIO;
+			mode_setup_audio_visualize();
+			break;
+		case 5:
 			mode = POWER_OFF;
 			poweroff();
 			break;
@@ -733,12 +738,12 @@ static void mode_setup_normal()
 
 static void mode_setup_audio_visualize()
 {
+	stop_all_animation();
+	btn_onOnePress(KEY1, NULL);
 	btn_onOnePress(KEY2, audio_transition);
+	auxbtn_onOnePress(KEY3, NULL);
+	auxbtn_onOnePress(KEY4, return_to_menu);
 
-	tmos_stop_task(common_taskid, ANI_NEXT_STEP);
-	tmos_stop_task(common_taskid, ANI_MARQUE);
-	tmos_stop_task(common_taskid, ANI_FLASH);
-	tmos_stop_task(common_taskid, BLE_NEXT_STEP);
 	memset(fb, 0, sizeof(fb));
 	tmos_start_reload_task(common_taskid, AUDIO_STEP, 500000 / (625*10));
 }
