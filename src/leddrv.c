@@ -101,15 +101,6 @@ static const pindesc_t led_pins[LED_PINCOUNT] = {
 	PINDESC(A, 11), // G
 	PINDESC(B, 9),  // H
 	PINDESC(B, 8),  // I
-<<<<<<< HEAD
-	#ifdef USBC_VERSION
-	PINDESC(B, 17), // J
-	PINDESC(B, 16), // K
-	#else
-	PINDESC(B, 15), // J
-	PINDESC(B, 14), // K
-	#endif
-=======
   PINDESC(B, 8),  // I
 #ifdef HARDWARE_REV3
 	PINDESC(B, 17), // J
@@ -122,7 +113,6 @@ static const pindesc_t led_pins[LED_PINCOUNT] = {
 #else
 	PINDESC(B, 14), // K
 #endif
->>>>>>> upstream/master
 	PINDESC(B, 13), // L
 	PINDESC(B, 12), // M
 	PINDESC(B, 5),  // N
@@ -273,10 +263,6 @@ void led_write2row_raw(int row, int which_half, uint32_t val)
 	g_pindrive_strong = 0x00000000;
 	if (on_count > 5)
 		g_pindrive_strong = 0xFFFFFFFF;
-<<<<<<< HEAD
-	GPIO_APPLY_ALL();
-=======
 
 	led_apply_bank_states(out_A, dir_A, out_B, dir_B);
->>>>>>> upstream/master
 }
