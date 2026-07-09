@@ -1,5 +1,6 @@
 #include "CH58x_common.h"
 #include <stdio.h>
+#include <math.h>
 #include "usb/usb.h"
 #include "leddrv.h"
 #include "audio.h"
@@ -77,6 +78,8 @@ void mic_init()
     cdc_tx_poll((uint8_t *)buf, len, 10);
 }
 
+static uint32_t measured_fs_hz = 0;
+
 void mic_measure_rate()
 {
     uint32_t t1 = SYS_GetSysTickCnt();
@@ -89,11 +92,11 @@ void mic_measure_rate()
     uint32_t t2 = SYS_GetSysTickCnt();
     uint32_t elapsed_ticks = t2 - t1;
     uint32_t elapsed_us = elapsed_ticks / (FREQ_SYS / 1000000);
-    uint32_t fs_hz = (elapsed_us > 0) ? (uint32_t)(64UL * 1000000UL / elapsed_us) : 0;
+    measured_fs_hz = (elapsed_us > 0) ? (uint32_t)(64UL * 1000000UL / elapsed_us) : 0;
 
     char buf[64];
     int len = snprintf(buf, sizeof(buf), "elapsed_us=%lu fs_hz=%lu\r\n",
-                       (unsigned long)elapsed_us, (unsigned long)fs_hz);
+                       (unsigned long)elapsed_us, (unsigned long)measured_fs_hz);
     cdc_tx_poll((uint8_t *)buf, len, 10);
 }
 
@@ -126,9 +129,25 @@ void beat_visualize_poll(volatile uint16_t *fb)
     }
 }
 
-static const int32_t goertzel_coeff_q14[NUM_BANDS] = {
-    16113, 15769, 15121, 13990, 12007, 8342, 1848, -8626
+static const int band_freq_hz[NUM_BANDS] = {
+    100, 200, 400, 700, 1200, 2000, 3500, 6000
 };
+
+static int32_t goertzel_coeff_q14[NUM_BANDS];
+static int coeffs_ready = 0;
+
+// Derives Goertzel coefficients from the measured sample rate 
+static void init_goertzel_coeffs()
+{
+    uint32_t fs = measured_fs_hz > 0 ? measured_fs_hz : 4000; // fallback if measurement never ran
+    for (int b = 0; b < NUM_BANDS; b++) {
+        float k = (int)(0.5f + (SPEC_WINDOW * (float)band_freq_hz[b]) / (float)fs);
+        float w = (2.0f * 3.14159265f / SPEC_WINDOW) * k;
+        float coeff = 2.0f * cosf(w);
+        goertzel_coeff_q14[b] = (int32_t)(coeff * 16384.0f); // Q14
+    }
+    coeffs_ready = 1;
+}
 
 static int16_t spec_buf[SPEC_WINDOW];
 static int32_t band_max[NUM_BANDS] = {0};
@@ -154,6 +173,8 @@ static int32_t goertzel_mag(const int16_t *buf, int n, int32_t coeff_q14)
 
 void spectrum_visualize_poll(volatile uint16_t *fb)
 {
+    if (!coeffs_ready) init_goertzel_coeffs();
+
     mic_capture_window(spec_buf, SPEC_WINDOW);
 
     int cols_per_band = LED_COLS / NUM_BANDS;
