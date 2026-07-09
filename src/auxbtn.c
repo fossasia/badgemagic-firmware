@@ -58,6 +58,7 @@ Readings are averaged over ADC_SAMPLE_COUNT (20) samples before classification t
 Decided these thresholds after testing it on the prototype and using USB CDC to get the adc readings 
 as KEYS 3,4 were pressed
  */
+
 static enum aux_state classify(int raw)
 {
     if (raw > NO_PRESS_LOW)
