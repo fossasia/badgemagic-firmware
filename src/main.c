@@ -312,6 +312,8 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		audio_visualize_poll();
 
 		return events ^ AUDIO_STEP;
+	}
+	
 	if (events & STOPWATCH_TICK) {
 		sw_centiseconds++;
 		disp_stopwatch();
