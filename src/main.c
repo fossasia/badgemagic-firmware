@@ -79,10 +79,6 @@ volatile int mode, is_play_sequentially = 1;
 static int clock_active = 0;
 
 __HIGH_CODE
-static void change_brightness()
-{
-	NEXT_STATE(badge_cfg.led_brightness, 0, BRIGHTNESS_LEVELS);
-}
 
 static void mode_setup_download();
 static void mode_setup_normal();
@@ -557,8 +553,10 @@ static void clock_submenu_select()
         tmos_start_reload_task(common_taskid, CLOCK_TICK, 1000000 / 625);
         btn_onOnePress(KEY1, NULL);
         btn_onOnePress(KEY2, NULL);
-        auxbtn_onOnePress(KEY3, NULL);
-        auxbtn_onOnePress(KEY4, enter_clock_submenu);
+        //auxbtn_onOnePress(KEY3, NULL);
+        //auxbtn_onOnePress(KEY4, enter_clock_submenu);
+		btn_onLongPress(KEY1, NULL);
+        btn_onLongPress(KEY2, enter_clock_submenu);
     } else {
         // Enter Stopwatch mode
         sw_state = SW_STOPPED;
@@ -566,8 +564,10 @@ static void clock_submenu_select()
         disp_stopwatch();
         btn_onOnePress(KEY1, sw_startstop);
         btn_onOnePress(KEY2, sw_reset);
-        auxbtn_onOnePress(KEY3, NULL);
-        auxbtn_onOnePress(KEY4, sw_back);
+        //auxbtn_onOnePress(KEY3, NULL);
+        //auxbtn_onOnePress(KEY4, sw_back);
+		btn_onLongPress(KEY1, NULL);
+        btn_onLongPress(KEY2, sw_back);
     }
 }
 
@@ -580,8 +580,8 @@ static void enter_clock_submenu()
 
     btn_onOnePress(KEY1, clock_submenu_nav);
     btn_onOnePress(KEY2, clock_submenu_nav);
-    auxbtn_onOnePress(KEY3, clock_submenu_select);
-    auxbtn_onOnePress(KEY4, return_to_menu);
+    btn_onLongPress(KEY1, clock_submenu_select);
+    btn_onLongPress(KEY2, return_to_menu);
 
     disp_clock_submenu();
 }
@@ -597,7 +597,7 @@ void return_to_menu()
     mode = MENU;
     btn_onOnePress(KEY1, menu_up);
     btn_onOnePress(KEY2, menu_down);
-    auxbtn_onOnePress(KEY3, menu_select);
+    btn_onLongPress(KEY1, menu_select);
     disp_menu();
 }
 
@@ -710,13 +710,13 @@ int main()
 	//btn_onOnePress(KEY2, bm_transition);
 	btn_onOnePress(KEY1, menu_up);
 	btn_onOnePress(KEY2, menu_down);
-	btn_onLongPress(KEY1, change_brightness);
 
 	auxbtn_init();
 	//auxbtn_onOnePress(KEY3, toggle_clock);
 	//auxbtn_onOnePress(KEY4, bm_transition);
 	auxbtn_onOnePress(KEY3, menu_select);
 	auxbtn_onOnePress(KEY4, return_to_menu);
+	btn_onLongPress(KEY1, menu_select);
 
 	power_init();
 	disp_charging();
