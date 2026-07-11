@@ -49,6 +49,7 @@ int16_t mic_adc()
     for (int i = 0; i < 64; i++) {
         uint16_t sample = ADC_ExcutSingleConver();
         if (sample < sig_min) sig_min = sample;
+        DelayUs(60);
     }
 
     int16_t amplitude = 4095 - sig_min;
@@ -63,7 +64,7 @@ int16_t mic_adc()
 
 void mic_init()
 {
-    GPIOA_ModeCfg(GPIO_Pin_7, GPIO_ModeIN_PU);
+    GPIOA_ModeCfg(GPIO_Pin_7, GPIO_ModeIN_Floating);
     ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
     ADC_ChannelCfg(11);
 
@@ -87,6 +88,7 @@ void mic_measure_rate()
     volatile int16_t dummy[64];
     for (int i = 0; i < 64; i++) {
         dummy[i] = ADC_ExcutSingleConver();
+        DelayUs(60);
     }
 
     uint32_t t2 = SYS_GetSysTickCnt();
@@ -139,7 +141,7 @@ static int coeffs_ready = 0;
 // Derives Goertzel coefficients from the measured sample rate 
 static void init_goertzel_coeffs()
 {
-    uint32_t fs = measured_fs_hz > 0 ? measured_fs_hz : 4000; // fallback if measurement never ran
+    uint32_t fs = measured_fs_hz > 0 ? measured_fs_hz : 16000; // fallback if measurement never ran
     for (int b = 0; b < NUM_BANDS; b++) {
         float k = (int)(0.5f + (SPEC_WINDOW * (float)band_freq_hz[b]) / (float)fs);
         float w = (2.0f * 3.14159265f / SPEC_WINDOW) * k;
@@ -157,6 +159,7 @@ static void mic_capture_window(int16_t *buf, int n)
     for (int i = 0; i < n; i++) {
         uint16_t s = ADC_ExcutSingleConver();
         buf[i] = (int16_t)s - mic_baseline;
+        DelayUs(60);
     }
 }
 
