@@ -826,6 +826,7 @@ int main()
 	btn_init_task();
 	
 	mic_init();
+	debug_raw_adc_stream(); 
 	mic_measure_rate();
 	auxbtn_init_task();
 	game_init();

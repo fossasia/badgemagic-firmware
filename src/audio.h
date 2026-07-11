@@ -14,5 +14,6 @@ void beat_visualize_poll(volatile uint16_t *fb);
 void spectrum_visualize_poll(volatile uint16_t *fb);
 void mic_measure_rate();
 void audio_reset();
+void debug_raw_adc_stream();
 
 #endif /* __AUDIO_H__ */

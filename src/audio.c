@@ -39,6 +39,19 @@ static int16_t mic_baseline = 0;
 #define BEAT_THRESHOLD 2.2f
 #define COL_FULL 0x7FF
 
+void debug_raw_adc_stream()
+{
+    char buf[32];
+    
+    while(1) {
+        uint16_t raw_sample = ADC_ExcutSingleConver();
+        
+        int len = snprintf(buf, sizeof(buf), "%u\r\n", raw_sample);
+        cdc_tx_poll((uint8_t *)buf, len, 10);
+        DelayMs(5); 
+    }
+}
+
 int16_t mic_adc()
 {
     ADC_ExtSingleChSampInit(SampleFreq_3_2, ADC_PGA_0);
