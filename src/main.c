@@ -9,8 +9,10 @@
 #include "animation.h"
 #include "font.h"
 #include "font3x5.h"
+#if HW_KEY_COUNT == 4
 #include "auxbtn.h"
 #include "game.h"
+#endif
 
 #include "power.h"
 #include "data.h"
@@ -39,6 +41,8 @@ enum MODES {
 };
 
 static int menu_cursor=0;
+
+#if HW_KEY_COUNT == 4
 #define MENU_ITEMS_COUNT 5
 static const char *menu_labels[] = {
 	"ANIMATION",
@@ -47,6 +51,24 @@ static const char *menu_labels[] = {
 	"SNAKE",
 	"OFF"
 };
+#define MENU_IDX_ANIMATION 0
+#define MENU_IDX_BLE       1
+#define MENU_IDX_CLOCK     2
+#define MENU_IDX_SNAKE     3
+#define MENU_IDX_OFF       4
+#else
+#define MENU_ITEMS_COUNT 4
+static const char *menu_labels[] = {
+	"ANIMATION",
+	"BT-PAIRING",
+	"CLOCK MODE",
+	"OFF"
+};
+#define MENU_IDX_ANIMATION 0
+#define MENU_IDX_BLE       1
+#define MENU_IDX_CLOCK     2
+#define MENU_IDX_OFF       3
+#endif
 
 #define ANI_BASE_SPEED_T      (200000) // uS
 #define ANI_MARQUE_SPEED_T    (100000) // uS
@@ -89,21 +111,6 @@ static void menu_down();
 static void enter_clock_submenu();
 static void disp_stopwatch();
 void return_to_menu();
-
-__HIGH_CODE
-/*static void change_mode()
-{
-	NEXT_STATE(mode, 0, MODES_COUNT);
-	const static void (*modes[])(void) = {
-		NULL,
-		mode_setup_normal,
-		mode_setup_download,
-		poweroff
-	};
-
-	if (modes[mode])
-		modes[mode]();
-}*/
 
 __HIGH_CODE
 static void bm_transition()
@@ -221,9 +228,6 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		if (bm->is_flash) {
 			ani_flash(bm, fb, flash_step);
 		}
-		/* After flash is applied, it will potentialy overwrite the marque
-		effect after it just wrote, results in flickering. So here apply the
-		marque effect again */
 		if (bm->is_marquee) {
 			ani_marque(bm, fb, marque_step);
 		}
@@ -450,32 +454,30 @@ static void menu_down(){
 }
 
 static void menu_select(){
-    switch (menu_cursor) {
-        case 0:
-            mode = NORMAL;
-            btn_onOnePress(KEY1, NULL);
-            btn_onOnePress(KEY2, bm_transition);
-            mode_setup_normal();
-            break;
-        case 1:
-            mode = DOWNLOAD;
-            btn_onOnePress(KEY1, NULL);
-            btn_onOnePress(KEY2, NULL);
-            ble_enable_advertise();
-            start_ble_animation();
-            break;
-        case 2:
-            enter_clock_submenu();
-            break;
-        case 3:
-            mode = GAME;
-			stop_all_animation();
-			game_start((uint16_t *)fb);
-            break;
-		case 4:
-			mode = POWER_OFF;
-			poweroff();
-			break;
+    if (menu_cursor == MENU_IDX_ANIMATION) {
+        mode = NORMAL;
+        btn_onOnePress(KEY1, NULL);
+        btn_onOnePress(KEY2, bm_transition);
+        mode_setup_normal();
+    } else if (menu_cursor == MENU_IDX_BLE) {
+        mode = DOWNLOAD;
+        btn_onOnePress(KEY1, NULL);
+        btn_onOnePress(KEY2, NULL);
+        ble_enable_advertise();
+        start_ble_animation();
+    } else if (menu_cursor == MENU_IDX_CLOCK) {
+        enter_clock_submenu();
+    }
+#if HW_KEY_COUNT == 4
+    else if (menu_cursor == MENU_IDX_SNAKE) {
+        mode = GAME;
+        stop_all_animation();
+        game_start((uint16_t *)fb);
+    }
+#endif
+    else if (menu_cursor == MENU_IDX_OFF) {
+        mode = POWER_OFF;
+        poweroff();
     }
 }
 
@@ -553,8 +555,6 @@ static void clock_submenu_select()
         tmos_start_reload_task(common_taskid, CLOCK_TICK, 1000000 / 625);
         btn_onOnePress(KEY1, NULL);
         btn_onOnePress(KEY2, NULL);
-        //auxbtn_onOnePress(KEY3, NULL);
-        //auxbtn_onOnePress(KEY4, enter_clock_submenu);
 		btn_onLongPress(KEY1, NULL);
         btn_onLongPress(KEY2, enter_clock_submenu);
     } else {
@@ -564,8 +564,6 @@ static void clock_submenu_select()
         disp_stopwatch();
         btn_onOnePress(KEY1, sw_startstop);
         btn_onOnePress(KEY2, sw_reset);
-        //auxbtn_onOnePress(KEY3, NULL);
-        //auxbtn_onOnePress(KEY4, sw_back);
 		btn_onLongPress(KEY1, NULL);
         btn_onLongPress(KEY2, sw_back);
     }
@@ -598,6 +596,9 @@ void return_to_menu()
     btn_onOnePress(KEY1, menu_up);
     btn_onOnePress(KEY2, menu_down);
     btn_onLongPress(KEY1, menu_select);
+#if HW_KEY_COUNT == 2
+    btn_onLongPress(KEY2, NULL);
+#endif
     disp_menu();
 }
 
@@ -626,13 +627,14 @@ static void disp_charging()
 
 static void mode_setup_download()
 {
-	// If always-on BLE is enabled, then skip this mode, jump to next mode
-	/*if (badge_cfg.ble_always_on) {
-		change_mode();
-	}*/
-
 	// Disable bitmap transition while in download mode
 	btn_onOnePress(KEY2, NULL);
+
+#if HW_KEY_COUNT == 2
+	// No aux KEY4 on 2-key hardware: give KEY2 long-press a way back to menu
+	btn_onLongPress(KEY1, NULL);
+	btn_onLongPress(KEY2, return_to_menu);
+#endif
 
 	// Take control of the current bitmap to display
 	// the Bluetooth animation
@@ -656,23 +658,14 @@ void reload_bmlist()
 static void mode_setup_normal()
 {
 	btn_onOnePress(KEY2, bm_transition);
+#if HW_KEY_COUNT == 2
+	// No aux KEY4 on 2-key hardware: give KEY2 long-press a way back to menu
+	btn_onLongPress(KEY1, NULL);
+	btn_onLongPress(KEY2, return_to_menu);
+#endif
 	reload_bmlist();
 	start_normal_animation();
 }
-/*
-static void toggle_clock()
-{
-    if (!clock_active) {
-        clock_active = 1;
-        stop_all_animation();
-        tmos_start_reload_task(common_taskid, CLOCK_TICK, 1000000 / 625);
-    } else {
-        clock_active = 0;
-        tmos_stop_task(common_taskid, CLOCK_TICK);
-        mode_setup_normal();
-    }
-}
-*/
 
 void handle_after_rx()
 {
@@ -706,17 +699,15 @@ int main()
 	bmlist_init(LED_COLS * 4);
 
 	btn_init();
-	//btn_onOnePress(KEY1, change_mode);
-	//btn_onOnePress(KEY2, bm_transition);
 	btn_onOnePress(KEY1, menu_up);
 	btn_onOnePress(KEY2, menu_down);
+	btn_onLongPress(KEY1, menu_select);
 
+#if HW_KEY_COUNT == 4
 	auxbtn_init();
-	//auxbtn_onOnePress(KEY3, toggle_clock);
-	//auxbtn_onOnePress(KEY4, bm_transition);
 	auxbtn_onOnePress(KEY3, menu_select);
 	auxbtn_onOnePress(KEY4, return_to_menu);
-	btn_onLongPress(KEY1, menu_select);
+#endif
 
 	power_init();
 	disp_charging();
@@ -735,8 +726,10 @@ int main()
 
 	spawn_tasks();
 	btn_init_task();
+#if HW_KEY_COUNT == 4
 	auxbtn_init_task();
 	game_init();
+#endif
 	stop_all_animation();
 
 	mode = MENU;
