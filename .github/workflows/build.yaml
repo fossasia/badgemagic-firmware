@@ -38,11 +38,8 @@ jobs:
         run: |
           export PREFIX=${{ env.MRS_TOOLCHAIN }}/RISC-V_Embedded_GCC/bin/riscv-none-embed-
           BUILD_DIR=${{ env.USBC_4KEY_BUILD_DIR }} USBC_VERSION=1 KEY_COUNT=4 make -j$(nproc)
-          make clean
           BUILD_DIR=${{ env.USBC_2KEY_BUILD_DIR }} USBC_VERSION=1 KEY_COUNT=2 make -j$(nproc)
-          make clean
           BUILD_DIR=${{ env.MICROB_4KEY_BUILD_DIR }} KEY_COUNT=4 make -j$(nproc)
-          make clean
           BUILD_DIR=${{ env.MICROB_2KEY_BUILD_DIR }} KEY_COUNT=2 make -j$(nproc)
 
       - uses: actions/upload-artifact@v4
