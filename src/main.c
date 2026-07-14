@@ -11,8 +11,8 @@
 #include "font3x5.h"
 #if HW_KEY_COUNT == 4
 #include "auxbtn.h"
-#include "game.h"
 #endif
+#include "game.h"
 
 #include "power.h"
 #include "data.h"
@@ -42,7 +42,6 @@ enum MODES {
 
 static int menu_cursor=0;
 
-#if HW_KEY_COUNT == 4
 #define MENU_ITEMS_COUNT 5
 static const char *menu_labels[] = {
 	"ANIMATION",
@@ -56,19 +55,6 @@ static const char *menu_labels[] = {
 #define MENU_IDX_CLOCK     2
 #define MENU_IDX_SNAKE     3
 #define MENU_IDX_OFF       4
-#else
-#define MENU_ITEMS_COUNT 4
-static const char *menu_labels[] = {
-	"ANIMATION",
-	"BT-PAIRING",
-	"CLOCK MODE",
-	"OFF"
-};
-#define MENU_IDX_ANIMATION 0
-#define MENU_IDX_BLE       1
-#define MENU_IDX_CLOCK     2
-#define MENU_IDX_OFF       3
-#endif
 
 #define ANI_BASE_SPEED_T      (200000) // uS
 #define ANI_MARQUE_SPEED_T    (100000) // uS
@@ -468,13 +454,13 @@ static void menu_select(){
     } else if (menu_cursor == MENU_IDX_CLOCK) {
         enter_clock_submenu();
     }
-#if HW_KEY_COUNT == 4
+
     else if (menu_cursor == MENU_IDX_SNAKE) {
         mode = GAME;
         stop_all_animation();
         game_start((uint16_t *)fb);
     }
-#endif
+
     else if (menu_cursor == MENU_IDX_OFF) {
         mode = POWER_OFF;
         poweroff();
@@ -728,8 +714,8 @@ int main()
 	btn_init_task();
 #if HW_KEY_COUNT == 4
 	auxbtn_init_task();
-	game_init();
 #endif
+	game_init();
 	stop_all_animation();
 
 	mode = MENU;

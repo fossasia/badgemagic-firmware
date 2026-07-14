@@ -92,11 +92,11 @@ src/font.c \
 src/font3x5.c \
 src/power.c \
 src/util.c\
+src/game.c\
 
 # Sources only relevant to 4-key hardware (aux buttons KEY3/KEY4, Snake game)
 ifeq ($(KEY_COUNT), 4)
 C_SOURCES += src/auxbtn.c \
-             src/game.c
 endif
 
 

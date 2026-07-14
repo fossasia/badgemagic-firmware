@@ -352,13 +352,17 @@ badges to 2-key hardware as well.
 ### What's new for 2-key badge owners
 
 - **Menu system** — scroll and select between Animation, Bluetooth Pairing,
-  Clock, and Off, instead of the old fixed on/off + bank-switch behavior.
+  Clock, Snake, and Off, instead of the old fixed on/off behaviour
 - **Clock mode with Stopwatch** — a full clock submenu (Time / Stopwatch),
   previously exclusive to 4-key hardware.
+- **Snake** — the game uses relative turning (turn left / turn right)
+  rather than absolute directions, so it works identically on 2-key
+  hardware with no loss of functionality.
+- Everything else the 2-key firmware already had — animations, BLE pairing
+  toggle, USB HID/CDC control
 
-**Not included:** the Snake game. It needs four independent directional
-inputs, and there's no usable control scheme for it on two buttons. Every
-other menu feature is fully available.
+Every menu feature from the 4-key firmware is now fully available on 2-key
+hardware. Nothing is missing in this release.
 
 ### How the buttons work differently
 
