@@ -448,9 +448,7 @@ static void menu_select(){
     } else if (menu_cursor == MENU_IDX_BLE) {
         mode = DOWNLOAD;
         btn_onOnePress(KEY1, NULL);
-        btn_onOnePress(KEY2, NULL);
-        ble_enable_advertise();
-        start_ble_animation();
+        mode_setup_download();
     } else if (menu_cursor == MENU_IDX_CLOCK) {
         enter_clock_submenu();
     }
