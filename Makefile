@@ -96,7 +96,7 @@ src/game.c\
 
 # Sources only relevant to 4-key hardware (aux buttons KEY3/KEY4, Snake game)
 ifeq ($(KEY_COUNT), 4)
-C_SOURCES += src/auxbtn.c \
+C_SOURCES += src/auxbtn.c 
 endif
 
 
