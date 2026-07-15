@@ -42,7 +42,7 @@ int ani_xbm_next_frame(xbm_t *xbm, uint16_t *fb, int col, int row)
 	return ++i;
 }
 
-int ani_xbm_scroll_up(xbm_t *xbm, int vh, 
+int ani_xbm_scroll_up(xbm_t *xbm, int vh,
 				uint16_t *fb, int col, int row)
 {
 	static int i;
@@ -57,7 +57,7 @@ int ani_xbm_scroll_up(xbm_t *xbm, int vh,
 	return ++i;
 }
 
-static int scroll_pt_next(xbm_t *xbm, int vh, int pt, 
+static int scroll_pt_next(xbm_t *xbm, int vh, int pt,
 				uint16_t *fb, int col, int row)
 {
 	static int i;
@@ -76,7 +76,7 @@ static int scroll_pt_next(xbm_t *xbm, int vh, int pt,
 	return ++i;
 }
 
-static int scroll_pb_next( xbm_t *xbm, int vh, int pb, 
+static int scroll_pb_next( xbm_t *xbm, int vh, int pb,
 				uint16_t *fb, int col, int row)
 {
 	static int i;
@@ -113,10 +113,11 @@ int ani_xbm_scrollup_pad( xbm_t *xbm, int vh, int pt, int pb,
 	}
 	return i;
 }
+
 /**
  * Infinite scroll up
  */
-int ani_xbm_scrollup_inf(xbm_t *xbm, uint16_t *fb, 
+int ani_xbm_scrollup_inf(xbm_t *xbm, uint16_t *fb,
 				int vh, int col, int row)
 {
 	static int i, r;
@@ -126,7 +127,7 @@ int ani_xbm_scrollup_inf(xbm_t *xbm, uint16_t *fb,
 
 		xbm_croph(xbm, &frame, i +r, i -1 +vh);
 		xbm_croph(xbm, &frame_circle, 0, r);
-		
+
 		xbm2fb(&frame, fb, col, row);
 		xbm2fb_dirty(&frame_circle, fb, col, row +vh -r);
 
@@ -167,6 +168,20 @@ int ani_scroll_left(bm_t *bm, uint16_t *fb)
 int ani_scroll_right(bm_t *bm, uint16_t *fb)
 {
 	return ani_scroll_x(bm, fb, 1);
+}
+
+/* Returns horizontal centering offset for a frame.
+ * Returns 0 if content fills the full width (no centering needed). */
+static int get_x_offset(bm_t *bm, int frame)
+{
+	int frame_start = frame * LED_COLS;
+	int content_width = 0;
+	for (int k = 0; k < LED_COLS; k++) {
+		if (frame_start + k >= bm->width) break;
+		if (bm->buf[frame_start + k] != 0)
+			content_width = k + 1;
+	}
+	return (content_width < LED_COLS) ? (LED_COLS - content_width) / 2 : 0;
 }
 
 void ani_shift_y(bm_t *bm, uint16_t *fb, int y, int frame)
@@ -225,42 +240,8 @@ int ani_scroll_down(bm_t *bm, uint16_t *fb)
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
 	int total_steps = frame_steps * frames;
 	bm->anim_step--;
-	
+
 	return mod(bm->anim_step, total_steps);
-}
-
-static void laser_in(bm_t *bm, uint16_t *fb, int step, int frame)
-{
-	int c = mod(step, LED_COLS);
-	frame *= LED_COLS;
-
-	int i = 0;
-	for (; i < c; i++) {
-		fb[i] = (frame + i < bm->width) ? bm->buf[frame + i] : 0;
-	}
-	for (; i < MIN(LED_COLS, bm->width - frame); i++) {
-		fb[i] = bm->buf[frame + c];
-	}
-	for (; i < LED_COLS; i++) {
-		fb[i] = (frame + c < bm->width) ? bm->buf[frame + c] : 0;
-	}
-}
-
-static void laser_out(bm_t *bm, uint16_t *fb, int step, int frame)
-{
-	int c = mod(step, LED_COLS);
-	frame *= LED_COLS;
-
-	int i = 0;
-	for (; i < c; i++) {
-		fb[i] = (frame + c < bm->width) ? bm->buf[frame + c] : 0;
-	}
-	for (; i < MIN(LED_COLS, bm->width - frame); i++) {
-		fb[i] = bm->buf[frame + i];
-	}
-	for (; i < LED_COLS; i++) {
-		fb[i] = 0;
-	}
 }
 
 static void still(bm_t *bm, uint16_t *fb, int frame)
@@ -274,7 +255,7 @@ static void still(bm_t *bm, uint16_t *fb, int frame)
 			content_width = k + 1;
 	}
 
-	int x_offset = (LED_COLS - content_width) / 2;
+	int x_offset = (content_width < LED_COLS) ? (LED_COLS - content_width) / 2 : 0;
 
 	int j = 0;
 	for (; j < x_offset; j++)
@@ -287,18 +268,6 @@ static void still(bm_t *bm, uint16_t *fb, int frame)
 	}
 	for (; j < LED_COLS; j++)
 		fb[j] = 0;
-}
-
-static int get_x_offset(bm_t *bm, int frame)
-{
-	int frame_start = frame * LED_COLS;
-	int content_width = 0;
-	for (int k = 0; k < LED_COLS; k++) {
-		if (frame_start + k >= bm->width) break;
-		if (bm->buf[frame_start + k] != 0)
-			content_width = k + 1;
-	}
-	return (content_width < LED_COLS) ? (LED_COLS - content_width) / 2 : 0;
 }
 
 static void laser_in(bm_t *bm, uint16_t *fb, int step, int frame, int x_offset)
@@ -335,7 +304,7 @@ static void laser_out(bm_t *bm, uint16_t *fb, int step, int frame, int x_offset)
 
 int ani_laser(bm_t *bm, uint16_t *fb)
 {
-	int frame_steps = LED_COLS * 3;
+	int frame_steps = LED_COLS * 3; // in-still-out
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
 	int total_steps = frame_steps * frames;
 	int frame = mod(bm->anim_step, total_steps) / frame_steps;
@@ -370,6 +339,7 @@ static uint32_t b16dialate(uint16_t w, int from, int to)
 
 	return ret;
 }
+
 static void snowflake_in(bm_t *bm, uint16_t *fb, int step, int frame, int x_offset)
 {
 	int y = mod(step, LED_ROWS*2) - LED_ROWS;
@@ -412,7 +382,7 @@ static void snowflake_out(bm_t *bm, uint16_t *fb, int step, int frame, int x_off
 
 int ani_snowflake(bm_t *bm, uint16_t *fb)
 {
-	int frame_steps = LED_ROWS * 6;
+	int frame_steps = LED_ROWS * 6; // in-still-out, each costs 2xLED_ROWS step
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
 	int total_steps = frame_steps * frames;
 	int frame = mod(bm->anim_step, total_steps) / frame_steps;
@@ -512,7 +482,7 @@ int ani_picture(bm_t *bm, uint16_t *fb)
 	bm->anim_step++;
 
 	if (frame == frames - 1) {
-		picture_out(bm, fb, mod(bm->anim_step, LED_COLS) );
+		picture_out(bm, fb, mod(bm->anim_step, LED_COLS));
 
 		/* picture_out() costs only half LED_COLS */
 		if (mod(bm->anim_step, LED_COLS) >= last_steps) {
@@ -540,7 +510,6 @@ void ani_marque(bm_t *bm, uint16_t *fb, int step)
 
 	fb[0] = tpl << (step % 4);
 	fb[LED_COLS - 1] = tpl >> ((step + 3) % 4);
-
 }
 
 void ani_flash(bm_t *bm, uint16_t *fb, int step)
