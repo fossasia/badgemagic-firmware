@@ -35,15 +35,19 @@ jobs:
       - name: Build firmware
         run: |
           export PREFIX=${{ env.MRS_TOOLCHAIN }}/RISC-V_Embedded_GCC/bin/riscv-none-embed-
-          BUILD_DIR=${{ env.USBC_BUILD_DIR }} USBC_VERSION=1 make -j$(nproc)
-          BUILD_DIR=${{ env.MICROB_BUILD_DIR }} make -j$(nproc)
+          BUILD_DIR=${{ env.USBC_BUILD_DIR }}/slotA USBC_VERSION=1 SLOT=A make -j$(nproc)
+          BUILD_DIR=${{ env.USBC_BUILD_DIR }}/slotB USBC_VERSION=1 SLOT=B make -j$(nproc)
+          BUILD_DIR=${{ env.MICROB_BUILD_DIR }}/slotA SLOT=A make -j$(nproc)
+          BUILD_DIR=${{ env.MICROB_BUILD_DIR }}/slotB SLOT=B make -j$(nproc)
 
       - uses: actions/upload-artifact@v4
         with:
           name: badgemagic-firmware
           path: |
-            ${{ env.USBC_BUILD_DIR }}/badgemagic-*
-            ${{ env.MICROB_BUILD_DIR }}/badgemagic-*
+            ${{ env.USBC_BUILD_DIR }}/slotA/badgemagic-*
+            ${{ env.USBC_BUILD_DIR }}/slotB/badgemagic-*
+            ${{ env.MICROB_BUILD_DIR }}/slotA/badgemagic-*
+            ${{ env.MICROB_BUILD_DIR }}/slotB/badgemagic-*
 
       # Skip upload APK for pull requests & only allow binaries build from master
       - if: ${{ github.event_name != 'pull_request' && github.ref_name == 'master' }}
@@ -54,7 +58,9 @@ jobs:
 
           git checkout --orphan bin
           git reset
-          git add ${{ env.USBC_BUILD_DIR }}/badgemagic-*${{ env.BIN_TYPES }}
-          git add ${{ env.MICROB_BUILD_DIR }}/badgemagic-*${{ env.BIN_TYPES }}
+          git add ${{ env.USBC_BUILD_DIR }}/slotA/badgemagic-*${{ env.BIN_TYPES }}
+          git add ${{ env.USBC_BUILD_DIR }}/slotB/badgemagic-*${{ env.BIN_TYPES }}
+          git add ${{ env.MICROB_BUILD_DIR }}/slotA/badgemagic-*${{ env.BIN_TYPES }}
+          git add ${{ env.MICROB_BUILD_DIR }}/slotB/badgemagic-*${{ env.BIN_TYPES }}
           git commit -am "[Auto] Update firmware binaries from ${{ github.ref_name }} ($(date +%Y-%m-%d.%H:%M:%S))"
           git push --force origin bin
