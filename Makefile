@@ -88,6 +88,7 @@ src/power.c \
 src/auxbtn.c \
 src/util.c\
 src/game.c \
+src/ble/profile/OTAprofile.c \
 
 
 # ASM sources
@@ -160,7 +161,18 @@ CFLAGS += -MMD -MP
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = CH5xx_ble_firmware_library/Ld/Link.ld 
+# Slot selection: A or B (default A)
+SLOT ?= A
+
+ifeq ($(SLOT), A)
+	LDSCRIPT = CH5xx_ble_firmware_library/Ld/Link_SlotA.ld
+else ifeq ($(SLOT), B)
+	LDSCRIPT = CH5xx_ble_firmware_library/Ld/Link_SlotB.ld
+else
+	$(error SLOT must be A or B)
+endif
+
+TARGET = badgemagic-ch582-slot$(SLOT)
 
 # libraries
 LIBS = -lc -lm -lnosys \
