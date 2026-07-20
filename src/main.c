@@ -56,12 +56,13 @@ enum MODES {
 };
 
 static int menu_cursor=0;
-#define MENU_ITEMS_COUNT 5
+#define MENU_ITEMS_COUNT 6
 static const char *menu_labels[] = {
 	"ANIMATION",
 	"BT-PAIRING",
 	"CLOCK MODE",
 	"SNAKE",
+	"SECURITY",
 	"OFF"
 };
 
@@ -101,7 +102,6 @@ static void change_brightness()
 	NEXT_STATE(badge_cfg.led_brightness, 0, BRIGHTNESS_LEVELS);
 }
 
-static void mode_setup_download();
 static void mode_setup_normal();
 static void disp_clock();
 static void disp_menu();
@@ -110,6 +110,8 @@ static void menu_down();
 static void enter_clock_submenu();
 static void disp_stopwatch();
 void return_to_menu();
+static void enter_security_submenu();
+static void bt_pairing_bypass();
 
 __HIGH_CODE
 /*static void change_mode()
@@ -418,6 +420,18 @@ static void fb_puts_small(char *s, int len, int col, int row)
     }
 }
 
+static void disp_auth_code(uint16_t code)
+{
+	memset(fb, 0, sizeof(fb));
+	char buf[5];
+	buf[0] = '0' + (code / 1000) % 10;
+	buf[1] = '0' + (code / 100)  % 10;
+	buf[2] = '0' + (code / 10)   % 10;
+	buf[3] = '0' + (code)        % 10;
+	buf[4] = '\0';
+	fb_puts(buf, 4, 8, 2);   // centered on 44-col display, row 2
+}
+
 static void disp_clock()
 {
     uint16_t year, month, day, hour, minute, second;
@@ -479,12 +493,19 @@ static void menu_select(){
             mode_setup_normal();
             break;
         case 1:
-            mode = DOWNLOAD;
-            btn_onOnePress(KEY1, NULL);
-            btn_onOnePress(KEY2, NULL);
-            ble_enable_advertise();
-            start_ble_animation();
-            break;
+			mode = DOWNLOAD;
+			if (badge_cfg.ble_security) {
+				uint16_t auth_code = tmos_rand() % 10000;
+				legacy_set_auth_code(auth_code);
+				ble_enable_advertise();
+				auxbtn_onOnePress(KEY4, bt_pairing_bypass);
+				disp_auth_code(auth_code);
+			} else {
+				ble_enable_advertise();
+				start_ble_animation();
+				auxbtn_onOnePress(KEY4, return_to_menu);
+			}
+			break;
         case 2:
             enter_clock_submenu();
             break;
@@ -494,6 +515,9 @@ static void menu_select(){
 			game_start((uint16_t *)fb);
             break;
 		case 4:
+			enter_security_submenu();
+			break;
+		case 5:
 			mode = POWER_OFF;
 			poweroff();
 			break;
@@ -588,6 +612,52 @@ static void clock_submenu_select()
     }
 }
 
+static int security_submenu_sel = 0;  // 0 = ENABLE, 1 = DISABLE 
+
+static void disp_security_submenu()
+{
+    memset(fb, 0, sizeof(fb));
+    if (security_submenu_sel == 0)
+        fb_putchar_small('>', 0, 0);
+    else
+        fb_putchar_small('>', 0, 6);
+
+    fb_puts_small("ENABLE", 6, 4, 0);
+    fb_puts_small("DISABLE", 7, 4, 6);
+}
+
+static void security_submenu_nav()
+{
+    security_submenu_sel ^= 1;
+    disp_security_submenu();
+}
+
+static void security_submenu_select()
+{
+    badge_cfg.ble_security = (security_submenu_sel == 0) ? 1 : 0;
+    cfg_writeflash_def(&badge_cfg);
+    return_to_menu();
+}
+
+static void bt_pairing_bypass()
+{
+    legacy_bypass_auth();       // skip auth for this session
+	auxbtn_onOnePress(KEY4, return_to_menu);  // restore KEY4 to normal
+    start_ble_animation();      // drop PIN display, show BT animation
+}
+
+static void enter_security_submenu()
+{
+    stop_all_animation();
+    // cursor starts on current state
+    security_submenu_sel = badge_cfg.ble_security ? 0 : 1;
+    btn_onOnePress(KEY1, security_submenu_nav);   // navigate up/down
+    btn_onOnePress(KEY2, security_submenu_nav);   // navigate up/down
+    auxbtn_onOnePress(KEY3, security_submenu_select);  // confirm
+    auxbtn_onOnePress(KEY4, return_to_menu);           // cancel
+    disp_security_submenu();
+}
+
 static void enter_clock_submenu()
 {
     clock_active = 0;
@@ -639,22 +709,6 @@ static void disp_charging()
 			return;
 		}
 	}
-}
-
-static void mode_setup_download()
-{
-	// If always-on BLE is enabled, then skip this mode, jump to next mode
-	/*if (badge_cfg.ble_always_on) {
-		change_mode();
-	}*/
-
-	// Disable bitmap transition while in download mode
-	btn_onOnePress(KEY2, NULL);
-
-	// Take control of the current bitmap to display
-	// the Bluetooth animation
-	ble_enable_advertise();
-	start_ble_animation();
 }
 
 void clean_bmlist()
