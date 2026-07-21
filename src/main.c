@@ -11,6 +11,7 @@
 #include "font3x5.h"
 #include "auxbtn.h"
 #include "game.h"
+#include "pong.h"
 
 #include "power.h"
 #include "data.h"
@@ -44,7 +45,7 @@ static const char *menu_labels[] = {
 	"ANIMATION",
 	"BT-PAIRING",
 	"CLOCK MODE",
-	"SNAKE",
+	"GAMES",
 	"SECURITY",
 	"OFF"
 };
@@ -93,6 +94,7 @@ static void menu_down();
 static void enter_clock_submenu();
 static void disp_stopwatch();
 void return_to_menu();
+static void enter_games_submenu(void);
 static void enter_security_submenu();
 static void bt_pairing_bypass();
 
@@ -493,10 +495,8 @@ static void menu_select(){
             enter_clock_submenu();
             break;
         case 3:
-            mode = GAME;
-			stop_all_animation();
-			game_start((uint16_t *)fb);
-            break;
+			enter_games_submenu();
+			break;
 		case 4:
 			enter_security_submenu();
 			break;
@@ -656,6 +656,50 @@ static void enter_clock_submenu()
     disp_clock_submenu();
 }
 
+// Games submenu: 0 = Snake, 1 = Pong
+static int games_submenu_sel = 0;
+
+static void disp_games_submenu(void)
+{
+    memset(fb, 0, sizeof(fb));
+    if (games_submenu_sel == 0)
+        fb_putchar_small('>', 0, 0);
+    else
+        fb_putchar_small('>', 0, 6);
+
+    fb_puts_small("SNAKE", 5, 4, 0);
+    fb_puts_small("PONG",  4, 4, 6);
+}
+
+static void games_submenu_nav(void)
+{
+    games_submenu_sel ^= 1;
+    disp_games_submenu();
+}
+
+static void games_submenu_select(void)
+{
+    mode = GAME;
+    stop_all_animation();
+    if (games_submenu_sel == 0)
+        game_start((uint16_t *)fb);
+    else
+        pong_start((uint16_t *)fb);
+}
+
+static void enter_games_submenu(void)
+{
+    games_submenu_sel = 0;
+    stop_all_animation();
+
+    btn_onOnePress(KEY1, games_submenu_nav);
+    btn_onOnePress(KEY2, games_submenu_nav);
+    auxbtn_onOnePress(KEY3, games_submenu_select);
+    auxbtn_onOnePress(KEY4, return_to_menu);
+
+    disp_games_submenu();
+}
+
 void return_to_menu()
 {
     stop_all_animation();
@@ -667,6 +711,8 @@ void return_to_menu()
     mode = MENU;
     btn_onOnePress(KEY1, menu_up);
     btn_onOnePress(KEY2, menu_down);
+	  btn_onLongPress(KEY1, change_brightness);  
+    btn_onLongPress(KEY2, NULL);               
     auxbtn_onOnePress(KEY3, menu_select);
     disp_menu();
 }
@@ -791,6 +837,7 @@ int main()
 	btn_init_task();
 	auxbtn_init_task();
 	game_init();
+	pong_init();
 	stop_all_animation();
 
 	mode = MENU;
