@@ -28,6 +28,7 @@ typedef struct {
 	// Speed in period of micro second. The lower value, the higher speed
 	uint16_t splash_speedT;
 	uint8_t reset_rx; // Reset after bitmap received
+	uint8_t ble_security;  // 1 = require PIN for BLE transfers, 0 = open
 
 	uint8_t crc;
 } __attribute__((packed)) badge_cfg_t;
