@@ -190,12 +190,14 @@ static uint16_t pong_task(tmosTaskID id, uint16_t events)
     }
     if (events & EVT_PADDLE_UP) {
         move_paddle_up();
-        tmos_start_task(pong_taskid, EVT_PADDLE_UP, MS_TO_TMOS(PADDLE_REPEAT_MS));
+        if (isPressed(KEY1))
+            tmos_start_task(pong_taskid, EVT_PADDLE_UP, MS_TO_TMOS(PADDLE_REPEAT_MS));
         return events ^ EVT_PADDLE_UP;
     }
     if (events & EVT_PADDLE_DOWN) {
         move_paddle_down();
-        tmos_start_task(pong_taskid, EVT_PADDLE_DOWN, MS_TO_TMOS(PADDLE_REPEAT_MS));
+        if (isPressed(KEY2))
+            tmos_start_task(pong_taskid, EVT_PADDLE_DOWN, MS_TO_TMOS(PADDLE_REPEAT_MS));
         return events ^ EVT_PADDLE_DOWN;
     }
     return 0;
