@@ -99,3 +99,22 @@ bm_t *flash2newbm(uint32_t n)
 	free(buf);
 	return bm;
 }
+
+uint16_t data_read_highscore(void)
+{
+    uint16_t magic, hs;
+    EEPROM_READ(HIGHSCORE_EEPROM_OFFSET, &magic, sizeof(magic));
+    EEPROM_READ(HIGHSCORE_EEPROM_OFFSET + 2, &hs, sizeof(hs));
+    if (magic != HIGHSCORE_MAGIC)
+        return 0;
+    return hs;
+}
+
+void data_write_highscore(uint16_t score)
+{
+    uint16_t buf[2];
+    buf[0] = HIGHSCORE_MAGIC;
+    buf[1] = score;
+    EEPROM_ERASE(HIGHSCORE_EEPROM_OFFSET, sizeof(buf));
+    EEPROM_WRITE(HIGHSCORE_EEPROM_OFFSET, buf, sizeof(buf));
+}

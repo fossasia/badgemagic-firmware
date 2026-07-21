@@ -1,6 +1,7 @@
 #include "CH58xBLE_LIB.h"
 #include "setup.h"
 #include "../config.h"
+#include "../legacyctrl.h"
 
 #define ADV_UUID    (0xFEE0)
 
@@ -90,6 +91,7 @@ static void link_onTerminated(gapRoleEvent_t *pe)
 {
 	gapTerminateLinkEvent_t *event = (gapTerminateLinkEvent_t *)pe;
 	GAPRole_TerminateLink(pe->linkCmpl.connectionHandle);
+	legacy_reset_auth(); //clears authorised flag on disconnect
 	enable_advertising(TRUE);
 
 	if(event->connectionHandle == conn_list.connHandle) {
