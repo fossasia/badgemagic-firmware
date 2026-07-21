@@ -247,15 +247,7 @@ int ani_scroll_down(bm_t *bm, uint16_t *fb)
 static void still(bm_t *bm, uint16_t *fb, int frame)
 {
 	int frame_start = frame * LED_COLS;
-
-	int content_width = 0;
-	for (int k = 0; k < LED_COLS; k++) {
-		if (frame_start + k >= bm->width) break;
-		if (bm->buf[frame_start + k] != 0)
-			content_width = k + 1;
-	}
-
-	int x_offset = (content_width < LED_COLS) ? (LED_COLS - content_width) / 2 : 0;
+	int x_offset = get_x_offset(bm, frame);
 
 	int j = 0;
 	for (; j < x_offset; j++)
