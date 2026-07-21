@@ -420,6 +420,11 @@ int main()
 	usb_start();
 
 	led_init();
+	_Static_assert(LED_REFRESH_RATE > 0 && LED_REFRESH_RATE <= 3000,
+		"LED_REFRESH_RATE must be between 1 and 3000 Hz");
+	_Static_assert((FREQ_SYS / LED_REFRESH_RATE) / 2 > 0,
+		"LED_REFRESH_RATE too high for FREQ_SYS: timer divisor rounds to 0");
+
 	TMR0_TimerInit((FREQ_SYS / LED_REFRESH_RATE) / 2);
 	TMR0_ITCfg(ENABLE, TMR0_3_IT_CYC_END);
 	PFIC_EnableIRQ(TMR0_IRQn);
