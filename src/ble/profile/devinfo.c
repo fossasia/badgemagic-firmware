@@ -5,7 +5,8 @@
 static const uint8_t    systemId_val[] = {0, 0, 0, 0, 0, 0, 0, 0};
 static const uint16_t   systemId_UUID = SYSTEM_ID_UUID;
 
-#ifdef USBC_VERSION
+// TODO: Check if the open hardware version (REV3) is correctly covered by this.
+#ifndef HARDWARE_REV1
 #define USBC_VER_PREFIX "(C) "
 #define USBC_VER_SUFIX "-C"
 #else
@@ -23,7 +24,7 @@ const uint16_t          firmwareRev_UUID = FIRMWARE_REV_UUID;
 static const uint8_t    firmwareRev_val[] = USBC_VER_PREFIX VERSION;
 
 const uint16_t          hardwareRev_UUID = HARDWARE_REV_UUID;
-static const uint8_t    hardwareRev_val[] = "20240908";
+static const uint8_t    hardwareRev_val[] = "REV3";
 
 const uint16_t          softwareRev_UUID = SOFTWARE_REV_UUID;
 static const uint8_t    softwareRev_val[] = "N/A";

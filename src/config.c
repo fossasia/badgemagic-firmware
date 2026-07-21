@@ -9,7 +9,6 @@
 #include "util/crc.h"
 
 #include "ISP583.h"
-#include "CH58xBLE_LIB.h"
 #include <stdlib.h>
 
 #define CFG_SIZE sizeof(badge_cfg_t)
@@ -21,9 +20,9 @@ badge_cfg_t badge_cfg;
 void cfg_fallback()
 {
 	badge_cfg.ble_always_on = 0;
-	tmos_memcpy(badge_cfg.ble_devname, "LED Badge Magic\0\0\0\0", 20);
+	memcpy(badge_cfg.ble_devname, "LED Badge Magic\0\0\0\0", 20);
 	/* OEM app testing: */
-	// tmos_memcpy(badge_cfg.ble_devname, "LSLED\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 20);
+	// memcpy(badge_cfg.ble_devname, "LSLED\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 20);
 
 	badge_cfg.led_brightness = 0;
 	badge_cfg.led_scan_freq = 2000;
@@ -31,15 +30,13 @@ void cfg_fallback()
 	badge_cfg.splash_speedT = 30; // ms
 
 	int splash_size = ALIGN_1BYTE(splash.w) * splash.h;
-	if (splash_size > (int)sizeof(badge_cfg.splash_bm_bits))
-		splash_size = sizeof(badge_cfg.splash_bm_bits);
-	tmos_memset(badge_cfg.splash_bm_bits, 0, sizeof(badge_cfg.splash_bm_bits));
-	tmos_memcpy(badge_cfg.splash_bm_bits, splash.bits, splash_size);
+	memcpy(badge_cfg.splash_bm_bits, splash.bits, splash_size);
 	badge_cfg.splash_bm_w = splash.w;
 	badge_cfg.splash_bm_h = splash.h;
 	badge_cfg.splash_bm_fh = splash.fh;
 
 	badge_cfg.reset_rx = FALSE;
+	badge_cfg.ble_security = 0;  // insecure by default
 }
 
 void cfg_update_crc(badge_cfg_t *cfg)
