@@ -15,6 +15,10 @@ TARGET = badgemagic-ch582
 LED_REFRESH_RATE = 2000 # Hz
 
 # optimization for size
+# There are 3 different hardware variants supported at the moment.
+# HARDWARE_REV1 = 1
+# HARDWARE_REV2 = 1 # (default)
+# HARDWARE_REV3 = 1
 OPT = -Os
 
 
@@ -85,7 +89,11 @@ src/xbm.c \
 src/resource.c \
 src/animation.c \
 src/font.c \
+src/font3x5.c \
 src/power.c \
+src/auxbtn.c \
+src/util.c\
+src/game.c \
 
 
 # ASM sources
@@ -140,12 +148,16 @@ ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2 -DDEBUG=$(DEBUG)
 endif
 
-ifeq ($(USBC_VERSION), 1)
-CFLAGS += -DUSBC_VERSION=$(USBC_VERSION)
+ifeq ($(HARDWARE_REV1), 1)
+CFLAGS += -DHARDWARE_REV1=$(HARDWARE_REV1)
+endif
+ifeq ($(HARDWARE_REV3), 1)
+CFLAGS += -DHARDWARE_REV3=$(HARDWARE_REV3)
 endif
 
 CFLAGS += -DVERSION='"$(VERSION)"' -DVERSION_ABBR='"$(VERSION_ABBR)"'
 CFLAGS += -DLED_REFRESH_RATE=$(LED_REFRESH_RATE)
+CFLAGS += -DCLK_OSC32K=2
 
 # Generate dependency information
 CFLAGS += -MMD -MP

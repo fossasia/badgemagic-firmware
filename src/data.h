@@ -1,6 +1,9 @@
 #ifndef __DATA_H__
 #define __DATA_H__
 
+#define HIGHSCORE_EEPROM_OFFSET  0x7FF8
+#define HIGHSCORE_MAGIC          0xA55A
+
 #include <stdint.h>
 
 #include "bmlist.h"
@@ -54,5 +57,8 @@ void chunk2bm(uint8_t *chunk, uint16_t size, bm_t *bm);
 
 bm_t *chunk2newbm(uint8_t *chunk, uint16_t size);
 bm_t *flash2newbm(uint32_t n);
+
+uint16_t data_read_highscore(void);
+void     data_write_highscore(uint16_t score);
 
 #endif /* __DATA_H__ */
