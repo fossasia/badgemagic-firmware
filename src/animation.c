@@ -174,6 +174,10 @@ int ani_scroll_right(bm_t *bm, uint16_t *fb)
  * Returns 0 if content fills the full width (no centering needed). */
 static int get_x_offset(bm_t *bm, int frame)
 {
+	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
+	if (frames > 1)
+		return 0;
+
 	int frame_start = frame * LED_COLS;
 	int content_width = 0;
 	for (int k = 0; k < LED_COLS; k++) {
