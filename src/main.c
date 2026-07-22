@@ -12,6 +12,7 @@
 #include "auxbtn.h"
 #include "game.h"
 #include "flappy.h"
+#include "pong.h"
 
 #include "power.h"
 #include "data.h"
@@ -656,14 +657,14 @@ static void enter_clock_submenu()
     disp_clock_submenu();
 }
 
-// Games submenu: 0 = Snake, 1 = Flappy
-#define GAMES_COUNT 2
+// Games submenu: 0 = Snake, 1 = Flappy, 2 = Pong
+#define GAMES_COUNT 3
 static int games_submenu_sel = 0;
 
 static void disp_games_submenu(void)
 {
     memset(fb, 0, sizeof(fb));
-    static const char *labels[] = { "SNAKE", "FLAPPY" };
+    static const char *labels[] = { "SNAKE", "FLAPPY", "PONG" };
 
     int page  = games_submenu_sel / 2;
     int item0 = page * 2;
@@ -690,10 +691,17 @@ static void games_submenu_select(void)
 {
     mode = GAME;
     stop_all_animation();
-    if (games_submenu_sel == 0)
-        game_start((uint16_t *)fb);
-    else
-        flappy_start((uint16_t *)fb);
+    switch (games_submenu_sel) {
+        case 0:
+            game_start((uint16_t *)fb);
+            break;
+        case 1:
+            flappy_start((uint16_t *)fb);
+            break;
+        case 2:
+            pong_start((uint16_t *)fb);
+            break;
+    }
 }
 
 static void enter_games_submenu(void)
@@ -847,6 +855,7 @@ int main()
 	auxbtn_init_task();
 	game_init();
 	flappy_init();
+	pong_init();
 	stop_all_animation();
 
 	mode = MENU;
