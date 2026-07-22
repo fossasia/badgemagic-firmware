@@ -88,6 +88,7 @@ src/power.c \
 src/auxbtn.c \
 src/util.c\
 src/game.c \
+src/flappy.c \
 src/pong.c \
 
 

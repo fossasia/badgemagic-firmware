@@ -11,6 +11,7 @@
 #include "font3x5.h"
 #include "auxbtn.h"
 #include "game.h"
+#include "flappy.h"
 #include "pong.h"
 
 #include "power.h"
@@ -626,7 +627,7 @@ static void security_submenu_select()
 static void bt_pairing_bypass()
 {
     legacy_bypass_auth();       // skip auth for this session
-	auxbtn_onOnePress(KEY4, return_to_menu);  // restore KEY4 to normal
+	  auxbtn_onOnePress(KEY4, return_to_menu);  // restore KEY4 to normal
     start_ble_animation();      // drop PIN display, show BT animation
 }
 
@@ -657,24 +658,33 @@ static void enter_clock_submenu()
     disp_clock_submenu();
 }
 
-// Games submenu: 0 = Snake, 1 = Pong
+// Games submenu: 0 = Snake, 1 = Flappy, 2 = Pong
+#define GAMES_COUNT 3
 static int games_submenu_sel = 0;
 
 static void disp_games_submenu(void)
 {
     memset(fb, 0, sizeof(fb));
-    if (games_submenu_sel == 0)
-        fb_putchar_small('>', 0, 0);
-    else
-        fb_putchar_small('>', 0, 6);
+    static const char *labels[] = { "SNAKE", "FLAPPY", "PONG" };
 
-    fb_puts_small("SNAKE", 5, 4, 0);
-    fb_puts_small("PONG",  4, 4, 6);
+    int page  = games_submenu_sel / 2;
+    int item0 = page * 2;
+    int item1 = page * 2 + 1;
+
+    if (games_submenu_sel == item0)
+        fb_putchar_small('>', 0, 0);
+    fb_puts_small((char *)labels[item0], strlen(labels[item0]), 4, 0);
+
+    if (item1 < GAMES_COUNT) {
+        if (games_submenu_sel == item1)
+            fb_putchar_small('>', 0, 6);
+        fb_puts_small((char *)labels[item1], strlen(labels[item1]), 4, 6);
+    }
 }
 
 static void games_submenu_nav(void)
 {
-    games_submenu_sel ^= 1;
+    games_submenu_sel = (games_submenu_sel + 1) % GAMES_COUNT;
     disp_games_submenu();
 }
 
@@ -682,10 +692,17 @@ static void games_submenu_select(void)
 {
     mode = GAME;
     stop_all_animation();
-    if (games_submenu_sel == 0)
-        game_start((uint16_t *)fb);
-    else
-        pong_start((uint16_t *)fb);
+    switch (games_submenu_sel) {
+        case 0:
+            game_start((uint16_t *)fb);
+            break;
+        case 1:
+            flappy_start((uint16_t *)fb);
+            break;
+        case 2:
+            pong_start((uint16_t *)fb);
+            break;
+    }
 }
 
 static void enter_games_submenu(void)
@@ -705,14 +722,14 @@ void return_to_menu()
 {
     stop_all_animation();
     tmos_stop_task(common_taskid, CLOCK_TICK);
-	tmos_stop_task(common_taskid, STOPWATCH_TICK);
-	sw_state=SW_STOPPED;
+	  tmos_stop_task(common_taskid, STOPWATCH_TICK);
+	  sw_state=SW_STOPPED;
     clock_active = 0;
 
     mode = MENU;
     btn_onOnePress(KEY1, menu_up);
     btn_onOnePress(KEY2, menu_down);
-	  btn_onLongPress(KEY1, change_brightness);  
+    btn_onLongPress(KEY1, change_brightness);  
     btn_onLongPress(KEY2, NULL);               
     auxbtn_onOnePress(KEY3, menu_select);
     disp_menu();
@@ -838,6 +855,7 @@ int main()
 	btn_init_task();
 	auxbtn_init_task();
 	game_init();
+	flappy_init();
 	pong_init();
 	stop_all_animation();
 
