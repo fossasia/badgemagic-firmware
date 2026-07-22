@@ -9,6 +9,12 @@ TARGET = badgemagic-ch582
 ######################################
 # Uncomment below line to enable debugging
 # DEBUG = 1
+# Uncomment below to build for USB-C version
+# USBC_VERSION = 1
+
+LED_REFRESH_RATE = 2000 # Hz
+
+# optimization for size
 # There are 3 different hardware variants supported at the moment.
 # HARDWARE_REV1 = 1
 # HARDWARE_REV2 = 1 # (default)
@@ -151,6 +157,7 @@ CFLAGS += -DHARDWARE_REV3=$(HARDWARE_REV3)
 endif
 
 CFLAGS += -DVERSION='"$(VERSION)"' -DVERSION_ABBR='"$(VERSION_ABBR)"'
+CFLAGS += -DLED_REFRESH_RATE=$(LED_REFRESH_RATE)
 CFLAGS += -DCLK_OSC32K=2
 
 # Generate dependency information
