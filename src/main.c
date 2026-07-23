@@ -723,7 +723,7 @@ void return_to_menu()
     btn_onOnePress(KEY1, menu_up);
     btn_onOnePress(KEY2, menu_down);
 #if HW_KEY_COUNT == 4
-    btn_onLongPress(KEY1, change_brightness);
+    btn_onLongPress(KEY1, NULL);
     btn_onLongPress(KEY2, NULL);
     auxbtn_onOnePress(KEY3, menu_select);
     auxbtn_onOnePress(KEY4, return_to_menu);
