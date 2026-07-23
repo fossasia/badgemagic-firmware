@@ -13,6 +13,8 @@
 #include "auxbtn.h"
 #endif
 #include "game.h"
+#include "flappy.h"
+#include "pong.h"
 
 #include "power.h"
 #include "data.h"
@@ -41,20 +43,21 @@ enum MODES {
 };
 
 static int menu_cursor=0;
-
-#define MENU_ITEMS_COUNT 5
+#define MENU_ITEMS_COUNT 6
 static const char *menu_labels[] = {
 	"ANIMATION",
 	"BT-PAIRING",
 	"CLOCK MODE",
-	"SNAKE",
+	"GAMES",
+	"SECURITY",
 	"OFF"
 };
 #define MENU_IDX_ANIMATION 0
 #define MENU_IDX_BLE       1
 #define MENU_IDX_CLOCK     2
-#define MENU_IDX_SNAKE     3
-#define MENU_IDX_OFF       4
+#define MENU_IDX_GAMES     3
+#define MENU_IDX_SECURITY  4
+#define MENU_IDX_OFF       5
 
 #define ANI_BASE_SPEED_T      (200000) // uS
 #define ANI_MARQUE_SPEED_T    (100000) // uS
@@ -88,7 +91,6 @@ static int clock_active = 0;
 
 __HIGH_CODE
 
-static void mode_setup_download();
 static void mode_setup_normal();
 static void disp_clock();
 static void disp_menu();
@@ -97,6 +99,9 @@ static void menu_down();
 static void enter_clock_submenu();
 static void disp_stopwatch();
 void return_to_menu();
+static void enter_games_submenu(void);
+static void enter_security_submenu();
+static void bt_pairing_bypass();
 
 __HIGH_CODE
 static void bm_transition()
@@ -107,6 +112,7 @@ static void bm_transition()
 		return;
 	}
 
+	bmlist_current()->anim_step = 0;
 	bmlist_gonext();
 	if (bmlist_current() == bmlist_head()) {
 		is_play_sequentially = 1;
@@ -171,9 +177,9 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		if (animations[LEGACY_GET_ANIMATION(bm->modes)])
 			if (animations[LEGACY_GET_ANIMATION(bm->modes)](bm, fb) == 0
 				&& is_play_sequentially) {
+				bm->anim_step = 0;
 				bmlist_gonext();
 			}
-
 		if (bm->is_flash) {
 			ani_flash(bm, fb, flash_step);
 		}
@@ -387,6 +393,18 @@ static void fb_puts_small(char *s, int len, int col, int row)
     }
 }
 
+static void disp_auth_code(uint16_t code)
+{
+	memset(fb, 0, sizeof(fb));
+	char buf[5];
+	buf[0] = '0' + (code / 1000) % 10;
+	buf[1] = '0' + (code / 100)  % 10;
+	buf[2] = '0' + (code / 10)   % 10;
+	buf[3] = '0' + (code)        % 10;
+	buf[4] = '\0';
+	fb_puts(buf, 4, 8, 2);   // centered on 44-col display, row 2
+}
+
 static void disp_clock()
 {
     uint16_t year, month, day, hour, minute, second;
@@ -440,32 +458,47 @@ static void menu_down(){
 }
 
 static void menu_select(){
-    if (menu_cursor == MENU_IDX_ANIMATION) {
-        mode = NORMAL;
-        btn_onOnePress(KEY1, NULL);
-        btn_onOnePress(KEY2, bm_transition);
-        mode_setup_normal();
-    } else if (menu_cursor == MENU_IDX_BLE) {
-        mode = DOWNLOAD;
-        btn_onOnePress(KEY1, NULL);
-        mode_setup_download();
-    } else if (menu_cursor == MENU_IDX_CLOCK) {
-        enter_clock_submenu();
-    }
-
-    else if (menu_cursor == MENU_IDX_SNAKE) {
-		mode = GAME;
-		stop_all_animation();
-	#if HW_KEY_COUNT == 4
-		auxbtn_onOnePress(KEY3, NULL);
-		auxbtn_onOnePress(KEY4, NULL);
-	#endif
-		game_start((uint16_t *)fb);
-	}
-
-    else if (menu_cursor == MENU_IDX_OFF) {
-        mode = POWER_OFF;
-        poweroff();
+    switch (menu_cursor) {
+        case MENU_IDX_ANIMATION:
+            mode = NORMAL;
+            btn_onOnePress(KEY1, NULL);
+            btn_onOnePress(KEY2, bm_transition);
+            mode_setup_normal();
+            break;
+        case MENU_IDX_BLE:
+            mode = DOWNLOAD;
+            btn_onOnePress(KEY2, NULL);
+            btn_onLongPress(KEY1, NULL);
+            btn_onLongPress(KEY2, return_to_menu);
+            if (badge_cfg.ble_security) {
+                uint16_t auth_code = tmos_rand() % 10000;
+                legacy_set_auth_code(auth_code);
+                ble_enable_advertise();
+            #if HW_KEY_COUNT == 4
+                auxbtn_onOnePress(KEY4, bt_pairing_bypass);
+            #endif
+                disp_auth_code(auth_code);
+            } else {
+                ble_enable_advertise();
+                start_ble_animation();
+            #if HW_KEY_COUNT == 4
+                auxbtn_onOnePress(KEY4, return_to_menu);
+            #endif
+            }
+            break;
+        case MENU_IDX_CLOCK:
+            enter_clock_submenu();
+            break;
+        case MENU_IDX_GAMES:
+            enter_games_submenu();
+            break;
+        case MENU_IDX_SECURITY:
+            enter_security_submenu();
+            break;
+        case MENU_IDX_OFF:
+            mode = POWER_OFF;
+            poweroff();
+            break;
     }
 }
 
@@ -557,6 +590,52 @@ static void clock_submenu_select()
     }
 }
 
+static int security_submenu_sel = 0;  // 0 = ENABLE, 1 = DISABLE 
+
+static void disp_security_submenu()
+{
+    memset(fb, 0, sizeof(fb));
+    if (security_submenu_sel == 0)
+        fb_putchar_small('>', 0, 0);
+    else
+        fb_putchar_small('>', 0, 6);
+
+    fb_puts_small("ENABLE", 6, 4, 0);
+    fb_puts_small("DISABLE", 7, 4, 6);
+}
+
+static void security_submenu_nav()
+{
+    security_submenu_sel ^= 1;
+    disp_security_submenu();
+}
+
+static void security_submenu_select()
+{
+    badge_cfg.ble_security = (security_submenu_sel == 0) ? 1 : 0;
+    cfg_writeflash_def(&badge_cfg);
+    return_to_menu();
+}
+
+static void bt_pairing_bypass()
+{
+    legacy_bypass_auth();       // skip auth for this session
+	  auxbtn_onOnePress(KEY4, return_to_menu);  // restore KEY4 to normal
+    start_ble_animation();      // drop PIN display, show BT animation
+}
+
+static void enter_security_submenu()
+{
+    stop_all_animation();
+    // cursor starts on current state
+    security_submenu_sel = badge_cfg.ble_security ? 0 : 1;
+    btn_onOnePress(KEY1, security_submenu_nav);   // navigate up/down
+    btn_onOnePress(KEY2, security_submenu_nav);   // navigate up/down
+    auxbtn_onOnePress(KEY3, security_submenu_select);  // confirm
+    auxbtn_onOnePress(KEY4, return_to_menu);           // cancel
+    disp_security_submenu();
+}
+
 static void enter_clock_submenu()
 {
     clock_active = 0;
@@ -572,24 +651,85 @@ static void enter_clock_submenu()
     disp_clock_submenu();
 }
 
+// Games submenu: 0 = Snake, 1 = Flappy, 2 = Pong
+#define GAMES_COUNT 3
+static int games_submenu_sel = 0;
+
+static void disp_games_submenu(void)
+{
+    memset(fb, 0, sizeof(fb));
+    static const char *labels[] = { "SNAKE", "FLAPPY", "PONG" };
+
+    int page  = games_submenu_sel / 2;
+    int item0 = page * 2;
+    int item1 = page * 2 + 1;
+
+    if (games_submenu_sel == item0)
+        fb_putchar_small('>', 0, 0);
+    fb_puts_small((char *)labels[item0], strlen(labels[item0]), 4, 0);
+
+    if (item1 < GAMES_COUNT) {
+        if (games_submenu_sel == item1)
+            fb_putchar_small('>', 0, 6);
+        fb_puts_small((char *)labels[item1], strlen(labels[item1]), 4, 6);
+    }
+}
+
+static void games_submenu_nav(void)
+{
+    games_submenu_sel = (games_submenu_sel + 1) % GAMES_COUNT;
+    disp_games_submenu();
+}
+
+static void games_submenu_select(void)
+{
+    mode = GAME;
+    stop_all_animation();
+    switch (games_submenu_sel) {
+        case 0:
+            game_start((uint16_t *)fb);
+            break;
+        case 1:
+            flappy_start((uint16_t *)fb);
+            break;
+        case 2:
+            pong_start((uint16_t *)fb);
+            break;
+    }
+}
+
+static void enter_games_submenu(void)
+{
+    games_submenu_sel = 0;
+    stop_all_animation();
+
+    btn_onOnePress(KEY1, games_submenu_nav);
+    btn_onOnePress(KEY2, games_submenu_nav);
+    auxbtn_onOnePress(KEY3, games_submenu_select);
+    auxbtn_onOnePress(KEY4, return_to_menu);
+
+    disp_games_submenu();
+}
+
 void return_to_menu()
 {
     stop_all_animation();
     tmos_stop_task(common_taskid, CLOCK_TICK);
-	tmos_stop_task(common_taskid, STOPWATCH_TICK);
-	sw_state=SW_STOPPED;
+    tmos_stop_task(common_taskid, STOPWATCH_TICK);
+    sw_state = SW_STOPPED;
     clock_active = 0;
 
     mode = MENU;
     btn_onOnePress(KEY1, menu_up);
     btn_onOnePress(KEY2, menu_down);
-    btn_onLongPress(KEY1, menu_select);
-#if HW_KEY_COUNT == 2
-    btn_onLongPress(KEY2, NULL);
-#endif
 #if HW_KEY_COUNT == 4
+    btn_onLongPress(KEY1, change_brightness);
+    btn_onLongPress(KEY2, NULL);
     auxbtn_onOnePress(KEY3, menu_select);
     auxbtn_onOnePress(KEY4, return_to_menu);
+#else
+    btn_onLongPress(KEY1, menu_select);
+    btn_onLongPress(KEY2, NULL);
 #endif
     disp_menu();
 }
@@ -615,17 +755,6 @@ static void disp_charging()
 			return;
 		}
 	}
-}
-
-static void mode_setup_download()
-{
-	btn_onOnePress(KEY2, NULL);
-
-	btn_onLongPress(KEY1, NULL);
-	btn_onLongPress(KEY2, return_to_menu);
-
-	ble_enable_advertise();
-	start_ble_animation();
 }
 
 void clean_bmlist()
@@ -713,6 +842,8 @@ int main()
 	auxbtn_init_task();
 #endif
 	game_init();
+	flappy_init();
+	pong_init();
 	stop_all_animation();
 
 	mode = MENU;
