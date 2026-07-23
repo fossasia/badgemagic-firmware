@@ -175,6 +175,85 @@ To flash the firmware, enter the bootloader, then run:
 ```sh
 BUILD_DIR=custom-dir-if-needed make isp
 ```
+## Building and flashing per hardware variant
+
+This firmware supports two independent build choices — you need to know both
+before building or downloading:
+
+1. **Board revision** — controlled by `HARDWARE_REV1` / `HARDWARE_REV3`
+   (see the [Build](#build) section above for what each targets).
+2. **Button count** — controlled by the new `KEY_COUNT` flag: `KEY_COUNT=4`
+   (default) or `KEY_COUNT=2`.
+
+If you're not sure which board revision or button count your badge has, see
+[CH582.md](./CH582.md) for identification help before flashing.
+
+### Building from source
+
+Set the toolchain location first, as described in [Build](#build):
+
+```sh
+export PREFIX=../MRS_Toolchain_Linux_x64_V1.92/RISC-V_Embedded_GCC/bin/riscv-none-embed-
+```
+
+**4-key badge, second-gen hardware (default):**
+```sh
+make
+```
+
+**4-key badge, Micro USB (first-gen) hardware:**
+```sh
+BUILD_DIR=custom-dir HARDWARE_REV1=1 make
+```
+
+**2-key badge, second-gen hardware:**
+```sh
+BUILD_DIR=custom-dir KEY_COUNT=2 make
+```
+
+**2-key badge, Micro USB (first-gen) hardware:**
+```sh
+BUILD_DIR=custom-dir HARDWARE_REV1=1 KEY_COUNT=2 make
+```
+
+> [!NOTE]
+> Switching `KEY_COUNT`, like switching `HARDWARE_REV*`, requires a clean
+> build so the new build doesn't contain the previous build's blob:
+> ```sh
+> make clean all
+> ```
+> This only matters if you're reusing the same `BUILD_DIR` for different
+> variants. Building each variant into its own `BUILD_DIR` avoids the need
+> for `make clean` between builds.
+
+To flash directly after building, enter the bootloader (see
+[Installation](#installation) above), then:
+
+```sh
+BUILD_DIR=custom-dir-if-needed make isp
+```
+
+### Flashing a pre-built release binary
+
+Download the binary matching your hardware from
+[releases](https://github.com/fossasia/badgemagic-firmware/releases):
+
+- `badgemagic-4key-<rev>.bin` — 4-key badges
+- `badgemagic-2key-<rev>.bin` — 2-key badges
+
+Where `<rev>` matches your board revision, per [CH582.md](./CH582.md).
+
+Then, same as any firmware update:
+
+```sh
+wchisp config reset
+wchisp flash badgemagic-<variant>.bin
+```
+
+Long-press KEY2 to enter ISP mode first if the badge isn't already there.
+Flashing the wrong `KEY_COUNT` variant won't damage the badge, but menu
+navigation will be incomplete or stuck, since some button handlers expect
+hardware that isn't present — reflash the correct variant to fix it.
 
 ### Debugging
 
@@ -262,6 +341,48 @@ The 2 buttons configuration:
     * Switches to badge display instead of charging screen when plugged with USB
     * Switches memory bank when displayed
     * Changes brightness level (long press)
+
+## New: Full menu firmware now available for 2-key badges
+
+Previously, 2-key badges could only run the simple button scheme described
+above (power on/off, Bluetooth upload, brightness, bank switch). This release
+brings the full menu-driven firmware — until now only available on 4-key
+badges to 2-key hardware as well.
+
+### What's new for 2-key badge owners
+
+- **Menu system** — scroll and select between Animation, Bluetooth Pairing,
+  Clock, Snake, and Off, instead of the old fixed on/off behaviour
+- **Clock mode with Stopwatch** — a full clock submenu (Time / Stopwatch),
+  previously exclusive to 4-key hardware.
+- **Snake** — the game uses relative turning (turn left / turn right)
+  rather than absolute directions, so it works identically on 2-key
+  hardware with no loss of functionality.
+- Everything else the 2-key firmware already had — animations, BLE pairing
+  toggle, USB HID/CDC control
+
+Every menu feature from the 4-key firmware is now fully available on 2-key
+hardware. Nothing is missing in this release.
+
+### How the buttons work differently
+
+The 4-key firmware uses two extra auxiliary buttons (KEY3/KEY4) for menu
+selection and returning to the menu. 2-key hardware doesn't have those
+buttons, so those actions are remapped onto **long-presses** of the two
+buttons you already have:
+
+| Action | 4-key badges | 2-key badges |
+|---|---|---|
+| Scroll menu / clock submenu | KEY1/KEY2 short-press | KEY1/KEY2 short-press (unchanged) |
+| Select menu item / enter clock submenu item | KEY3 short-press, or KEY1 long-press | KEY1 long-press |
+| Return to menu (from Animation/BLE mode) | KEY4 short-press | KEY2 long-press |
+| Return to menu / back (from Clock submenu) | KEY4 short-press | KEY2 long-press |
+| Stopwatch start/stop, reset | KEY1 / KEY2 short-press | KEY1 / KEY2 short-press (unchanged) |
+| Snake | KEY3/KEY4 for movement | Not available |
+
+Menu scrolling, the clock submenu, and the stopwatch behave exactly the same
+either way — the only change is that KEY1 long-press and KEY2 long-press now
+do the job KEY3 and KEY4 used to do.
 
 ### Upload Protocol
 
