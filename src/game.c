@@ -8,6 +8,9 @@
 #include "CH58x_common.h"
 #include "game.h"
 #include "data.h"
+#if HW_KEY_COUNT == 4
+#include "auxbtn.h"
+#endif
 
 #define SNAKE_MAX_LEN       100
 #define SPEED_INITIAL_MS    300
@@ -232,7 +235,11 @@ void game_start(uint16_t *fb)
 
     btn_onOnePress(KEY1, on_turn_left);
     btn_onOnePress(KEY2, on_turn_right);
-    btn_onLongPress(KEY1, NULL); 
-     
+    btn_onLongPress(KEY1, NULL);
+#if HW_KEY_COUNT == 4
+    auxbtn_onOnePress(KEY3, NULL);
+    auxbtn_onOnePress(KEY4, NULL);
+#endif
+
     tmos_start_task(game_taskid, GAME_TICK, MS_TO_TMOS(speed_ms));
 }
