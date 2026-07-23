@@ -92,10 +92,13 @@ src/font.c \
 src/font3x5.c \
 src/power.c \
 src/util.c \
+src/game.c \
+src/flappy.c \
+src/pong.c \
 
-# Games only relevant to 4-key hardware (aux buttons KEY3/KEY4 needed for select/back)
+# Aux buttons (KEY3/KEY4) only exist on 4-key hardware
 ifeq ($(KEY_COUNT), 4)
-C_SOURCES += src/game.c src/flappy.c src/pong.c src/auxbtn.c
+C_SOURCES += src/auxbtn.c
 endif
 
 
