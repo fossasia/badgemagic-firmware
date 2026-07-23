@@ -454,10 +454,14 @@ static void menu_select(){
     }
 
     else if (menu_cursor == MENU_IDX_SNAKE) {
-        mode = GAME;
-        stop_all_animation();
-        game_start((uint16_t *)fb);
-    }
+		mode = GAME;
+		stop_all_animation();
+	#if HW_KEY_COUNT == 4
+		auxbtn_onOnePress(KEY3, NULL);
+		auxbtn_onOnePress(KEY4, NULL);
+	#endif
+		game_start((uint16_t *)fb);
+	}
 
     else if (menu_cursor == MENU_IDX_OFF) {
         mode = POWER_OFF;
@@ -583,6 +587,10 @@ void return_to_menu()
 #if HW_KEY_COUNT == 2
     btn_onLongPress(KEY2, NULL);
 #endif
+#if HW_KEY_COUNT == 4
+    auxbtn_onOnePress(KEY3, menu_select);
+    auxbtn_onOnePress(KEY4, return_to_menu);
+#endif
     disp_menu();
 }
 
@@ -611,17 +619,11 @@ static void disp_charging()
 
 static void mode_setup_download()
 {
-	// Disable bitmap transition while in download mode
 	btn_onOnePress(KEY2, NULL);
 
-#if HW_KEY_COUNT == 2
-	// No aux KEY4 on 2-key hardware: give KEY2 long-press a way back to menu
 	btn_onLongPress(KEY1, NULL);
 	btn_onLongPress(KEY2, return_to_menu);
-#endif
 
-	// Take control of the current bitmap to display
-	// the Bluetooth animation
 	ble_enable_advertise();
 	start_ble_animation();
 }
@@ -642,11 +644,8 @@ void reload_bmlist()
 static void mode_setup_normal()
 {
 	btn_onOnePress(KEY2, bm_transition);
-#if HW_KEY_COUNT == 2
-	// No aux KEY4 on 2-key hardware: give KEY2 long-press a way back to menu
 	btn_onLongPress(KEY1, NULL);
 	btn_onLongPress(KEY2, return_to_menu);
-#endif
 	reload_bmlist();
 	start_normal_animation();
 }
