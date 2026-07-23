@@ -466,26 +466,30 @@ static void menu_select(){
             mode_setup_normal();
             break;
         case MENU_IDX_BLE:
-            mode = DOWNLOAD;
-            btn_onOnePress(KEY2, NULL);
-            btn_onLongPress(KEY1, NULL);
-            btn_onLongPress(KEY2, return_to_menu);
-            if (badge_cfg.ble_security) {
-                uint16_t auth_code = tmos_rand() % 10000;
-                legacy_set_auth_code(auth_code);
-                ble_enable_advertise();
-            #if HW_KEY_COUNT == 4
-                auxbtn_onOnePress(KEY4, bt_pairing_bypass);
-            #endif
-                disp_auth_code(auth_code);
-            } else {
-                ble_enable_advertise();
-                start_ble_animation();
-            #if HW_KEY_COUNT == 4
-                auxbtn_onOnePress(KEY4, return_to_menu);
-            #endif
-            }
-            break;
+			mode = DOWNLOAD;
+			btn_onOnePress(KEY2, NULL);
+			btn_onLongPress(KEY1, NULL);
+			btn_onLongPress(KEY2, return_to_menu);
+			if (badge_cfg.ble_security) {
+				uint16_t auth_code = tmos_rand() % 10000;
+				legacy_set_auth_code(auth_code);
+				ble_enable_advertise();
+		#if HW_KEY_COUNT == 4
+				auxbtn_onOnePress(KEY4, bt_pairing_bypass);
+		#else
+				btn_onLongPress(KEY1, bt_pairing_bypass);
+		#endif
+				disp_auth_code(auth_code);
+			} else {
+				ble_enable_advertise();
+				start_ble_animation();
+		#if HW_KEY_COUNT == 4
+				auxbtn_onOnePress(KEY4, return_to_menu);
+		#else
+				btn_onLongPress(KEY1, return_to_menu);
+		#endif
+			}
+			break;
         case MENU_IDX_CLOCK:
             enter_clock_submenu();
             break;
@@ -620,7 +624,11 @@ static void security_submenu_select()
 static void bt_pairing_bypass()
 {
     legacy_bypass_auth();       // skip auth for this session
-	  auxbtn_onOnePress(KEY4, return_to_menu);  // restore KEY4 to normal
+#if HW_KEY_COUNT == 4
+    auxbtn_onOnePress(KEY4, return_to_menu);  // restore KEY4 to normal
+#else
+    btn_onLongPress(KEY1, return_to_menu);    // restore KEY1 long-press to normal
+#endif
     start_ble_animation();      // drop PIN display, show BT animation
 }
 
@@ -631,8 +639,13 @@ static void enter_security_submenu()
     security_submenu_sel = badge_cfg.ble_security ? 0 : 1;
     btn_onOnePress(KEY1, security_submenu_nav);   // navigate up/down
     btn_onOnePress(KEY2, security_submenu_nav);   // navigate up/down
+#if HW_KEY_COUNT == 4
     auxbtn_onOnePress(KEY3, security_submenu_select);  // confirm
     auxbtn_onOnePress(KEY4, return_to_menu);           // cancel
+#else
+    btn_onLongPress(KEY1, security_submenu_select);    // confirm
+    btn_onLongPress(KEY2, return_to_menu);              // cancel
+#endif
     disp_security_submenu();
 }
 
@@ -705,8 +718,13 @@ static void enter_games_submenu(void)
 
     btn_onOnePress(KEY1, games_submenu_nav);
     btn_onOnePress(KEY2, games_submenu_nav);
+#if HW_KEY_COUNT == 4
     auxbtn_onOnePress(KEY3, games_submenu_select);
     auxbtn_onOnePress(KEY4, return_to_menu);
+#else
+    btn_onLongPress(KEY1, games_submenu_select);
+    btn_onLongPress(KEY2, return_to_menu);
+#endif
 
     disp_games_submenu();
 }
