@@ -1,7 +1,9 @@
 #include "flappy.h"
 #include "leddrv.h"
 #include "CH58xBLE_LIB.h"
+#if HW_KEY_COUNT == 4
 #include "auxbtn.h"
+#endif
 #include "button.h"
 #include "font3x5.h"
 #include "CH58x_common.h"
@@ -171,13 +173,11 @@ void flappy_start(uint16_t *fb)
     RTC_GetTime(&yr, &mo, &dy, &hr, &mn, &sc);
     srand(hr * 3600 + mn * 60 + sc);
 
-    // bird: center of screen, fixed-point - same as actual game (enough to create illusion)
     bird_y   = (LED_ROWS / 2) << 2;
     bird_vel = 0;
     score    = 0;
     tick_ms  = TICK_INIT_MS;
 
-    // pipes: first at col 43, second 15 behind 
     pipes[0].x       = LED_COLS - 1;
     pipes[0].gap_top = random_gap();
     pipes[1].x       = LED_COLS - 1 - PIPE_SPACING;
@@ -187,6 +187,7 @@ void flappy_start(uint16_t *fb)
     draw_pipe(&pipes[0], 1);
     draw_pipe(&pipes[1], 1);
 
+#if HW_KEY_COUNT == 4
     // Key 3 is used to play the game
     btn_onOnePress(KEY1, NULL);
     btn_onOnePress(KEY2, NULL);
@@ -194,6 +195,13 @@ void flappy_start(uint16_t *fb)
     btn_onLongPress(KEY2, NULL);
     auxbtn_onOnePress(KEY3, on_flap);
     auxbtn_onOnePress(KEY4, NULL);
+#else
+    // No aux buttons on 2-key hardware: both keys flap
+    btn_onOnePress(KEY1, on_flap);
+    btn_onOnePress(KEY2, on_flap);
+    btn_onLongPress(KEY1, NULL);
+    btn_onLongPress(KEY2, NULL);
+#endif
 
     tmos_start_task(flappy_taskid, EVT_GAME_TICK, MS_TO_TMOS(tick_ms));
 }

@@ -1,7 +1,9 @@
 #include "pong.h"
 #include "leddrv.h"
 #include "CH58xBLE_LIB.h"
+#if HW_KEY_COUNT == 4
 #include "auxbtn.h"
+#endif
 #include "button.h"
 #include "font3x5.h"
 #include "CH58x_common.h"
@@ -285,8 +287,10 @@ void pong_start(uint16_t *fb)
     btn_onLongPress(KEY1, on_key1_long);
     btn_onOnePress(KEY2, on_key2_press);
     btn_onLongPress(KEY2, on_key2_long);
+#if HW_KEY_COUNT == 4
     auxbtn_onOnePress(KEY3, NULL);
     auxbtn_onOnePress(KEY4, NULL);
+#endif
 
     tmos_start_task(pong_taskid, EVT_BALL_TICK, MS_TO_TMOS(ball_ms));
 }

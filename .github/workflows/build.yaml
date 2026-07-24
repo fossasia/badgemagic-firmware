@@ -7,8 +7,10 @@ on:
 
 env:
   MRS_TOOLCHAIN: MRS_Toolchain_Linux_x64_V1.92
-  USBC_BUILD_DIR: usb-c
-  MICROB_BUILD_DIR: micro-b
+  USBC_4KEY_BUILD_DIR: usb-c-4key
+  USBC_2KEY_BUILD_DIR: usb-c-2key
+  MICROB_4KEY_BUILD_DIR: micro-b-4key
+  MICROB_2KEY_BUILD_DIR: micro-b-2key
   BIN_TYPES: '{.bin,.elf}'
 
 jobs:
@@ -35,15 +37,19 @@ jobs:
       - name: Build firmware
         run: |
           export PREFIX=${{ env.MRS_TOOLCHAIN }}/RISC-V_Embedded_GCC/bin/riscv-none-embed-
-          BUILD_DIR=${{ env.USBC_BUILD_DIR }} USBC_VERSION=1 make -j$(nproc)
-          BUILD_DIR=${{ env.MICROB_BUILD_DIR }} make -j$(nproc)
+          BUILD_DIR=${{ env.USBC_4KEY_BUILD_DIR }} USBC_VERSION=1 KEY_COUNT=4 make -j$(nproc)
+          BUILD_DIR=${{ env.USBC_2KEY_BUILD_DIR }} USBC_VERSION=1 KEY_COUNT=2 make -j$(nproc)
+          BUILD_DIR=${{ env.MICROB_4KEY_BUILD_DIR }} KEY_COUNT=4 make -j$(nproc)
+          BUILD_DIR=${{ env.MICROB_2KEY_BUILD_DIR }} KEY_COUNT=2 make -j$(nproc)
 
       - uses: actions/upload-artifact@v4
         with:
           name: badgemagic-firmware
           path: |
-            ${{ env.USBC_BUILD_DIR }}/badgemagic-*
-            ${{ env.MICROB_BUILD_DIR }}/badgemagic-*
+            ${{ env.USBC_4KEY_BUILD_DIR }}/badgemagic-*
+            ${{ env.USBC_2KEY_BUILD_DIR }}/badgemagic-*
+            ${{ env.MICROB_4KEY_BUILD_DIR }}/badgemagic-*
+            ${{ env.MICROB_2KEY_BUILD_DIR }}/badgemagic-*
 
       # Skip upload APK for pull requests & only allow binaries build from master
       - if: ${{ github.event_name != 'pull_request' && github.ref_name == 'master' }}
@@ -54,7 +60,9 @@ jobs:
 
           git checkout --orphan bin
           git reset
-          git add ${{ env.USBC_BUILD_DIR }}/badgemagic-*${{ env.BIN_TYPES }}
-          git add ${{ env.MICROB_BUILD_DIR }}/badgemagic-*${{ env.BIN_TYPES }}
+          git add ${{ env.USBC_4KEY_BUILD_DIR }}/badgemagic-*${{ env.BIN_TYPES }}
+          git add ${{ env.USBC_2KEY_BUILD_DIR }}/badgemagic-*${{ env.BIN_TYPES }}
+          git add ${{ env.MICROB_4KEY_BUILD_DIR }}/badgemagic-*${{ env.BIN_TYPES }}
+          git add ${{ env.MICROB_2KEY_BUILD_DIR }}/badgemagic-*${{ env.BIN_TYPES }}
           git commit -am "[Auto] Update firmware binaries from ${{ github.ref_name }} ($(date +%Y-%m-%d.%H:%M:%S))"
           git push --force origin bin
