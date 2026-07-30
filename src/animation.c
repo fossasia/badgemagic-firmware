@@ -42,7 +42,7 @@ int ani_xbm_next_frame(xbm_t *xbm, uint16_t *fb, int col, int row)
 	return ++i;
 }
 
-int ani_xbm_scroll_up(xbm_t *xbm, int vh, 
+int ani_xbm_scroll_up(xbm_t *xbm, int vh,
 				uint16_t *fb, int col, int row)
 {
 	static int i;
@@ -57,7 +57,7 @@ int ani_xbm_scroll_up(xbm_t *xbm, int vh,
 	return ++i;
 }
 
-static int scroll_pt_next(xbm_t *xbm, int vh, int pt, 
+static int scroll_pt_next(xbm_t *xbm, int vh, int pt,
 				uint16_t *fb, int col, int row)
 {
 	static int i;
@@ -76,7 +76,7 @@ static int scroll_pt_next(xbm_t *xbm, int vh, int pt,
 	return ++i;
 }
 
-static int scroll_pb_next( xbm_t *xbm, int vh, int pb, 
+static int scroll_pb_next( xbm_t *xbm, int vh, int pb,
 				uint16_t *fb, int col, int row)
 {
 	static int i;
@@ -113,10 +113,11 @@ int ani_xbm_scrollup_pad( xbm_t *xbm, int vh, int pt, int pb,
 	}
 	return i;
 }
+
 /**
  * Infinite scroll up
  */
-int ani_xbm_scrollup_inf(xbm_t *xbm, uint16_t *fb, 
+int ani_xbm_scrollup_inf(xbm_t *xbm, uint16_t *fb,
 				int vh, int col, int row)
 {
 	static int i, r;
@@ -126,7 +127,7 @@ int ani_xbm_scrollup_inf(xbm_t *xbm, uint16_t *fb,
 
 		xbm_croph(xbm, &frame, i +r, i -1 +vh);
 		xbm_croph(xbm, &frame_circle, 0, r);
-		
+
 		xbm2fb(&frame, fb, col, row);
 		xbm2fb_dirty(&frame_circle, fb, col, row +vh -r);
 
@@ -169,19 +170,40 @@ int ani_scroll_right(bm_t *bm, uint16_t *fb)
 	return ani_scroll_x(bm, fb, 1);
 }
 
+/* Returns horizontal centering offset for a frame.
+ * Returns 0 if content fills the full width (no centering needed). */
+static int get_x_offset(bm_t *bm, int frame)
+{
+	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
+	if (frames > 1)
+		return 0;
+
+	int frame_start = frame * LED_COLS;
+	int content_width = 0;
+	for (int k = 0; k < LED_COLS; k++) {
+		if (frame_start + k >= bm->width) break;
+		if (bm->buf[frame_start + k] != 0)
+			content_width = k + 1;
+	}
+	return (content_width < LED_COLS) ? (LED_COLS - content_width) / 2 : 0;
+}
+
 void ani_shift_y(bm_t *bm, uint16_t *fb, int y, int frame)
 {
-	frame *= LED_COLS;
+	int frame_start = frame * LED_COLS;
+	int x_offset = get_x_offset(bm, frame);
 
-	int size = MIN(LED_COLS, bm->width);
+	int j = 0;
+	for (; j < x_offset; j++)
+		fb[j] = 0;
+
 	int i = 0;
-	for (; i < size; i++) {
-		if ((frame + i) >= bm->width)
-			break;
-		fb[i] = SIGNED_SHIFT(bm->buf[frame + i], y);
+	int size = MIN(LED_COLS - x_offset, bm->width - frame_start);
+	for (; i < size; j++, i++) {
+		fb[j] = SIGNED_SHIFT(bm->buf[frame_start + i], y);
 	}
-	for (; i < LED_COLS; i++)
-		fb[i] = 0;
+	for (; j < LED_COLS; j++)
+		fb[j] = 0;
 }
 
 void ani_scroll_y(bm_t *bm, uint16_t *fb)
@@ -222,57 +244,58 @@ int ani_scroll_down(bm_t *bm, uint16_t *fb)
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
 	int total_steps = frame_steps * frames;
 	bm->anim_step--;
-	
+
 	return mod(bm->anim_step, total_steps);
-}
-
-static void laser_in(bm_t *bm, uint16_t *fb, int step, int frame)
-{
-	int c = mod(step, LED_COLS);
-	frame *= LED_COLS;
-
-	int i = 0;
-	for (; i < c; i++) {
-		fb[i] = (frame + i < bm->width) ? bm->buf[frame + i] : 0;
-	}
-	for (; i < MIN(LED_COLS, bm->width - frame); i++) {
-		fb[i] = bm->buf[frame + c];
-	}
-	for (; i < LED_COLS; i++) {
-		fb[i] = (frame + c < bm->width) ? bm->buf[frame + c] : 0;
-	}
-}
-
-static void laser_out(bm_t *bm, uint16_t *fb, int step, int frame)
-{
-	int c = mod(step, LED_COLS);
-	frame *= LED_COLS;
-
-	int i = 0;
-	for (; i < c; i++) {
-		fb[i] = (frame + c < bm->width) ? bm->buf[frame + c] : 0;
-	}
-	for (; i < MIN(LED_COLS, bm->width - frame); i++) {
-		fb[i] = bm->buf[frame + i];
-	}
-	for (; i < LED_COLS; i++) {
-		fb[i] = 0;
-	}
 }
 
 static void still(bm_t *bm, uint16_t *fb, int frame)
 {
-	int i = frame * LED_COLS;
+	int frame_start = frame * LED_COLS;
+	int x_offset = get_x_offset(bm, frame);
+
 	int j = 0;
-	for (; j < LED_COLS; j++) {
-		if (i >= bm->width)
-			break;
-		fb[j] = bm->buf[i];
-		i++;
-	}
-	for (; j< LED_COLS; j++) {
+	for (; j < x_offset; j++)
 		fb[j] = 0;
+
+	int i = frame_start;
+	for (; j < LED_COLS; j++, i++) {
+		if (i >= bm->width) break;
+		fb[j] = bm->buf[i];
 	}
+	for (; j < LED_COLS; j++)
+		fb[j] = 0;
+}
+
+static void laser_in(bm_t *bm, uint16_t *fb, int step, int frame, int x_offset)
+{
+	int content_cols = LED_COLS - x_offset;
+	int c = mod(step, content_cols);
+	int frame_start = frame * LED_COLS;
+
+	int i = 0;
+	for (; i < x_offset; i++)
+		fb[i] = 0;
+	for (; i < x_offset + c; i++)
+		fb[i] = (frame_start + i - x_offset < bm->width) ? bm->buf[frame_start + i - x_offset] : 0;
+	for (; i < x_offset + MIN(content_cols, bm->width - frame_start); i++)
+		fb[i] = (frame_start + c < bm->width) ? bm->buf[frame_start + c] : 0;
+	for (; i < LED_COLS; i++)
+		fb[i] = 0;
+}
+
+static void laser_out(bm_t *bm, uint16_t *fb, int step, int frame, int x_offset)
+{
+	int content_cols = LED_COLS - x_offset;
+	int c = mod(step, content_cols);
+	int frame_start = frame * LED_COLS;
+
+	int i = 0;
+	for (; i < x_offset + c; i++)
+		fb[i] = 0;
+	for (; i < x_offset + MIN(content_cols, bm->width - frame_start); i++)
+		fb[i] = (frame_start + i - x_offset < bm->width) ? bm->buf[frame_start + i - x_offset] : 0;
+	for (; i < LED_COLS; i++)
+		fb[i] = 0;
 }
 
 int ani_laser(bm_t *bm, uint16_t *fb)
@@ -280,17 +303,18 @@ int ani_laser(bm_t *bm, uint16_t *fb)
 	int frame_steps = LED_COLS * 3; // in-still-out
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
 	int total_steps = frame_steps * frames;
-	int frame = mod(bm->anim_step, total_steps)/frame_steps;
+	int frame = mod(bm->anim_step, total_steps) / frame_steps;
+	int x_offset = get_x_offset(bm, frame);
 
 	int c = mod(bm->anim_step, frame_steps);
 	bm->anim_step++;
 
 	if (c < LED_COLS)
-		laser_in(bm, fb, c - LED_COLS, frame);
+		laser_in(bm, fb, c - LED_COLS, frame, x_offset);
 	else if (c < LED_COLS * 2)
 		still(bm, fb, frame);
 	else
-		laser_out(bm, fb, c - LED_COLS * 2, frame);
+		laser_out(bm, fb, c - LED_COLS * 2, frame, x_offset);
 
 	return mod(bm->anim_step, total_steps);
 }
@@ -312,44 +336,44 @@ static uint32_t b16dialate(uint16_t w, int from, int to)
 	return ret;
 }
 
-static void snowflake_in(bm_t *bm, uint16_t *fb, int step, int frame)
+static void snowflake_in(bm_t *bm, uint16_t *fb, int step, int frame, int x_offset)
 {
 	int y = mod(step, LED_ROWS*2) - LED_ROWS;
-	frame *= LED_COLS;
+	int frame_start = frame * LED_COLS;
 
-	int size = MIN(LED_COLS, bm->width - frame);
 	int i = 0;
-	for (; i < size; i++) {
-		if (y < 0) {
-			fb[i] = SIGNED_SHIFT(b16dialate(bm->buf[frame + i], 0, LED_ROWS),
-				LED_ROWS - y);
-		} else
-			fb[i] = SIGNED_SHIFT(b16dialate(bm->buf[frame + i], 0, LED_ROWS - y),
-				(LED_ROWS - y));
-	}
-	for (; i < LED_COLS; i++) {
+	for (; i < x_offset; i++)
 		fb[i] = 0;
+
+	int size = MIN(LED_COLS - x_offset, bm->width - frame_start);
+	for (int k = 0; k < size; k++, i++) {
+		if (y < 0)
+			fb[i] = SIGNED_SHIFT(b16dialate(bm->buf[frame_start + k], 0, LED_ROWS), LED_ROWS - y);
+		else
+			fb[i] = SIGNED_SHIFT(b16dialate(bm->buf[frame_start + k], 0, LED_ROWS - y), (LED_ROWS - y));
 	}
+	for (; i < LED_COLS; i++)
+		fb[i] = 0;
 }
 
-static void snowflake_out(bm_t *bm, uint16_t *fb, int step, int frame)
+static void snowflake_out(bm_t *bm, uint16_t *fb, int step, int frame, int x_offset)
 {
 	int y = mod(step, LED_ROWS*2) - LED_ROWS;
-	frame *= LED_COLS;
+	int frame_start = frame * LED_COLS;
 
-	int size = MIN(LED_COLS, bm->width - frame);
 	int i = 0;
-	for (; i < size; i++) {
-		if (y <= 0) {
-			fb[i] = SIGNED_SHIFT(b16dialate(bm->buf[frame + i], 0, LED_ROWS),
-				y);
-		} else {
-			fb[i] = b16dialate(bm->buf[frame + i], y, LED_ROWS);
-		}
-	}
-	for (; i < LED_COLS; i++) {
+	for (; i < x_offset; i++)
 		fb[i] = 0;
+
+	int size = MIN(LED_COLS - x_offset, bm->width - frame_start);
+	for (int k = 0; k < size; k++, i++) {
+		if (y <= 0)
+			fb[i] = SIGNED_SHIFT(b16dialate(bm->buf[frame_start + k], 0, LED_ROWS), y);
+		else
+			fb[i] = b16dialate(bm->buf[frame_start + k], y, LED_ROWS);
 	}
+	for (; i < LED_COLS; i++)
+		fb[i] = 0;
 }
 
 int ani_snowflake(bm_t *bm, uint16_t *fb)
@@ -357,18 +381,18 @@ int ani_snowflake(bm_t *bm, uint16_t *fb)
 	int frame_steps = LED_ROWS * 6; // in-still-out, each costs 2xLED_ROWS step
 	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
 	int total_steps = frame_steps * frames;
-	int frame = mod(bm->anim_step, total_steps)/frame_steps;
+	int frame = mod(bm->anim_step, total_steps) / frame_steps;
+	int x_offset = get_x_offset(bm, frame);
 
 	int c = mod(bm->anim_step, frame_steps);
 	bm->anim_step++;
 
-	if (c < LED_ROWS * 2) {
-		snowflake_in(bm, fb, c - LED_ROWS * 2, frame);
-	} else if (c <= LED_ROWS * 4) {
+	if (c < LED_ROWS * 2)
+		snowflake_in(bm, fb, c - LED_ROWS * 2, frame, x_offset);
+	else if (c <= LED_ROWS * 4)
 		still(bm, fb, frame);
-	} else {
-		snowflake_out(bm, fb, -(c - LED_ROWS * 4), frame);
-	}
+	else
+		snowflake_out(bm, fb, -(c - LED_ROWS * 4), frame, x_offset);
 
 	return mod(bm->anim_step, total_steps);
 }
@@ -454,7 +478,7 @@ int ani_picture(bm_t *bm, uint16_t *fb)
 	bm->anim_step++;
 
 	if (frame == frames - 1) {
-		picture_out(bm, fb, mod(bm->anim_step, LED_COLS) );
+		picture_out(bm, fb, mod(bm->anim_step, LED_COLS));
 
 		/* picture_out() costs only half LED_COLS */
 		if (mod(bm->anim_step, LED_COLS) >= last_steps) {
@@ -482,7 +506,6 @@ void ani_marque(bm_t *bm, uint16_t *fb, int step)
 
 	fb[0] = tpl << (step % 4);
 	fb[LED_COLS - 1] = tpl >> ((step + 3) % 4);
-
 }
 
 void ani_flash(bm_t *bm, uint16_t *fb, int step)
