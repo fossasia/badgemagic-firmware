@@ -173,6 +173,7 @@ else
 endif
 
 TARGET = badgemagic-ch582-slot$(SLOT)
+CFLAGS += -DTHIS_SLOT_$(SLOT)
 
 # libraries
 LIBS = -lc -lm -lnosys \
