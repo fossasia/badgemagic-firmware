@@ -363,7 +363,7 @@ void Rec_OTA_IAP_DataDeal(void)
             OpAdd = (uint32_t)(iap_rec_data.program.addr[0]);
             OpAdd |= ((uint32_t)(iap_rec_data.program.addr[1]) << 8);
             OpAdd = OpAdd * 16;
-            OpAdd += IMAGE_B_START_ADD;
+            OpAdd += OTA_TARGET_START_ADD;
             status = FLASH_ROM_WRITE(OpAdd, iap_rec_data.program.buf, (uint16_t)OpParaDataLen);
 
             {
@@ -382,7 +382,7 @@ void Rec_OTA_IAP_DataDeal(void)
             OpAdd = (uint32_t)(iap_rec_data.erase.addr[0]);
             OpAdd |= ((uint32_t)(iap_rec_data.erase.addr[1]) << 8);
             OpAdd = OpAdd * 16;
-            OpAdd += IMAGE_B_START_ADD;
+            OpAdd += OTA_TARGET_START_ADD;
             EraseBlockNum = (uint32_t)(iap_rec_data.erase.block_num[0]);
             EraseBlockNum |= ((uint32_t)(iap_rec_data.erase.block_num[1]) << 8);
             EraseAdd = OpAdd;
@@ -395,11 +395,11 @@ void Rec_OTA_IAP_DataDeal(void)
                     "erase add=%08lx num=%lu end=%08lx Bstart=%08lx IAPstart=%08lx\r\n",
                     (unsigned long)EraseAdd, (unsigned long)EraseBlockNum,
                     (unsigned long)(EraseAdd + (EraseBlockNum - 1) * FLASH_BLOCK_SIZE),
-                    (unsigned long)IMAGE_B_START_ADD, (unsigned long)IMAGE_IAP_START_ADD);
+                    (unsigned long)OTA_TARGET_START_ADD, (unsigned long)IMAGE_IAP_START_ADD);
                 cdc_tx_poll((uint8_t *)buf, len, 100);
             }
 
-            if(EraseAdd < IMAGE_B_START_ADD || (EraseAdd + (EraseBlockNum - 1) * FLASH_BLOCK_SIZE) > IMAGE_IAP_START_ADD)
+            if(EraseAdd < OTA_TARGET_START_ADD || (EraseAdd + (EraseBlockNum - 1) * FLASH_BLOCK_SIZE) > IMAGE_IAP_START_ADD)
             {
                 OTA_IAP_SendCMDDealSta(0xFF);
             }
@@ -416,7 +416,7 @@ void Rec_OTA_IAP_DataDeal(void)
             OpAdd = (uint32_t)(iap_rec_data.verify.addr[0]);
             OpAdd |= ((uint32_t)(iap_rec_data.verify.addr[1]) << 8);
             OpAdd = OpAdd * 16;
-            OpAdd += IMAGE_B_START_ADD;
+            OpAdd += OTA_TARGET_START_ADD;
             status = FLASH_ROM_VERIFY(OpAdd, iap_rec_data.verify.buf, OpParaDataLen);
             VerifyStatus |= status;
             OTA_IAP_SendCMDDealSta(VerifyStatus);
@@ -445,7 +445,7 @@ void Rec_OTA_IAP_DataDeal(void)
 			len = snprintf(buf, sizeof(buf), "iap_end: switching flag\r\n");
 			cdc_tx_poll((uint8_t *)buf, len, 100);
 
-			SwitchImageFlag(IMAGE_IAP_FLAG);
+			SwitchImageFlag(OTA_TARGET_FLAG);
 
 			{
 				uint8_t verify_buf[4];
@@ -453,7 +453,7 @@ void Rec_OTA_IAP_DataDeal(void)
 				char buf2[64];
 				int len2 = snprintf(buf2, sizeof(buf2),
 					"iap_end: flag readback=%02x (expect %02x)\r\n",
-					verify_buf[0], IMAGE_IAP_FLAG);
+					verify_buf[0], OTA_TARGET_FLAG);
 				cdc_tx_poll((uint8_t *)buf2, len2, 100);
 			}
 
@@ -477,7 +477,7 @@ void Rec_OTA_IAP_DataDeal(void)
 			cdc_tx_poll((uint8_t *)iap_buf, iap_len, 100);
 
             uint8_t send_buf[20];
-            send_buf[0] = IMAGE_B_FLAG;
+            send_buf[0] = THIS_IMAGE_FLAG;
             send_buf[1] = (uint8_t)(IMAGE_SIZE & 0xff);
             send_buf[2] = (uint8_t)((IMAGE_SIZE >> 8) & 0xff);
             send_buf[3] = (uint8_t)((IMAGE_SIZE >> 16) & 0xff);
