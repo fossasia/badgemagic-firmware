@@ -101,21 +101,21 @@ enum MODES {
 };
 
 static int menu_cursor=0;
-#define MENU_ITEMS_COUNT 6
+#define MENU_ITEMS_COUNT 5
 static const char *menu_labels[] = {
 	"ANIMATION",
 	"BT-PAIRING",
 	"CLOCK MODE",
 	"GAMES",
-	"SECURITY",
+	//"SECURITY",
 	"OFF"
 };
 #define MENU_IDX_ANIMATION 0
 #define MENU_IDX_BLE       1
 #define MENU_IDX_CLOCK     2
 #define MENU_IDX_GAMES     3
-#define MENU_IDX_SECURITY  4
-#define MENU_IDX_OFF       5
+//#define MENU_IDX_SECURITY  4
+#define MENU_IDX_OFF       4
 
 #define ANI_BASE_SPEED_T      (200000) // uS
 #define ANI_MARQUE_SPEED_T    (100000) // uS
@@ -554,9 +554,10 @@ static void menu_select(){
         case MENU_IDX_GAMES:
             enter_games_submenu();
             break;
-        case MENU_IDX_SECURITY:
+        /*case MENU_IDX_SECURITY:
             enter_security_submenu();
             break;
+			*/
         case MENU_IDX_OFF:
             mode = POWER_OFF;
             poweroff();
