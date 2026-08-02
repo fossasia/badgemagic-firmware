@@ -23,9 +23,67 @@
 
 #include "ble/setup.h"
 #include "ble/profile.h"
+#include "ble/ota.h"
 
 #include "usb/usb.h"
 #include "legacyctrl.h"
+
+// Image validity marker — IAP checks this to confirm valid firmware 
+const uint32_t Address = 0xFFFFFFFF;
+__attribute__((aligned(4))) uint32_t Image_Flag __attribute__((section(".ImageFlag"))) = (uint32_t)&Address;
+
+// Current image slot tracker 
+unsigned char CurrImageFlag = 0xff;
+
+static void ReadImageFlag(void)
+{
+    OTADataFlashInfo_t p_image_flash;
+    EEPROM_READ(OTA_DATAFLASH_ADD, &p_image_flash, 4);
+    CurrImageFlag = p_image_flash.ImageFlag;
+    if((CurrImageFlag != IMAGE_A_FLAG) && (CurrImageFlag != IMAGE_B_FLAG))
+        CurrImageFlag = IMAGE_A_FLAG;
+}
+
+/*********************************************************************
+ * @fn      ota_confirm_boot
+ *
+ * @brief   Marks the current boot as confirmed-good, per the direct-xip
+ *          revert scheme (see src/ble/ota.h, modeled after MCUboot's
+ *          revert mechanism: docs.mcuboot.com/design.html#direct-xip-ram-load-revert).
+ *
+ *          IAP sets BootPending before jumping into this slot. If APP
+ *          never reaches this call before the next reset, IAP treats
+ *          the previous boot as failed and reverts to the other slot.
+ *
+ *          Only writes to flash if not already confirmed, to avoid
+ *          unnecessary EEPROM wear on every boot.
+ *
+ * @return  none
+ *********************************************************************/
+static void ota_confirm_boot(void)
+{
+    OTADataFlashInfo_t info;
+    EEPROM_READ(OTA_DATAFLASH_ADD, (uint32_t *)&info, sizeof(info));
+
+    if (info.BootOK == BOOT_MARK_CONFIRMED) {
+        return; // already confirmed, nothing to do
+    }
+
+    uint8_t r_st, e_st, w_st;
+    uint8_t block_buf[16];
+
+    r_st = EEPROM_READ(OTA_DATAFLASH_ADD, (uint32_t *)&block_buf[0], 4);
+    e_st = EEPROM_ERASE(OTA_DATAFLASH_ADD, EEPROM_PAGE_SIZE);
+
+    info.BootOK      = BOOT_MARK_CONFIRMED;
+    info.BootPending = BOOT_MARK_UNCONFIRMED; // clear pending flag too
+
+    tmos_memcpy(block_buf, &info, sizeof(info));
+    w_st = EEPROM_WRITE(OTA_DATAFLASH_ADD, (uint32_t *)&block_buf[0], 4);
+
+    PRINT("ota_confirm_boot: flag=%02x ok=%02x r=%02x e=%02x w=%02x\n",
+        info.ImageFlag, info.BootOK, r_st, e_st, w_st);
+}
 
 #define NEXT_STATE(v, min, max) \
 				(v)++; \
@@ -43,21 +101,21 @@ enum MODES {
 };
 
 static int menu_cursor=0;
-#define MENU_ITEMS_COUNT 6
+#define MENU_ITEMS_COUNT 5
 static const char *menu_labels[] = {
 	"ANIMATION",
 	"BT-PAIRING",
 	"CLOCK MODE",
 	"GAMES",
-	"SECURITY",
+	//"SECURITY",
 	"OFF"
 };
 #define MENU_IDX_ANIMATION 0
 #define MENU_IDX_BLE       1
 #define MENU_IDX_CLOCK     2
 #define MENU_IDX_GAMES     3
-#define MENU_IDX_SECURITY  4
-#define MENU_IDX_OFF       5
+//#define MENU_IDX_SECURITY  4
+#define MENU_IDX_OFF       4
 
 #define ANI_BASE_SPEED_T      (200000) // uS
 #define ANI_MARQUE_SPEED_T    (100000) // uS
@@ -496,9 +554,10 @@ static void menu_select(){
         case MENU_IDX_GAMES:
             enter_games_submenu();
             break;
-        case MENU_IDX_SECURITY:
+        /*case MENU_IDX_SECURITY:
             enter_security_submenu();
             break;
+			*/
         case MENU_IDX_OFF:
             mode = POWER_OFF;
             poweroff();
@@ -812,6 +871,7 @@ void handle_after_rx()
 
 int main()
 {
+	ReadImageFlag();
 	SetSysClock(CLK_SOURCE_PLL_60MHz);
 	
 	debug_init();
@@ -853,6 +913,7 @@ int main()
 	load_bmlist();
 
 	ble_setup();
+	ota_confirm_boot();
 
 	spawn_tasks();
 	btn_init_task();
