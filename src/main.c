@@ -35,6 +35,9 @@ __attribute__((aligned(4))) uint32_t Image_Flag __attribute__((section(".ImageFl
 // Current image slot tracker 
 unsigned char CurrImageFlag = 0xff;
 
+// Whether ota_confirm_boot() has run this session, to avoid duplicate writes
+static uint8_t ota_confirmed = 0;
+
 static void ReadImageFlag(void)
 {
     OTADataFlashInfo_t p_image_flash;
@@ -814,9 +817,16 @@ void return_to_menu()
 static void disp_charging()
 {
 	int blink = 0;
+	uint32_t elapsed_ms = 0;
+
 	while (1) {
 		btn_tick();
 		int percent = batt_raw2percent(batt_raw());
+
+		if (!ota_confirmed && elapsed_ms >= OTA_BOOT_CONFIRM_TIMEOUT_MS) {
+			ota_confirm_boot();
+			ota_confirmed = 1;
+		}
 
 		if (charging_status()) {
 			disp_bat_stt(blink ? percent : 0, 2, 2);
@@ -826,9 +836,11 @@ static void disp_charging()
 			}
 			blink = !blink;
 			DelayMs(500);
+			elapsed_ms += 500;
 		} else {
 			disp_bat_stt(percent, 7, 2);
 			DelayMs(500);
+			elapsed_ms += 500;
 			return;
 		}
 	}
@@ -901,6 +913,10 @@ int main()
 
 	power_init();
 	disp_charging();
+	if (!ota_confirmed) {
+		ota_confirm_boot();
+		ota_confirmed = 1;
+	}
 	cfg_init();
 	xbm_t spl = {
 		.bits = &(badge_cfg.splash_bm_bits),
@@ -913,7 +929,6 @@ int main()
 	load_bmlist();
 
 	ble_setup();
-	ota_confirm_boot();
 
 	spawn_tasks();
 	btn_init_task();
