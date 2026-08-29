@@ -2,7 +2,7 @@ ENTRY( _start )
 
 MEMORY
 {
-	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 448K 
+	FLASH (rx) : ORIGIN = 0x00001000, LENGTH = 216K 
 	RAM (xrw) : ORIGIN = 0x20003800, LENGTH = 32K
 }
 
@@ -14,6 +14,8 @@ SECTIONS
 		_sinit = .;
 		. = ALIGN(4);
 		KEEP(*(SORT_NONE(.init)))
+		KEEP(*(.ImageFlag))
+		KEEP(*(.ImageFlag.*))
 		. = ALIGN(4);
 		_einit = .;
 	} >FLASH AT>FLASH
