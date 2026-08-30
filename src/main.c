@@ -75,6 +75,7 @@ static const char *menu_labels[] = {
 #define CLOCK_TICK          (1 << 5)
 #define STOPWATCH_TICK  	(1 << 6)
 #define BLE_OFF_DONE 		(1 << 7)
+#define RX_ERROR_DONE       (1 << 8)
 
 typedef enum {
     SW_STOPPED,
@@ -249,6 +250,11 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 		ble_disable_advertise();
 		return_to_menu();
 		return events ^ BLE_OFF_DONE;
+	}
+
+	if (events & RX_ERROR_DONE) {
+		memset(fb, 0, sizeof(fb));
+		return events ^ RX_ERROR_DONE;
 	}
 
 	return 0;
@@ -816,6 +822,23 @@ static void disp_ble_off()
     memset(fb, 0, sizeof(fb));
     fb_puts_small("BLUETOOTH", 9, 4, 0);
     fb_puts_small("OFF", 3, 4, 6);
+}
+
+void show_rx_error(char *s)
+{
+    if (common_taskid == INVALID_TASK_ID) {
+        return;
+    }
+
+    tmos_stop_task(common_taskid, CLOCK_TICK);
+    tmos_stop_task(common_taskid, STOPWATCH_TICK);
+    tmos_stop_task(common_taskid, RX_ERROR_DONE);
+    sw_state = SW_STOPPED;
+    clock_active = 0;
+    stop_all_animation();
+    memset(fb, 0, sizeof(fb));
+    fb_puts_small(s, strlen(s), 2, 2);
+    tmos_start_task(common_taskid, RX_ERROR_DONE, 3000 / 625);
 }
 
 void handle_after_rx()
