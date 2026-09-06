@@ -160,6 +160,9 @@ endif
 ifeq ($(HARDWARE_REV3), 1)
 CFLAGS += -DHARDWARE_REV3=$(HARDWARE_REV3)
 endif
+ifeq ($(LED_PIN_T_B6), 1)
+CFLAGS += -DLED_PIN_T_B6=$(LED_PIN_T_B6)
+endif
 
 CFLAGS += -DHW_KEY_COUNT=$(KEY_COUNT)
 

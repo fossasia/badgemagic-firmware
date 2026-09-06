@@ -119,7 +119,7 @@ static const pindesc_t led_pins[LED_PINCOUNT] = {
 	PINDESC(B, 4),  // Q
 	PINDESC(B, 2),  // R
 	PINDESC(B, 1),  // S
-#ifdef HARDWARE_REV3
+#if defined(HARDWARE_REV3) || defined(LED_PIN_T_B6)
 	PINDESC(B, 6), // T
 #else
 	PINDESC(B, 23), // T

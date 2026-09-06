@@ -177,16 +177,55 @@ BUILD_DIR=custom-dir-if-needed make isp
 ```
 ## Building and flashing per hardware variant
 
-This firmware supports two independent build choices — you need to know both
-before building or downloading:
+This firmware supports three independent build choices — you need to know all
+of them before building or downloading:
 
 1. **Board revision** — controlled by `HARDWARE_REV1` / `HARDWARE_REV3`
    (see the [Build](#build) section above for what each targets).
 2. **Button count** — controlled by the new `KEY_COUNT` flag: `KEY_COUNT=4`
    (default) or `KEY_COUNT=2`.
+3. **T-pin mapping** — `LED_PIN_T_B6=1` for boards that need only the REV3 T pin;
+   see [Boards that need only the REV3 T pin](#boards-that-need-only-the-rev3-t-pin).
 
 If you're not sure which board revision or button count your badge has, see
 [CH582.md](./CH582.md) for identification help before flashing.
+
+### Boards that need only the REV3 T pin
+
+`HARDWARE_REV3` switches three LED matrix pins at once — J, K and T. At least one
+board needs **only** the T pin from REV3 (`B6`) while J and K stay on their
+default `B15`/`B14`. Neither stock variant drives such a panel correctly:
+
+* the default build leaves **columns 38-39 dark**;
+* `HARDWARE_REV3` fixes those two but takes out **columns 18-21** instead.
+
+For that board use `LED_PIN_T_B6=1`, which selects the T pin on its own:
+
+```sh
+BUILD_DIR=custom-dir LED_PIN_T_B6=1 KEY_COUNT=2 make
+```
+
+> [!NOTE]
+> Switching `LED_PIN_T_B6`, like switching `HARDWARE_REV*` or `KEY_COUNT`,
+> requires a clean build — otherwise a stale `src/leddrv.o` keeps the previous
+> T-pin mapping and the resulting firmware silently has the wrong pin. Pass the
+> same variables to `clean all`, or `make clean` will look in the default
+> `build/` directory and the rebuild will produce the default variant. This
+> is for re-building inside an existing `BUILD_DIR`; on a fresh checkout there
+> is nothing to clean yet, and `make clean` fails on the missing directory:
+>
+> ```sh
+> BUILD_DIR=custom-dir LED_PIN_T_B6=1 KEY_COUNT=2 make clean all
+> ```
+>
+> Building each variant into its own `BUILD_DIR` avoids this entirely.
+
+CI builds this variant as `usb-c-2key-tb6`, available both as a workflow
+artifact and in the [`bin`](https://github.com/fossasia/badgemagic-firmware/tree/bin) branch.
+
+**How to tell.** Light the whole panel and count the dark columns. Exactly one
+dead pair at 38-39 with everything else lit means the T pin, and this flag.
+If columns 18-21 go dark under `HARDWARE_REV3`, that board is not REV3.
 
 ### Building from source
 
