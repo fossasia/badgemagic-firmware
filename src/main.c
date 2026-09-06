@@ -254,9 +254,40 @@ static uint16_t common_tasks(tmosTaskID task_id, uint16_t events)
 	return 0;
 }
 
+/* BLE_LibInit() also brings up TMOS, and every task below -- buttons,
+ * animation, clock, games -- runs on TMOS. If it fails there is nothing to
+ * continue with, and PRINT is empty in release builds, so the failure would
+ * otherwise look like a badge that boots and then does nothing. The display
+ * refresh is interrupt driven and still works, so show it: a checkerboard
+ * that no normal mode ever draws, with the first <status> columns lit solid
+ * to give the BLE_LibInit code, then stop -- WCH's own HAL/MCU.c does the
+ * same. On a chip whose factory MAC reads back the cause is the compile-time
+ * BLE configuration (the ERR_LIB_INIT codes in CH58xBLE_LIB.h). From here
+ * only the hardware ISP entry works; the software one is a TMOS task that
+ * never starts. */
+static void ble_init_failed(int status) __attribute__((noreturn));
+static void ble_init_failed(int status)
+{
+	/* The ERR_LIB_INIT codes are 1..7; anything larger is capped so that
+	 * at least one checkerboard column stays and the pattern is still
+	 * recognisable. */
+	if (status > LED_COLS - 1) {
+		status = LED_COLS - 1;
+	}
+	for (int i = 0; i < LED_COLS; i++) {
+		fb[i] = (i < status) ? 0x07FF : ((i & 1) ? 0x02AA : 0x0555);
+	}
+	while (1) {
+		DelayMs(1000);
+	}
+}
+
 void ble_setup()
 {
-	ble_hardwareInit();
+	int st = ble_hardwareInit();
+	if (st != 0) {
+		ble_init_failed(st);
+	}
 	tmos_clockInit();
 
 	peripheral_init();
