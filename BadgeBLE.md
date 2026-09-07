@@ -69,6 +69,12 @@ The "mode" bytes are a combination of two 4 bit values. The high nibble describe
 | 0x07 | "picture"         |
 | 0x08 | "laser"           |
 
+#### Authentication (Optional)
+
+By default, BLE security is disabled (`SECURITY` -> `DISABLE` in the badge menu) and legacy data frames starting with `wang` are accepted directly without requiring a PIN, preserving full compatibility with the OEM protocol.
+
+When BLE security is enabled (`SECURITY` -> `ENABLE`), a 4-digit PIN is displayed on the badge upon entering `BT-PAIRING` mode. Clients must write this 4-digit PIN (as ASCII characters padded with zeros to 16 bytes) to `0xFEE1` before sending data frames; unauthenticated `wang` packets are rejected with `ATT_ERR_UNLIKELY` (`0x0E`). Authorization remains active for the duration of the BLE connection and resets upon disconnect. See [BLE Security](src/BLEsecurity.md) for full details.
+
 ### Next-Gen profile
 
  16-bit Service/characteristic:
