@@ -508,6 +508,13 @@ static void menu_select(){
             break;
         case MENU_IDX_OFF:
             mode = POWER_OFF;
+            stop_all_animation(); // blank the display right away
+            // On 2-key boards OFF is chosen by holding KEY1, which is also the
+            // wake-up key: shutting down while it is held lets the bounce on
+            // release wake the badge straight back up
+            while (isPressed(KEY1))
+                DelayMs(10);
+            DelayMs(50);
             poweroff();
             break;
     }
