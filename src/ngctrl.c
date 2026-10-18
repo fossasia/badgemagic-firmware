@@ -130,7 +130,7 @@ uint8_t load_fallback_cfg(uint8_t *val, uint16_t len)
 {
 	PRINT(__func__);
 	PRINT("\n");
-	cfg_fallback(&badge_cfg);
+	cfg_fallback();
 	return 0;
 }
 
