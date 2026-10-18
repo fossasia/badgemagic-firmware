@@ -53,7 +53,7 @@ static void ep_handler()
 	switch(token) {
 
 	case UIS_TOKEN_SETUP:
-		print_setuppk(req);
+		print_setuppk(request);
 
 		if (recip == USB_REQ_RECIP_DEVICE) {
 			handle_devreq(request);

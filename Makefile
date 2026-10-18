@@ -123,7 +123,11 @@ BIN = $(CP) -O binary -S
 # CFLAGS
 #######################################
 # cpu
-CPU = -march=rv32imac -mabi=ilp32 -msmall-data-limit=8 
+# Mainline GCC (binutils >= 2.38) needs the CSR and fence.i instructions spelled out as
+# extensions. The MounRiver GCC 8 does not know these names but has the instructions in rv32imac.
+CSR_EXT := $(shell echo 'void f(void){__asm__("csrr a0, mepc");}' | \
+	$(CC) -march=rv32imac -mabi=ilp32 -x c -c -o /dev/null - 2>/dev/null || echo _zicsr_zifencei)
+CPU = -march=rv32imac$(CSR_EXT) -mabi=ilp32 -msmall-data-limit=8 
 
 # fpu
 FPU = 
@@ -149,6 +153,14 @@ ASFLAGS = $(MCU) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
 CFLAGS = $(MCU) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 CFLAGS += -Werror=implicit-function-declaration
+
+# Only the MounRiver GCC knows interrupt("WCH-Interrupt-fast"). Mainline GCC ignores it with a
+# warning, the handlers then return with ret instead of mret. Use the standard attribute there.
+WCH_IRQ := $(shell echo '__attribute__((interrupt("WCH-Interrupt-fast"))) void f(void){}' | \
+	$(CC) $(CPU) -Werror=attributes -x c -c -o /dev/null - 2>/dev/null && echo yes)
+ifneq ($(WCH_IRQ), yes)
+CFLAGS += -DINT_SOFT
+endif
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2 -DDEBUG=$(DEBUG)

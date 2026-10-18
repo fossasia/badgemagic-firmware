@@ -833,6 +833,12 @@ void handle_after_rx()
     }
 }
 
+/* The USB layer expects a void callback, legacy_usb_rx() returns a status */
+static void usb_rx(uint8_t *buf, uint16_t len)
+{
+	legacy_usb_rx(buf, len);
+}
+
 int main()
 {
 	SetSysClock(CLK_SOURCE_PLL_60MHz);
@@ -840,8 +846,8 @@ int main()
 	debug_init();
 	PRINT("\nDebug console is on UART%d\n", DEBUG);
 
-	cdc_onWrite(legacy_usb_rx);
-	hiddev_onWrite(legacy_usb_rx);
+	cdc_onWrite(usb_rx);
+	hiddev_onWrite(usb_rx);
 	usb_start();
 
 	led_init();
@@ -866,7 +872,7 @@ int main()
 	disp_charging();
 	cfg_init();
 	xbm_t spl = {
-		.bits = &(badge_cfg.splash_bm_bits),
+		.bits = badge_cfg.splash_bm_bits,
 		.w = badge_cfg.splash_bm_w,
 		.h = badge_cfg.splash_bm_h,
 		.fh = badge_cfg.splash_bm_fh,

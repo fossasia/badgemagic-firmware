@@ -17,7 +17,7 @@
 badge_cfg_t badge_cfg;
 
 /* In case of first time firmware upgrading */
-void cfg_fallback()
+void cfg_fallback(void)
 {
 	badge_cfg.ble_always_on = 0;
 	memcpy(badge_cfg.ble_devname, "LED Badge Magic\0\0\0\0", 20);

@@ -164,6 +164,14 @@ SECTIONS
 		PROVIDE( _ebss = .);
 	} >RAM AT>FLASH
 
+	/* Placed explicitly: newer ld puts this orphan section after `end`, i.e. into the malloc heap */
+	.noinit (NOLOAD) :
+	{
+		. = ALIGN(4);
+		*(.noinit .noinit.*)
+		. = ALIGN(4);
+	} >RAM
+
 	PROVIDE( _end = _ebss);
 	PROVIDE( end = . );
 	

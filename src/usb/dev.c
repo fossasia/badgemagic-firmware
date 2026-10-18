@@ -93,9 +93,9 @@ static void desc_string(USB_SETUP_REQ *request)
 {
 	uint8_t *string_index[32] = {
 		lang_desc,
-		vendor_info,
-		product_info,
-		serial_number
+		(uint8_t *)vendor_info,
+		(uint8_t *)product_info,
+		(uint8_t *)serial_number
 	};
 	uint8_t index = request->wValue & 0xff;
 	if (index <= sizeof(string_index))
