@@ -1,6 +1,7 @@
 #include "data.h"
 #include "power.h"
 #include "leddrv.h"
+#include "config.h"
 #include "debug.h"
 #include "legacyctrl.h"
 #include "CH58x_common.h"
@@ -33,7 +34,7 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 		return -1;
 	}
 
-	if (!authorized) {
+	if (badge_cfg.ble_security && !authorized) {
 		if (!memcmp(val, "wang", 4)) {
 			char buf[32];
 			int blen = snprintf(buf, sizeof(buf), "BLE: rejected - not authed\n");
