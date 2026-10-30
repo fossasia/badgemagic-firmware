@@ -4,6 +4,12 @@
 #define HIGHSCORE_EEPROM_OFFSET  0x7FF8
 #define HIGHSCORE_MAGIC          0xA55A
 
+/* Maximum size reserved for legacy animation data in Data-Flash (EEPROM).
+ * The top 512 bytes (0x7E00 - 0x7FFF) are reserved for badge configuration
+ * (badge_cfg_t at 0x7ED7) and game high score (at 0x7FF8).
+ */
+#define DATA_FLASH_MAX_SIZE      0x7E00
+
 #include <stdint.h>
 
 #include "bmlist.h"

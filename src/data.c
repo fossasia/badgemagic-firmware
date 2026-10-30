@@ -18,6 +18,9 @@ uint32_t bigendian16_sum(uint16_t *s, int len)
 
 uint32_t data_flatSave(uint8_t *data, uint32_t len)
 {
+	if (!data || len < LEGACY_HEADER_SIZE || len > DATA_FLASH_MAX_SIZE) {
+		return 1;
+	}
 	uint32_t r = EEPROM_ERASE(0, len);
 	if (r) 
 		return r;
@@ -37,14 +40,24 @@ uint16_t data_flash2newmem(uint8_t **chunk, uint32_t n)
 	if (memcmp(header.header, "wang", 5))
 		return 0;
 
-	uint16_t size = bswap16(header.sizes[n]) * LED_ROWS;
-	if (size == 0)
+	if (n >= 8 || !chunk)
 		return 0;
 
-	uint16_t offs = LEGACY_HEADER_SIZE
+	uint32_t raw_size = (uint32_t)bswap16(header.sizes[n]) * LED_ROWS;
+	if (raw_size == 0 || raw_size > DATA_FLASH_MAX_SIZE)
+		return 0;
+
+	uint32_t offs = LEGACY_HEADER_SIZE
 		+ bigendian16_sum(header.sizes, n) * LED_ROWS;
 
+	if (offs + raw_size > DATA_FLASH_MAX_SIZE)
+		return 0;
+
+	uint16_t size = (uint16_t)raw_size;
 	*chunk = malloc(size);
+	if (!*chunk)
+		return 0;
+
 	EEPROM_READ(offs, *chunk, size);
 	return size;
 }
@@ -77,18 +90,24 @@ void chunk2bm(uint8_t *chunk, uint16_t size, bm_t *bm)
 bm_t *chunk2newbm(uint8_t *chunk, uint16_t size)
 {
 	bm_t *bm = bm_new((size*8)/11);
+	if (!bm)
+		return NULL;
 	chunk2bm(chunk, size, bm);
 	return bm;
 }
 
 bm_t *flash2newbm(uint32_t n)
 {
-	uint8_t *buf;
+	uint8_t *buf = NULL;
 	uint16_t size = data_flash2newmem(&buf, n);
-	if (size == 0)
+	if (size == 0 || !buf)
 		return NULL;
 
 	bm_t *bm = chunk2newbm(buf, size);
+	free(buf);
+	if (!bm)
+		return NULL;
+
 	data_legacy_t header;
 	data_get_header(&header);
 
@@ -96,7 +115,6 @@ bm_t *flash2newbm(uint32_t n)
 	bm->is_marquee = (header.marquee & (1 << n)) != 0;
 	bm->modes = header.modes[n];
 
-	free(buf);
 	return bm;
 }
 
