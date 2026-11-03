@@ -5,6 +5,9 @@
 #include "legacyctrl.h"
 #include "CH58x_common.h"
 #include "usb/usb.h"
+#include "config.h"
+
+void show_rx_error(char *s);
 
 static uint16_t auth_code = 0;
 static uint8_t  authorized = 0;
@@ -30,14 +33,16 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 		char buf[32];
 		int blen = snprintf(buf, sizeof(buf), "BLE: width mismatch %d\n", len);
 		cdc_tx_poll((uint8_t *)buf, blen, 10);
+		show_rx_error("BLE: width mismatch");
 		return -1;
 	}
 
-	if (!authorized) {
+	if (badge_cfg.ble_security && !authorized) {
 		if (!memcmp(val, "wang", 4)) {
 			char buf[32];
 			int blen = snprintf(buf, sizeof(buf), "BLE: rejected - not authed\n");
 			cdc_tx_poll((uint8_t *)buf, blen, 10);
+			show_rx_error("BLE: rejected - not authed");
 			return -4;
 		}
 
@@ -62,6 +67,7 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 				char buf[48];
 				int blen = snprintf(buf, sizeof(buf), "BLE: wrong code got=%04d exp=%04d\n", attempt, auth_code);
 				cdc_tx_poll((uint8_t *)buf, blen, 10);
+				show_rx_error("BLE: wrong code");
 				return -5;
 			}
 		}
@@ -69,6 +75,7 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 		char buf[32];
 		int blen = snprintf(buf, sizeof(buf), "BLE: invalid code attempt\n");
 		cdc_tx_poll((uint8_t *)buf, blen, 10);
+		show_rx_error("BLE: invalid code");
 		return -5;
 	}
 
@@ -84,6 +91,7 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 			char buf[32];
 			int blen = snprintf(buf, sizeof(buf), "BLE: not a header\n");
 			cdc_tx_poll((uint8_t *)buf, blen, 10);
+			show_rx_error("BLE: not a header");
 			return -2;
 		} else {
 			free(data);
@@ -92,6 +100,7 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 				char buf[32];
 				int blen = snprintf(buf, sizeof(buf), "BLE: malloc failed\n");
 				cdc_tx_poll((uint8_t *)buf, blen, 10);
+				show_rx_error("BLE: malloc failed");
 				return -3;
 			}
 		}
@@ -104,6 +113,7 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 				char buf[32];
 				int blen = snprintf(buf, sizeof(buf), "BLE: malloc failed\n");
 				cdc_tx_poll((uint8_t *)buf, blen, 10);
+				show_rx_error("BLE: malloc failed");
 				return -3;
 			}
 		}
@@ -123,6 +133,7 @@ int legacy_ble_rx(uint8_t *val, uint16_t len)
 			char buf2[32];
 			int blen2 = snprintf(buf2, sizeof(buf2), "BLE: realloc failed\n");
 			cdc_tx_poll((uint8_t *)buf2, blen2, 10);
+			show_rx_error("BLE: realloc failed");
 			return -3;
 		}
 	}
@@ -153,8 +164,10 @@ int legacy_usb_rx(uint8_t *buf, uint16_t len)
 				buf[4], buf[5], buf[6], buf[7]);
 
 	if (rx_len == 0) {
-		if (memcmp(buf, "wang", 5))
+		if (memcmp(buf, "wang", 5)) {
+			show_rx_error("BLE: not a header");
 			return -1;
+		}
 
 		int init_len = len > LEGACY_HEADER_SIZE ? len : sizeof(data_legacy_t);
 		init_len += MAX_PACKET_SIZE;
