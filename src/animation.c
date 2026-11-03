@@ -170,11 +170,39 @@ int ani_scroll_right(bm_t *bm, uint16_t *fb)
 	return ani_scroll_x(bm, fb, 1);
 }
 
+/* Width ignoring trailing all-blank columns.
+ *
+ * The legacy upload format sizes bitmaps in 8-pixel chunks while the display
+ * is LED_COLS (44) wide, which is not a multiple of 8. A message is therefore
+ * always a multiple of 8 columns and routinely carries a few blank ones past
+ * the end of its content: a name occupying 41 columns is stored as 48.
+ *
+ * Counting that padding as content makes ALIGN() report a second frame, which
+ * still mode then renders as a full frame of darkness -- 8.8 seconds at the
+ * slowest speed, alternating with the message. */
+static int visible_width(bm_t *bm)
+{
+	int w = bm->width;
+
+	while (w > 0 && bm->buf[w - 1] == 0)
+		w--;
+
+	return w;
+}
+
+/* Frame count for the paged (non-scrolling) modes, padding excluded. */
+static int still_frames(bm_t *bm)
+{
+	int w = visible_width(bm);
+
+	return (w > 0) ? ALIGN(w, LED_COLS) / LED_COLS : 1;
+}
+
 /* Returns horizontal centering offset for a frame.
  * Returns 0 if content fills the full width (no centering needed). */
 static int get_x_offset(bm_t *bm, int frame)
 {
-	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
+	int frames = still_frames(bm);
 	if (frames > 1)
 		return 0;
 
@@ -414,7 +442,7 @@ int ani_animation(bm_t *bm, uint16_t *fb)
 int ani_fixed(bm_t *bm, uint16_t *fb)
 {
 	int frame_steps = ANI_FIXED_STEPS;
-	int frames = ALIGN(bm->width, LED_COLS) / LED_COLS;
+	int frames = still_frames(bm);
 	int total_steps = frame_steps * frames;
 	int frame = mod(bm->anim_step, total_steps)/frame_steps;
 
