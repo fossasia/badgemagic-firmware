@@ -15,7 +15,7 @@ static uint8_t TxCharVal[256];
 static uint16_t TxLen;
 
 static const uint16_t RxCharUUID = 0xF057;
-static uint8_t RxCharProps = GATT_PROP_WRITE;
+static uint8_t RxCharProps = GATT_PROP_WRITE | GATT_PROP_WRITE_NO_RSP;
 #define RxCharVal TxCharVal
 static gattCharCfg_t TxCCCD[1];
 
@@ -73,7 +73,18 @@ static bStatus_t read_handler(uint16_t connHandle, gattAttribute_t *pAttr,
 	}
 
 	if (uuid == TxCharUUID) {
-		*pLen = MIN(TxLen-offset, maxLen);
+		/* TxLen is the amount of valid data in TxCharVal. The characteristic
+		 * is readable, but nothing sets TxLen yet, so a read returns zero
+		 * bytes. The guard must not trust it either way: bound it by the
+		 * buffer, and refuse a Read Blob offset past it -- otherwise
+		 * TxLen-offset wraps in uint16_t and the copy below hands out up to
+		 * maxLen bytes of whatever follows the buffer. A larger MTU makes
+		 * that window larger. */
+		uint16_t valid = MIN(TxLen, sizeof(TxCharVal));
+		if (offset > valid) {
+			return ATT_ERR_INVALID_OFFSET;
+		}
+		*pLen = MIN(valid - offset, maxLen);
 		tmos_memcpy(pValue, &pAttr->pValue[offset], *pLen);
 		return SUCCESS;
 	}

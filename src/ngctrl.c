@@ -153,6 +153,7 @@ static uint8_t cfg_led_brightness(uint8_t *val, uint16_t len)
 	PRINT(__func__);
 	PRINT("\n");
 
+	if (len < 1) return -2;
 	uint8_t lvl = val[0];
 	if (lvl >= BRIGHTNESS_LEVELS)
 		return -2;
@@ -194,13 +195,31 @@ const uint8_t (*cmd_lut[])(uint8_t *val, uint16_t len) = {
 
 #define CMD_LUT_LEN (sizeof(cmd_lut) / sizeof(cmd_lut[0]))
 
+/* Reported when the packet never reaches a handler at all: empty, an unknown
+ * command code, or a command with no implementation. Handlers report their
+ * own failures as -1..-4 (0xFF..0xFC in the uint8_t status byte), so this
+ * value stays outside that range: over a Write Command the notification is
+ * the only feedback, and a client must be able to tell "rejected before any
+ * handler" from "a handler rejected the parameters". */
+#define NG_ERR_INVALID  0xF0
+
 uint8_t ng_parse(uint8_t *val, uint16_t len)
 {
-	if (len < 1) return bleInvalidRange;
+	uint8_t err = NG_ERR_INVALID;
+
+	/* The characteristic accepts Write Command as well as Write Request, and a
+	 * Write Command carries no ATT response. The notification is then the only
+	 * channel a client has, so protocol errors must be reported there too --
+	 * otherwise an unacknowledged write of a malformed packet is silent. */
+	if (len < 1) {
+		ng_notify(&err, 1);
+		return bleInvalidRange;
+	}
 	uint8_t cmd = val[0];
 	PRINT("LUT_LEN: %02x \n", CMD_LUT_LEN);
 	if (cmd >= CMD_LUT_LEN) {
 		PRINT("invalid command!\n");
+		ng_notify(&err, 1);
 		return bleInvalidRange;
 	}
 
@@ -210,6 +229,8 @@ uint8_t ng_parse(uint8_t *val, uint16_t len)
 		ng_notify(&ret, 1); // response to the client app
 	} else {
 		PRINT("function is not defined!\n");
+		ng_notify(&err, 1);
+		return bleInvalidRange;
 	}
 	return SUCCESS;
 }

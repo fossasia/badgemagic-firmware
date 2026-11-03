@@ -2,7 +2,7 @@
 #define __BLE_SETUP_H__
 
 void tmos_clockInit(void);
-void ble_hardwareInit(void);
+int ble_hardwareInit(void);   /* 0 on success, else the BLE_LibInit status */
 void peripheral_init(void);
 
 void ble_enable_advertise();
