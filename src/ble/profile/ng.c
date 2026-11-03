@@ -149,9 +149,13 @@ bStatus_t ng_notify(uint8_t *val, uint8_t len)
 	tmos_memcpy(noti.pValue, val, len);
 
 	bStatus_t ret = GATT_Notification(TxCCCD->connHandle, &noti, FALSE);
-	GATT_bm_free((gattMsg_t *)&noti, ATT_HANDLE_VALUE_NOTI);
 	if (ret != SUCCESS) {
-		PRINT("ble: noti sending failed\n");
+		/* On SUCCESS the stack owns the buffer and frees it; freeing it
+		 * here as well would release it twice.
+		 * WCH's own example frees only on failure: EVT/EXAM/BLE/Peripheral/
+		 * APP/peripheral.c, peripheralChar4Notify(). */
+		GATT_bm_free((gattMsg_t *)&noti, ATT_HANDLE_VALUE_NOTI);
+		PRINT("ble: noti sending failed: 0x%02x\n", ret);
 		return ret;
 	}
 
