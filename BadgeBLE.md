@@ -112,11 +112,11 @@ Function/Command code: `0x01`.
 Parameters:
 
 - Power off: `0x00`.
-- Enable resetting after uploading is done: `[0x01, 0x00]`. Note: call
+- Disable resetting after uploading is done: `[0x01, 0x00]`. Note: call
   the [save_cfg](#save_cfg) command to save this config.
-- Disable resetting after uploading is done: `[0x01, 0x01]`. Note: call
+- Enable resetting after uploading is done: `[0x01, 0x01]`. Note: call
   the [save_cfg](#save_cfg) command to save this config.
-- Power off: `0x02`.
+- Reset: `0x02`.
 
 Returns:
 
