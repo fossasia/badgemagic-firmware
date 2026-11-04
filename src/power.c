@@ -4,6 +4,15 @@
 #include "button.h"
 #include "debug.h"
 
+// Wake-up edge IRQ. Without a real handler the weak startup stub is an
+// endless loop, which hangs the chip awake (display dark, buttons dead)
+__INTERRUPT
+__HIGH_CODE
+void GPIOA_IRQHandler(void)
+{
+	GPIOA_ClearITFlagBit(KEY1_PIN | CHARGE_STT_PIN);
+}
+
 void poweroff()
 {
 	// Stop wasting energy
