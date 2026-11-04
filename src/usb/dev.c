@@ -86,20 +86,22 @@ static void desc_dev(USB_SETUP_REQ *request)
 
 static void desc_config(USB_SETUP_REQ *request)
 {
-	ctrl_start_load_block(cfg_desc, request->wLength);
+	ctrl_start_load_block(cfg_desc, ((USB_CFG_DESCR *)cfg_desc)->wTotalLength);
 }
 
 static void desc_string(USB_SETUP_REQ *request)
 {
-	uint8_t *string_index[32] = {
+	uint8_t *string_index[] = {
 		lang_desc,
 		vendor_info,
 		product_info,
 		serial_number
 	};
 	uint8_t index = request->wValue & 0xff;
-	if (index <= sizeof(string_index))
+	if (index < sizeof(string_index) / sizeof(string_index[0]))
 		ctrl_start_load_block(string_index[index], string_index[index][0]);
+	else
+		set_handshake(0, USB_STALL, 1, 0);
 }
 
 static void dev_getDesc(USB_SETUP_REQ *request)
@@ -117,6 +119,8 @@ static void dev_getDesc(USB_SETUP_REQ *request)
 	};
 	if (type <= 3 && desc_type_handlers[type])
 		desc_type_handlers[type](request);
+	else // e.g. Device Qualifier: answer with STALL, not with stale EP0 data
+		set_handshake(0, USB_STALL, 1, 0);
 }
 
 static void dev_getStatus(USB_SETUP_REQ *request)
