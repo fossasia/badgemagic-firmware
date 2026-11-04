@@ -21,7 +21,10 @@ void usb_set_address(uint8_t ad)
 
 void ctrl_start_load_block(void *buf, uint16_t len)
 {
-	usb_start_load_block(ep0buf, buf, len, 1);
+	/* Never send more than the host asked for: macOS first reads only 8 bytes
+	of the device descriptor and treats a longer reply as babble */
+	uint16_t wLength = ((USB_SETUP_REQ *)ep0buf)->wLength;
+	usb_start_load_block(ep0buf, buf, len < wLength ? len : wLength, 1);
 }
 
 static void route_interfaces(USB_SETUP_REQ *request)

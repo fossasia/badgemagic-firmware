@@ -17,7 +17,7 @@ USB_CFG_DESCR cfg_static = {
 	.wTotalLength = sizeof(USB_CFG_DESCR), // will be updated on cfg_desc_add()
 	.bNumInterfaces = 0, // will be updated on cfg_desc_add()
 	.bConfigurationValue = 0x01,
-	.iConfiguration = 4,
+	.iConfiguration = 0, // there is no string descriptor 4
 	.bmAttributes = 0xA0,
 	.MaxPower = 50 // mA
 };
